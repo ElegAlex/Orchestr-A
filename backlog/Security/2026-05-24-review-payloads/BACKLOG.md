@@ -8134,7 +8134,7 @@ Add AllExceptionsFilter (catches HttpException + Error); emit ACCESS_DENIED audi
 pnpm test apps/api/src/common  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 07409128
 **Learnings:**
 Created apps/api/src/common/filters/all-exceptions.filter.ts: global @Catch() ExceptionFilter that branches on HttpException (forward Nest default shape, preserve 401/403/404 bodies) vs non-HttpException (opaque 500 safe shape {statusCode,message,timestamp,path}, full detail logged server-side with Fastify requestId, Sentry no-op stub). Wired via app.useGlobalFilters() in main.ts. ACCESS_DENIED audit on 403 deferred: would double-emit alongside services that already audit 403s, flood immutable hash-chain on high-frequency denials; structured server-side log is sufficient. Fail-pre: leaky skeleton leaked raw message (\"boom \u2014 secret DB creds in message\"); spec asserted message===\"Internal server error\" → RED; fixed filter → GREEN (6/6). Gate: build=0, test=0.
 
