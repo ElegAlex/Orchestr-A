@@ -7354,7 +7354,7 @@ Add at minimum: 4 negative cases (notFound update, notFound remove, forbidden no
 pnpm test apps/api/src/comments/comments.service.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** a8fae7f
 **Learnings:**
 Coverage task (service already correct). Added 6 negative tests: create NotFoundException (task not found), update NotFoundException (comment not found), update ForbiddenException (non-author), remove NotFoundException (comment not found), remove ForbiddenException (non-author without delete_any), remove allowed with delete_any permission. Mutation witness: removed update ownership guard → test "should throw ForbiddenException when non-author tries to update" went RED (AssertionError: promise resolved instead of rejecting); restored → GREEN. findAll unauthorized scope test omitted as theater (AccessScopeService is mocked).
 
