@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
@@ -12,6 +18,16 @@ import { AuditAction } from '../audit/audit.service';
 
 /** Request metadata threaded from the controller for audit emission (OBS-006). */
 export type DocumentAccessMeta = { ip?: string; ua?: string };
+
+/**
+ * TST-016 — self-reported size cap for the metadata-only document store.
+ * Documents are stored as URL + metadata (no binary upload pipeline), so
+ * this cap guards the `size` integer field against absurd values. Aligned
+ * with typical government document portals (200 MB covers any realistic
+ * office/PDF artefact; nginx client_max_body_size handles the actual upload
+ * to the storage backend if one is added later).
+ */
+export const MAX_DOCUMENT_SIZE_BYTES = 200_000_000; // 200 MB
 
 @Injectable()
 export class DocumentsService {
@@ -28,6 +44,15 @@ export class DocumentsService {
     createDocumentDto: CreateDocumentDto,
     currentUser?: AccessUser,
   ) {
+    // TST-016: service-layer size guard. The `size` field is self-reported by
+    // the client (URL-based storage, no binary upload pipeline). Reject values
+    // that exceed the cap to block metadata pollution / storage quota gaming.
+    if (createDocumentDto.size > MAX_DOCUMENT_SIZE_BYTES) {
+      throw new BadRequestException(
+        `File size exceeds the maximum allowed (${MAX_DOCUMENT_SIZE_BYTES} bytes)`,
+      );
+    }
+
     if (currentUser) {
       await this.accessScope.assertCanAccessProject(
         createDocumentDto.projectId,
@@ -154,8 +179,26 @@ export class DocumentsService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, currentUser?: AccessUser) {
+    const document = await this.findOne(id);
+
+    // TST-016: service-layer ownership assertion — defense-in-depth below the
+    // OwnershipGuard at the controller layer. If a currentUser is provided,
+    // only the uploader OR a user with documents:manage_any may delete.
+    // This catches programmatic service calls that bypass the HTTP guard.
+    if (currentUser) {
+      const scopeWhere = await this.accessScope.documentReadWhere(currentUser);
+      const isFullAccess =
+        !scopeWhere ||
+        (typeof scopeWhere === 'object' && Object.keys(scopeWhere).length === 0);
+      const isOwner = document.uploadedBy === currentUser.id;
+      if (!isFullAccess && !isOwner) {
+        throw new ForbiddenException(
+          'Vous ne pouvez supprimer que vos propres documents',
+        );
+      }
+    }
+
     // DAT-025: soft-delete — set deletedAt instead of hard-delete; preserves FK audit trail
     await this.prisma.document.update({
       where: { id },

@@ -127,7 +127,13 @@ export class DocumentsController {
   })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Supprimer un document' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.documentsService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: { id: string; role?: { code: string } | null },
+  ) {
+    return this.documentsService.remove(id, {
+      id: user.id,
+      role: user.role?.code ?? null,
+    });
   }
 }

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DocumentsService } from './documents.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { AccessScopeService } from '../common/services/access-scope.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
@@ -281,6 +281,119 @@ describe('DocumentsService', () => {
       });
 
       await expect(service.findOne('doc-1')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // TST-016 — security-relevant negative tests missing from original spec
+
+  describe('create (TST-016: size cap)', () => {
+    it('throws BadRequestException when size exceeds MAX_DOCUMENT_SIZE_BYTES', async () => {
+      const oversizeDto = {
+        name: 'Huge File',
+        url: 'https://example.com/huge.pdf',
+        mimeType: 'application/pdf',
+        size: 200_000_001, // > 200 MB cap
+        projectId: 'project-1',
+      };
+      await expect(service.create('user-1', oversizeDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockPrismaService.document.create).not.toHaveBeenCalled();
+    });
+
+    it('accepts a file at the size limit boundary (exactly MAX_DOCUMENT_SIZE_BYTES)', async () => {
+      const atLimitDto = {
+        name: 'Edge File',
+        url: 'https://example.com/edge.pdf',
+        mimeType: 'application/pdf',
+        size: 200_000_000, // exactly 200 MB — should pass
+        projectId: 'project-1',
+      };
+      mockPrismaService.document.create.mockResolvedValue(mockDocument);
+      await expect(service.create('user-1', atLimitDto)).resolves.toBeDefined();
+    });
+  });
+
+  describe('remove (TST-016: cross-user delete Forbidden)', () => {
+    it('throws ForbiddenException when a non-owner without manage_any tries to delete', async () => {
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument); // uploadedBy: 'user-1'
+
+      const nonOwner = { id: 'user-2', role: 'CONTRIBUTEUR' };
+      // Simulate a scoped (non-empty) documentReadWhere result, meaning the user
+      // does NOT have documents:manage_any — they only see their own documents.
+      accessScope.documentReadWhere.mockResolvedValueOnce({
+        uploadedBy: 'user-2',
+      });
+
+      await expect(
+        (service as unknown as { remove(id: string, user: unknown): Promise<unknown> })
+          .remove('doc-1', nonOwner),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('allows delete by the document owner (uploadedBy matches currentUser.id)', async () => {
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument); // uploadedBy: 'user-1'
+      mockPrismaService.document.update.mockResolvedValue({
+        ...mockDocument,
+        deletedAt: new Date(),
+      });
+
+      const owner = { id: 'user-1', role: 'CONTRIBUTEUR' };
+      // documentReadWhere returns scoped (non-empty) — owner bypasses via uploadedBy match
+      accessScope.documentReadWhere.mockResolvedValueOnce({
+        uploadedBy: 'user-1',
+      });
+      await expect(
+        (service as unknown as { remove(id: string, user: unknown): Promise<unknown> })
+          .remove('doc-1', owner),
+      ).resolves.toBeDefined();
+    });
+
+    it('allows delete by a user with documents:manage_any bypass (empty documentReadWhere)', async () => {
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument); // uploadedBy: 'user-1'
+      mockPrismaService.document.update.mockResolvedValue({
+        ...mockDocument,
+        deletedAt: new Date(),
+      });
+
+      // documentReadWhere returns {} (empty) = full-access, simulating manage_any bypass
+      const adminUser = { id: 'user-admin', role: 'ADMIN' };
+      accessScope.documentReadWhere.mockResolvedValueOnce({});
+      await expect(
+        (service as unknown as { remove(id: string, user: unknown): Promise<unknown> })
+          .remove('doc-1', adminUser),
+      ).resolves.toBeDefined();
+    });
+  });
+
+  describe('findAll (TST-016: documentReadWhere scoping applied with currentUser)', () => {
+    it('applies documentReadWhere scope filter when currentUser is provided', async () => {
+      mockPrismaService.document.findMany.mockResolvedValue([mockDocument]);
+      mockPrismaService.document.count.mockResolvedValue(1);
+
+      const scopeWhere = { uploadedBy: 'user-1' };
+      accessScope.documentReadWhere.mockResolvedValueOnce(scopeWhere);
+
+      const currentUser = { id: 'user-1', role: 'CONTRIBUTEUR' };
+      await service.findAll(1, 10, undefined, currentUser);
+
+      expect(accessScope.documentReadWhere).toHaveBeenCalledWith(currentUser);
+      expect(mockPrismaService.document.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: [scopeWhere],
+          }) as object,
+        }),
+      );
+    });
+
+    it('does NOT apply documentReadWhere when currentUser is absent', async () => {
+      mockPrismaService.document.findMany.mockResolvedValue([mockDocument]);
+      mockPrismaService.document.count.mockResolvedValue(1);
+
+      await service.findAll(1, 10);
+
+      expect(accessScope.documentReadWhere).not.toHaveBeenCalled();
     });
   });
 });

@@ -220,10 +220,13 @@ describe('DocumentsController', () => {
         message: 'Document supprimé',
       });
 
-      const result = await controller.remove('doc-id-1');
+      const result = await controller.remove('doc-id-1', mockCurrentUser);
 
       expect(result.message).toBe('Document supprimé');
-      expect(mockDocumentsService.remove).toHaveBeenCalledWith('doc-id-1');
+      expect(mockDocumentsService.remove).toHaveBeenCalledWith(
+        'doc-id-1',
+        normalizedCurrentUser,
+      );
     });
 
     it('should throw NotFoundException when document not found', async () => {
@@ -231,9 +234,9 @@ describe('DocumentsController', () => {
         new NotFoundException('Document introuvable'),
       );
 
-      await expect(controller.remove('nonexistent')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.remove('nonexistent', mockCurrentUser),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

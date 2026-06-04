@@ -8616,7 +8616,7 @@ pnpm test apps/web/src/lib/__tests__/date-utils.test.ts
 ---
 ### TST-016 — Documents service spec — only one negative test; no MIME/size/auth assertions
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8654,7 +8654,8 @@ pnpm test apps/api/src/documents/documents.service.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added service-layer size cap (MAX_DOCUMENT_SIZE_BYTES=200MB) guard in create() with BadRequestException + test (RED: resolved without throw; GREEN: throws). Added optional currentUser param to remove() with ownership assertion via documentReadWhere empty-object heuristic (empty={} = manage_any bypass, non-empty = scoped = require uploadedBy match); ForbiddenException on cross-user delete (RED: resolved; GREEN: throws). Controller wired to pass currentUser to remove(). Controller spec updated. findAll scoping coverage test added (documentReadWhere called with currentUser). MIME not duplicated at service (SEC-009 covers it at DTO). No DOCUMENT_DELETE audit added (beyond suggested fix scope; OwnershipGuard already guards HTTP layer). Fail-pre witness: size cap test + cross-user delete test both RED before fix.
 
 ---
 ### TST-020 — Validator dormancy not tested — findValidatorForUser fallback path missing critical case
