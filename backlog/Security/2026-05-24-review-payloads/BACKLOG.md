@@ -7670,7 +7670,7 @@ Add an archived: ArchivedFilter = ArchivedFilter.ACTIVE parameter and ...archive
 pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** a1065136
 **Learnings:**
 Added `archived: ArchivedFilter = ArchivedFilter.ACTIVE` param to getProjectsByUser and spread `...archivedWhere(archived)` into the Prisma where clause.
 Fail-pre witness: new test asserting `archivedAt:null` was RED on unfixed code (where had no archivedAt).
