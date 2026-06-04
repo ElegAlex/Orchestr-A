@@ -9431,7 +9431,7 @@ Replaced leaveType:true (12 occurrences, 2 indent variants: 6-space and 8-space)
 ---
 ### SEC-026 — JWT_SECRET placeholder is too memorable
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9469,7 +9469,8 @@ TBD — manual verification (env config), plus boot-assert test if applicable
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Extracted assertJwtSecretStrength() pure helper into apps/api/src/common/config/jwt-secret.ts (matches SEC-001/SEC-018 prod-gate pattern). Gated on NODE_ENV===production only, so short test-secret values in specs remain unaffected. .env.example placeholder cleared to empty + openssl generation hint to eliminate memorable default. fail-pre: Cannot find module ./jwt-secret when impl absent; 8 tests RED then GREEN after fix. Acceptance #4 (audit_logs) N/A — boot-time assertion has no request context.
 
 ---
 ### SEC-027 — Approve/Reject endpoints use @Body('comment')/@Body('reason') without DTO — bypasses ValidationPipe whitelist

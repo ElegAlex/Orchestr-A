@@ -20,6 +20,7 @@ import {
   installGlobalErrorHandlers,
 } from './common/error-reporter';
 import { resolveAllowedOrigins } from './common/fastify/cors.config';
+import { assertJwtSecretStrength } from './common/config/jwt-secret';
 
 // OBS-010: install process-level error handlers before the app boots so that
 // unhandledRejection and uncaughtException are captured from the very first tick.
@@ -52,6 +53,11 @@ async function bootstrap() {
         "'enforce'.",
     );
   }
+
+  // SEC-026: refuse to start in production if JWT_SECRET is shorter than 32
+  // characters. A weak or absent secret allows token forgery. The check is
+  // prod-only so test/dev short secrets (e.g. 'test-secret') are unaffected.
+  assertJwtSecretStrength(process.env.JWT_SECRET, process.env.NODE_ENV);
 
   // SEC-018: refuse to start in production if AUTH_EXPOSE_RESET_TOKEN=true.
   // The flag returns the raw reset token in the HTTP response (dev/E2E only).
