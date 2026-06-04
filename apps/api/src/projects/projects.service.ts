@@ -562,6 +562,14 @@ export class ProjectsService {
       throw new NotFoundException('Projet introuvable');
     }
 
+    // COR-016 — reject all mutations on CANCELLED projects; revival must go
+    // through a dedicated restore/unarchive path, not a plain PATCH.
+    if (existingProject.status === ProjectStatus.CANCELLED) {
+      throw new ConflictException(
+        'Ce projet est annulé. Utilisez le point de restauration dédié pour le réactiver.',
+      );
+    }
+
     const {
       startDate,
       endDate,

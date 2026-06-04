@@ -860,6 +860,29 @@ describe('ProjectsService', () => {
       );
     });
 
+    // COR-016 — update() must reject all mutations on CANCELLED projects
+    it('COR-016: should throw ConflictException when updating a CANCELLED project', async () => {
+      const cancelledProject = { ...mockProject, status: ProjectStatus.CANCELLED };
+      mockPrismaService.project.findUnique.mockResolvedValue(cancelledProject);
+
+      await expect(
+        service.update('project-1', { name: 'Try to revive' }),
+      ).rejects.toThrow(ConflictException);
+
+      expect(mockPrismaService.project.update).not.toHaveBeenCalled();
+    });
+
+    it('COR-016: should throw ConflictException when trying to revive a CANCELLED project via status change', async () => {
+      const cancelledProject = { ...mockProject, status: ProjectStatus.CANCELLED };
+      mockPrismaService.project.findUnique.mockResolvedValue(cancelledProject);
+
+      await expect(
+        service.update('project-1', { status: ProjectStatus.ACTIVE } as any),
+      ).rejects.toThrow(ConflictException);
+
+      expect(mockPrismaService.project.update).not.toHaveBeenCalled();
+    });
+
     // COR-018 — update() clientIds sync must be wrapped in $transaction
     it('COR-018: project update + client sync (deleteMany+createMany) run inside $transaction when clientIds is provided', async () => {
       const updatedProject = { ...mockProject, name: 'Updated' };

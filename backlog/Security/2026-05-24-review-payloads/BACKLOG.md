@@ -7589,7 +7589,7 @@ Changed `<=` to `<` at L93 (create) and L575 (update) in projects.service.ts, al
 ---
 ### COR-016 — Soft-delete (CANCELLED) project can be revived via update without restriction
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7627,7 +7627,8 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Guard added at line ~565 in update() right after the NotFoundException check: if existingProject.status===CANCELLED, throw ConflictException(409). Design: reject ALL updates on CANCELLED projects (not just status changes back to ACTIVE) — any mutation of a cancelled project must go through a dedicated restore path. ConflictException chosen to match existing archive conflict convention in the same file. fail-pre witness: 2 COR-016 tests RED before fix (expected ConflictException, received resolved value). SCOPE NOTE: archived projects (archivedAt field) not guarded — separate axis, no design decision provided. No restore endpoint exists yet; CANCELLED projects are PATCH-immutable by design until one is added.
 
 ---
 ### COR-017 — getProjectsByUser ignores archived filter — surfaces archived projects
