@@ -7582,7 +7582,7 @@ Pick one convention (likely < for both) and centralise the check in a DateRangeD
 pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 47151a00
 **Learnings:**
 Changed `<=` to `<` at L93 (create) and L575 (update) in projects.service.ts, aligning with tasks.service.ts convention. Same-day projects (startDate === endDate) are now valid. Two regression tests added: one for create, one for update, both RED before fix and GREEN after. No shared validator needed per scope decision — inline fix only.
 
