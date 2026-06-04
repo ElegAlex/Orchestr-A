@@ -8386,7 +8386,7 @@ Cap projectDetails to top-N (e.g. 50) with 'see all' paginated endpoint. Add tak
 pnpm test apps/api/src/analytics/analytics.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** c4d6328
 **Learnings:**
 Added PROJECT_DETAILS_LIMIT=50 const to analytics.service.ts; added take: PROJECT_DETAILS_LIMIT to project.findMany at line 125 (formerly 122 before const insertion). Test: assert project.findMany called with take:50 — RED before (undefined), GREEN after. No payload truncation in-memory needed: take is the DB-level bound. Existing 33 tests unaffected.
 
