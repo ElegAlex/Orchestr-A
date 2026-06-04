@@ -7065,7 +7065,7 @@ Wrap DayCell, row, and group-header in React.memo with shallow-equal props. Move
 pnpm --filter web test  # no targeted spec inferred from apps/web/src/components/planning/PlanningGrid.tsx
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 994c6b8
 **Learnings:**
 Wrapped DayCell, UserRow, GroupHeader in React.memo (+ displayName). Added useCallback to all PlanningGrid handlers (handleTeleworkToggle/handleDragStart/End/Drop/handleTaskClick/handleEventClick/handleCloseTaskModal/handleCloseEventModal/handlePredefinedTaskClick/handleAddPredefinedTask) with proper deps. Wrapped gridCols in useMemo([displayDays.length]). Fail-pre: render-count test (UserRow.test.tsx) confirmed RED (expected 2 DayCell calls after mount, got 4 on re-render with same props). GREEN after React.memo applied. Build + all tests green.
 
