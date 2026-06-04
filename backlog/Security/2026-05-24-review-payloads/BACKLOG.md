@@ -5998,7 +5998,7 @@ Either deactivate users (isActive=false) and forbid hard delete, or change Leave
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** db1efdfa
 **Learnings:**
 Re-grounded by operator decision A′ (2026-06-04): this app is NOT the SIRH of legal
 record → no Code du Travail retention obligation. The Cascade DAT-008 flagged is now
@@ -6140,7 +6140,7 @@ Add deletedAt DateTime? and @@index([deletedAt]). Add @@index([isActive]). Repla
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** db1efdfa
 **Learnings:**
 Implemented per operator decision A′ (2026-06-04, full erasure; audit-bearing users
 → anonymised shell; no retention; OBS-002 untouched). The "soft-delete +
