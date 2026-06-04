@@ -94,12 +94,17 @@ export const PASSWORD_CHANGE_REQUIRED_CODE = "PASSWORD_CHANGE_REQUIRED";
 
 function redirectToChangePassword() {
   if (typeof window !== "undefined") {
+    const pathname = window.location.pathname ?? "";
+    // Guard: already on the change-password page — do nothing to break the reload loop.
+    // Without this guard the interceptor fires again on every /auth/me bootstrap call
+    // that the change-password page mount triggers.
+    if (/\/(fr|en)\/change-password$/.test(pathname)) return;
+    // Signal to listeners (e.g. useAuthBootstrap) that a redirect is happening.
     window.dispatchEvent(new Event("auth:password-change-required"));
     // Detect locale from current path (e.g. /fr/dashboard → fr)
-    const pathname = window.location.pathname ?? "";
     const segments = pathname.split("/");
     const locale = ["fr", "en"].includes(segments[1]) ? segments[1] : "fr";
-    window.location.href = `/${locale}/change-password`;
+    window.location.assign(`/${locale}/change-password`);
   }
 }
 

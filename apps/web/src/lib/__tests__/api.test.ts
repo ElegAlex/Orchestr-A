@@ -40,12 +40,18 @@ Object.defineProperty(window, "localStorage", {
 // Silence navigation
 const originalLocation = window.location;
 let consoleErrorSpy: jest.SpyInstance;
+// SEC-FE-001: shared assign mock — defined once so Object.defineProperty doesn't fight itself
+const locationAssignMock = jest.fn();
 beforeAll(() => {
   consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
   // @ts-expect-error — overriding read-only window.location for test isolation
   delete window.location;
   // @ts-expect-error — stub minimal Location shape (test only reads/writes href and pathname)
-  window.location = { href: "", pathname: "/fr/dashboard" };
+  window.location = {
+    href: "",
+    pathname: "/fr/dashboard",
+    assign: locationAssignMock,
+  };
 });
 afterAll(() => {
   // @ts-expect-error — restoring original Location instance
@@ -243,11 +249,14 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
 
   // SEC-FE-001 — ForcePasswordChangeGuard returns 403 + PASSWORD_CHANGE_REQUIRED.
   // The interceptor must redirect to /change-password and NOT clear the token.
-  it("SEC-FE-001: 403+PASSWORD_CHANGE_REQUIRED redirects to /change-password without clearing auth token", async () => {
+  it("SEC-FE-001: 403+PASSWORD_CHANGE_REQUIRED fires redirect event and preserves auth token", async () => {
     store["access_token"] = "valid-jwt";
+    locationAssignMock.mockClear();
+    // pushState is the reliable way to set pathname in jsdom; the stub assignment
+    // only sets an own property shadowing the prototype accessor.
+    window.history.pushState({}, "", "/fr/dashboard");
 
     const dispatchSpy = jest.spyOn(window, "dispatchEvent");
-
     const { responseErrorHandler } = loadApi({});
 
     const err = {
@@ -260,12 +269,43 @@ describe("api interceptors (SEC-04 refresh flow)", () => {
 
     await expect(responseErrorHandler(err)).rejects.toBeDefined();
 
+    // Must fire the auth:password-change-required event (proves the redirect path was taken)
+    const firedTypes = dispatchSpy.mock.calls.map((c) => (c[0] as Event).type);
+    expect(firedTypes).toContain("auth:password-change-required");
     // Must NOT clear the auth token (user needs it to PATCH the new password)
     expect(store["access_token"]).toBe("valid-jwt");
-    // Must fire the password-change-required event (proves interceptor reached redirect handler)
-    const firedEvents = dispatchSpy.mock.calls.map((c) => (c[0] as Event).type);
-    expect(firedEvents).toContain("auth:password-change-required");
 
     dispatchSpy.mockRestore();
+  });
+
+  it("SEC-FE-001: does NOT fire redirect event when already on /change-password (loop guard)", async () => {
+    store["access_token"] = "valid-jwt";
+    locationAssignMock.mockClear();
+    // jsdom's window.location is a prototype accessor; pushState is the only reliable
+    // way to set pathname so the module's window.location.pathname sees it.
+    window.history.pushState({}, "", "/fr/change-password");
+
+    const dispatchSpy = jest.spyOn(window, "dispatchEvent");
+    const { responseErrorHandler } = loadApi({});
+
+    const err = {
+      response: {
+        status: 403,
+        data: { code: "PASSWORD_CHANGE_REQUIRED" },
+      },
+      config: { url: "/auth/me", headers: {} },
+    };
+
+    await expect(responseErrorHandler(err)).rejects.toBeDefined();
+
+    // Must NOT fire redirect event (loop guard prevents it)
+    const firedTypes = dispatchSpy.mock.calls.map((c) => (c[0] as Event).type);
+    expect(firedTypes).not.toContain("auth:password-change-required");
+    // Token still intact
+    expect(store["access_token"]).toBe("valid-jwt");
+
+    dispatchSpy.mockRestore();
+    // Restore to a non-change-password path for subsequent tests
+    window.history.pushState({}, "", "/fr/dashboard");
   });
 });
