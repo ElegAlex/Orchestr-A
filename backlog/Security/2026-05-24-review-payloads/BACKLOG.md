@@ -7633,7 +7633,7 @@ Guard added at line ~565 in update() right after the NotFoundException check: if
 ---
 ### COR-017 — getProjectsByUser ignores archived filter — surfaces archived projects
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7671,7 +7671,12 @@ pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added `archived: ArchivedFilter = ArchivedFilter.ACTIVE` param to getProjectsByUser and spread `...archivedWhere(archived)` into the Prisma where clause.
+Fail-pre witness: new test asserting `archivedAt:null` was RED on unfixed code (where had no archivedAt).
+Updated existing test at line 1317 to include `archivedAt: null` in expected where (that test encoded the buggy behavior).
+No audit log needed: read-only path, not in audit-sensitive list.
+Controller wiring deferred per design_decision (default param silently fixes all existing callers).
 
 ---
 ### COR-021 — leaveTypeConfig.code → LeaveType enum fallback silently masks misconfiguration

@@ -1327,6 +1327,7 @@ describe('ProjectsService', () => {
             members: {
               some: { userId: 'user-1' },
             },
+            archivedAt: null,
           },
         }),
       );
@@ -1338,6 +1339,16 @@ describe('ProjectsService', () => {
       await expect(service.getProjectsByUser('nonexistent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('default call excludes archived projects (archivedAt: null) — COR-017', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+
+      await service.getProjectsByUser('user-1');
+
+      const callArgs = mockPrismaService.project.findMany.mock.calls[0][0];
+      expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":null');
     });
   });
 

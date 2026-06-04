@@ -1039,7 +1039,11 @@ export class ProjectsService {
   /**
    * Récupérer les projets dont un utilisateur est membre
    */
-  async getProjectsByUser(userId: string, currentUser?: AccessUser) {
+  async getProjectsByUser(
+    userId: string,
+    currentUser?: AccessUser,
+    archived: ArchivedFilter = ArchivedFilter.ACTIVE,
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -1054,6 +1058,7 @@ export class ProjectsService {
           userId,
         },
       },
+      ...archivedWhere(archived),
     };
     if (
       currentUser &&
