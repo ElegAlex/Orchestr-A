@@ -7711,7 +7711,7 @@ At seed time, refuse to create a LeaveTypeConfig whose code is not in LeaveType,
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 506684b2
 **Learnings:**
 Added Logger.warn at both fallback sites in leaves.service.ts (create path line ~517 and importLeaves path line ~3479) to surface silent LeaveType.OTHER mapping when leaveTypeConfig.code is not a known enum value. Two COR-021 tests added: one in the create describe block and one in importLeaves. Both were RED before the fix (Logger.warn spy called 0 times), GREEN after. No existing assertions weakened. Logger imported from @nestjs/common; private logger property added to LeavesService class.
 
