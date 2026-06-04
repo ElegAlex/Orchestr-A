@@ -8940,7 +8940,7 @@ Add 4 multi-role flows: reject, cancel, delegation, dormant-manager fallback. Ea
 pnpm test:e2e -- e2e/tests/multi-role/leave-lifecycle.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 15ad2cf9
 **Learnings:**
 Added 4 new multi-role E2E test blocks to e2e/tests/multi-role/leave-lifecycle.spec.ts (TST-024 blocks A-D), preserving the 2 existing tests byte-intact.
 
