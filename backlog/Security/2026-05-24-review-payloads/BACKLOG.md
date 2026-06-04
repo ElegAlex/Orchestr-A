@@ -7021,7 +7021,7 @@ Add experimental.optimizePackageImports: ['lucide-react', '@radix-ui/react-icons
 pnpm --filter web test  # no targeted spec inferred from apps/web/next.config.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** c5204ac
 **Learnings:**
 Added experimental.optimizePackageImports:[lucide-react,@radix-ui/react-icons,date-fns] to next.config.ts; gated @next/bundle-analyzer behind ANALYZE=true env var with try/catch guard so missing devDep never breaks build. next-intl/plugin createRequire incompatible with jest-environment-jsdom (file URL error), so used fs.readFileSync structural test instead of direct import. All 5 assertions RED pre-fix, GREEN post-fix.
 
