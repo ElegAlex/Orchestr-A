@@ -708,7 +708,7 @@ export class LeavesService {
     // An any-active-delegate query is the root cause — a delegate set up by a
     // manager of department B must never become the validator for dept A users.
     const today = new Date();
-    if (user.department?.managerId) {
+    if (user.department?.managerId && user.department.manager?.isActive !== false) {
       const managerId = user.department.managerId;
       const activeDelegate =
         await this.prisma.leaveValidationDelegate.findFirst({

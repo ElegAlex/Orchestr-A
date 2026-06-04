@@ -599,6 +599,39 @@ describe('LeavesService', () => {
       expect(validator).toBe('manager-1');
     });
 
+    it('TST-020 — dormant manager is skipped; MANAGE_ANY fallback is returned', async () => {
+      // RED before fix: findValidatorForUser checks managerId truthy but NOT
+      // manager.isActive, so it returns 'manager-1' even when the manager is
+      // inactive. After fix: dormant manager is ignored, fallback is used.
+      const userWithDormantManager = {
+        ...mockUser,
+        department: {
+          ...mockUser.department,
+          managerId: 'manager-1',
+          manager: { id: 'manager-1', firstName: 'Manager', lastName: 'One', isActive: false },
+        },
+      };
+      const fallbackValidator = {
+        id: 'admin-1',
+        isActive: true,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(userWithDormantManager);
+      // No active delegation for dormant manager
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValueOnce(null);
+      // getRoleCodesWithPermission: uses ROLE_TEMPLATES (in-memory) + prisma.role.findMany
+      mockPrismaService.role.findMany.mockResolvedValueOnce([
+        { code: 'ADMIN' },
+      ]);
+      mockPrismaService.user.findFirst.mockResolvedValueOnce(fallbackValidator);
+
+      const validator = await (service as any).findValidatorForUser('user-1');
+
+      // Dormant manager must NOT be returned; the MANAGE_ANY fallback wins.
+      expect(validator).not.toBe('manager-1');
+      expect(validator).toBe('admin-1');
+    });
+
     it('should find fallback validator when no manager or delegate', async () => {
       const userWithoutManager = {
         ...mockUser,

@@ -8679,7 +8679,7 @@ Added service-layer size cap (MAX_DOCUMENT_SIZE_BYTES=200MB) guard in create() w
 ---
 ### TST-020 — Validator dormancy not tested — findValidatorForUser fallback path missing critical case
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8717,7 +8717,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added test TST-020: dormant manager (isActive=false) must be skipped and MANAGE_ANY fallback used. RED before fix: findValidatorForUser returned managerId without checking manager.isActive, test failed with expected manager-1 not to be manager-1. Fix: gate condition changed from `user.department?.managerId` to `user.department?.managerId && user.department.manager?.isActive !== false`. GREEN after: all 188 tests pass. Scope: leaves.service.ts L711 + leaves.service.spec.ts new test after COR-005.
 
 ---
 ### TST-021 — Negative E2E coverage is sparse — most workflow specs only positive paths
