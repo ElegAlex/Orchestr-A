@@ -9948,7 +9948,7 @@ pnpm --filter database db:seed && \
 # Expect >= 11 rows for the current and next year.
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 13d91539
 **Learnings:**
 Mechanism 2 (cron) + startup hook chosen, both in holidays.service.ts.
 
