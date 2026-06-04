@@ -6984,7 +6984,7 @@ pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/d
 ---
 ### PER-020 — next.config.ts has no image domains, no bundle optimization, no analyzer
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 12
 - **Cluster:** I
 - **Confidence:** claude-only
@@ -7022,7 +7022,8 @@ pnpm --filter web test  # no targeted spec inferred from apps/web/next.config.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added experimental.optimizePackageImports:[lucide-react,@radix-ui/react-icons,date-fns] to next.config.ts; gated @next/bundle-analyzer behind ANALYZE=true env var with try/catch guard so missing devDep never breaks build. next-intl/plugin createRequire incompatible with jest-environment-jsdom (file URL error), so used fs.readFileSync structural test instead of direct import. All 5 assertions RED pre-fix, GREEN post-fix.
 
 ---
 ### PER-028 — Planning grid components: 17 useEffect vs only 20 useMemo/useCallback across the planning folder
