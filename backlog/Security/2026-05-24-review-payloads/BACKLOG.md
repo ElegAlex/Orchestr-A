@@ -8006,7 +8006,7 @@ pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ---
 ### OBS-014 — Pino redact list is too narrow — refresh tokens in query, JWT in headers, leave reason all leak
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8044,7 +8044,12 @@ pnpm test apps/api/src/common/fastify/redact.config.spec.ts  # may need creation
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Widened Pino redact paths from 7 to 21 entries.
+Added: req.headers["x-api-key"], req.headers["proxy-authorization"], req.query.token, req.body.token, req.body.validationComment, req.body.reason, req.body.motif, req.body.justification, res.body.passwordHash, res.body.refresh_token, res.body.access_token.
+Created redact.config.spec.ts with 16 tests (5 regression guards + 11 new-path assertions).
+Fail-pre: 11/16 RED on unfixed code (new paths absent). Green after fix: 16/16.
+Design: kept censor=[REDACTED] consistent; added inline comment grouping for future reviewers.
 
 ---
 ### OBS-015 — Production startup banner uses console.log instead of structured logger
