@@ -9443,7 +9443,7 @@ Use JSON log_format with $request_id (proxy_set_header X-Request-Id $request_id)
 TBD — derive test from finding description for nginx/nginx.conf
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 0fd4ee6a
 **Learnings:**
 Added $request_id to log_format in both nginx configs for log correlation.
 
