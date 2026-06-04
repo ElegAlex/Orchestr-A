@@ -17,7 +17,7 @@
  * nginx CSP for the HTML path has been removed. The /api path keeps its own
  * separate CSP via @fastify/helmet.
  */
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { locales, defaultLocale } from "./src/i18n/config";
 import { buildCsp } from "./src/lib/csp";
@@ -44,10 +44,13 @@ export default function middleware(request: NextRequest): NextResponse {
   requestHeaders.set("content-security-policy", csp);
   requestHeaders.set("x-nonce", nonce);
 
-  // Run next-intl middleware with the augmented request.
-  const intlRequest = new Request(request, { headers: requestHeaders });
-  // next-intl expects a NextRequest; cast via type assertion (same shape).
-  const response = handleI18n(intlRequest as unknown as NextRequest);
+  // Run next-intl middleware with the augmented request. Use NextRequest (NOT a
+  // plain Request) so `.nextUrl` survives — next-intl reads `nextUrl` for locale
+  // routing and the bare-`/` -> `/<locale>` redirect. A plain Request has no
+  // `nextUrl`, which silently dropped that redirect in production (`/` -> 404,
+  // and the compose `/` healthcheck then fails -> container "unhealthy").
+  const intlRequest = new NextRequest(request, { headers: requestHeaders });
+  const response = handleI18n(intlRequest);
 
   // Stamp the CSP on the response so the browser enforces it.
   response.headers.set("Content-Security-Policy", csp);

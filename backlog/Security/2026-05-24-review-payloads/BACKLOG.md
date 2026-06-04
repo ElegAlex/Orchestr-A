@@ -10244,3 +10244,26 @@ immutable, out of scope (operator/DPO call). **DEPLOY DEPENDENCY: AUDIT_HASH_KEY
 provisioned in prod `.env.production` BEFORE this ships — the app refuses to boot without
 it; this was NOT touched (separate authorized step).** Gate green: 2040 api unit + 126 int
 + types + lint + build.
+
+### COR-039 — SEC-CSP-001 middleware dropped the bare-root locale redirect (prod `/`→404, web container unhealthy)
+
+- **Status:** DONE
+- **Phase:** post-deploy (regression surfaced during the 2026-06-04 web cutover `7c5e1ae5` verification)
+- **Cluster:** web / i18n routing (same file surface as SEC-CSP-001)
+- **Confidence:** cross-validated (reproduced live on prod AND locally; root cause pinned from git history + a RED witness)
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** correctness · web routing / i18n
+- **File:** `apps/web/middleware.ts`
+- **Source:** post-deploy browser + curl verification of the web cutover (`7c5e1ae5`); NOT from the original `audits/**` (new regression, not an audit finding)
+
+**Description:**
+After the web image was rebuilt at `7c5e1ae5`, prod `GET /` returns **404** while `/fr`, `/fr/login`, `/fr/dashboard` return 200. The previous web build redirected `/`→`/fr`. The compose web healthcheck probes bare `/` (`wget --no-verbose --tries=1 --spider http://127.0.0.1:3000`), so the 404 marks the container **unhealthy**; since `nginx depends_on web: condition: service_healthy`, the next deliberate nginx recreate would refuse to start until web is healthy. Bare-domain users also get a 404 instead of the locale home.
+
+**Root cause:**
+The prior middleware was a bare `export default createMiddleware({ locales, defaultLocale })` — next-intl received the real `NextRequest` and redirected `/`→`/<locale>` (localePrefix "always"). The SEC-CSP-001 rewrite (`785e6617`, `[closes SEC-CSP-001]`) wrapped next-intl to inject a per-request nonce CSP. Its **production** branch built `new Request(request, { headers })` — a plain `Request`, which has **no `.nextUrl`** — and passed that to next-intl. next-intl reads `request.nextUrl` to compute the locale redirect; on a plain `Request` it is `undefined`, so the redirect silently stopped **in production only** (the dev branch passes the real `NextRequest`, so dev kept working — masking the regression). Witnessed: with the bug the request handed to next-intl has `nextUrl === undefined`.
+
+**Fix (this commit):**
+`apps/web/middleware.ts` prod branch now constructs `new NextRequest(request, { headers })` (preserves `.nextUrl`) and passes it to next-intl unchanged, restoring full next-intl behaviour including Accept-Language detection (`/`→`/fr` default; `/`→`/en` for an `en` client). The SEC-CSP-001 nonce logic (request-header injection + response CSP) is **untouched** — no pre-emption or collision with the still-blocked SEC-CSP-001 work; `csp-nonce.test.ts` stays green. Witness `apps/web/src/__tests__/middleware-locale-redirect.test.ts` (RED→GREEN: next-intl now receives a `NextRequest` whose `.nextUrl` is defined; CSP still stamped). Verified by a local production run (`next build` + standalone server): `/`→**307** `/fr` (and `/en` under `Accept-Language: en`), `/fr/*`=200, `wget --spider /` follows the redirect → rc 0 (the compose `/` healthcheck would now pass → clears the unhealthy/nginx-gate). **LOCAL ONLY** — prepares a follow-up web redeploy (separate authorized step).
+
+**Closed_by:** (pending — set by the follow-up commit)
