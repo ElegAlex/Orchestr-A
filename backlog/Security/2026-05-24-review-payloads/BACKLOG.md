@@ -10225,7 +10225,7 @@ OBS-002 trigger untouched.
 pnpm --filter api test -- audit.service audit-hash-key users.service && pnpm --filter api test:integration -- audit-immutability
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** fa83599d
 **Learnings:**
 Forward-only. PART A: `resolveEntityId` → keyed HMAC-SHA256(AUDIT_HASH_KEY,
 trim+lowercase(id)) via new private `hashAttemptedSubject`; removed the now-dead
