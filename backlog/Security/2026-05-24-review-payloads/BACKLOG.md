@@ -9907,7 +9907,7 @@ Fail-pre witness: expected captureSnapshots called 1 time, got 2 — AssertionEr
 ---
 ### DAT-031 — Add durable holidays seeding mechanism
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** C
 - **Confidence:** claude-only
@@ -9950,8 +9950,15 @@ pnpm --filter database db:seed && \
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:**
-- Not blocking Phase 1: prod holidays cover through **2027-12-31** (~24-month runway from 2026-05), so COR-003 was returned to TODO without this. This task closes the structural gap before the runway expires.
-- The TZ off-by-one in `importFrenchHolidays` was fixed in `0dc640e` (UTC date construction + regression test); the durable mechanism must keep using that fixed path.
+Mechanism 2 (cron) + startup hook chosen, both in holidays.service.ts.
+
+Design: added OnApplicationBootstrap.autoImportHolidaysOnBoot() that finds the first ADMIN-templateKey user and calls importFrenchHolidays(currentYear) + importFrenchHolidays(currentYear+1) on every boot. Also added @Cron(Dec 1, Europe/Paris) calling importFrenchHolidays(currentYear+1, currentYear+2) for the rolling forward window. Both paths are idempotent via @@unique([date]) P2002 skip logic already in importFrenchHolidays.
+
+createdById FK (non-nullable) is satisfied by looking up prisma.user.findFirst({ where: { role: { templateKey: ADMIN } } }); if no admin exists yet the import is skipped with a warning (fresh-DB edge case).
+
+Fail-pre witness: before fix, both new spec tests failed with TypeError: service.autoImportHolidaysOnBoot is not a function (2 failed | 31 passed). After fix: 33 tests pass.
+
+Idempotency covered by existing spec line 347 (P2002 skip test). TZ-safety covered by existing spec line 396 (UTC date construction regression test from COR-013 / 0dc640e).
 
 ---
 ### SEC-031 — GET /users list + getUsersBy* helpers have no horizontal scope filter — any users:read holder enumerates the full directory

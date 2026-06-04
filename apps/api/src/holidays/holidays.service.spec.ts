@@ -17,6 +17,9 @@ describe('HolidaysService', () => {
       update: vi.fn(),
       delete: vi.fn(),
     },
+    user: {
+      findFirst: vi.fn(),
+    },
   };
 
   const mockHoliday = {
@@ -556,6 +559,36 @@ describe('HolidaysService', () => {
       );
 
       expect(result).toBe(0);
+    });
+  });
+
+  describe('autoImportHolidaysOnBoot (DAT-031)', () => {
+    it('should call importFrenchHolidays for currentYear and currentYear+1 when an admin user exists', async () => {
+      const adminUser = { id: 'admin-user-id' };
+      mockPrismaService.user = {
+        findFirst: vi.fn().mockResolvedValue(adminUser),
+      };
+      const importSpy = vi
+        .spyOn(service, 'importFrenchHolidays')
+        .mockResolvedValue({ created: 11, skipped: 0 });
+
+      await service.autoImportHolidaysOnBoot();
+
+      const currentYear = new Date().getFullYear();
+      expect(importSpy).toHaveBeenCalledWith(currentYear, adminUser.id);
+      expect(importSpy).toHaveBeenCalledWith(currentYear + 1, adminUser.id);
+      expect(importSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should skip import and log a warning when no admin user exists', async () => {
+      mockPrismaService.user = {
+        findFirst: vi.fn().mockResolvedValue(null),
+      };
+      const importSpy = vi.spyOn(service, 'importFrenchHolidays');
+
+      await service.autoImportHolidaysOnBoot();
+
+      expect(importSpy).not.toHaveBeenCalled();
     });
   });
 });

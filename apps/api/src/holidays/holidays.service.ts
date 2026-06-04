@@ -1,16 +1,114 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ConflictException,
+  OnApplicationBootstrap,
 } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateHolidayDto } from './dto/create-holiday.dto';
 import { UpdateHolidayDto } from './dto/update-holiday.dto';
 import { Holiday, HolidayType, Prisma } from 'database';
 
 @Injectable()
-export class HolidaysService {
+export class HolidaysService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(HolidaysService.name);
+
   constructor(private readonly prisma: PrismaService) {}
+
+  // --- DAT-031: Durable bootstrap + year-boundary cron ---
+
+  /**
+   * On every API boot, idempotently ensures holidays exist for currentYear and
+   * currentYear+1. Safe to run on every restart thanks to @@unique([date])
+   * (P2002 collisions are silently skipped in importFrenchHolidays).
+   *
+   * Finds the first ADMIN user to satisfy the non-nullable createdById FK.
+   * If no admin user exists (empty DB before first seed), the import is
+   * deferred to the next boot or to the manual admin endpoint — the guarantee
+   * is best-effort bootstrap, not hard invariant on a pristine DB.
+   */
+  async onApplicationBootstrap(): Promise<void> {
+    try {
+      await this.autoImportHolidaysOnBoot();
+    } catch (err) {
+      this.logger.error(
+        `Holiday bootstrap import failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  /**
+   * Core logic extracted for testability.
+   * Exported as public so the spec can spy on importFrenchHolidays calls.
+   */
+  async autoImportHolidaysOnBoot(): Promise<void> {
+    const adminUser = await this.prisma.user.findFirst({
+      where: { role: { templateKey: 'ADMIN' } },
+      select: { id: true },
+    });
+
+    if (!adminUser) {
+      this.logger.warn(
+        'Holiday bootstrap skipped: no ADMIN user found. Run the admin import endpoint after first seed.',
+      );
+      return;
+    }
+
+    const currentYear = new Date().getFullYear();
+    for (const year of [currentYear, currentYear + 1]) {
+      const { created, skipped } = await this.importFrenchHolidays(
+        year,
+        adminUser.id,
+      );
+      this.logger.log(
+        `Holiday bootstrap ${year}: created=${created} skipped=${skipped}`,
+      );
+    }
+  }
+
+  /**
+   * DAT-031: Year-boundary cron — fires on 1 December each year and imports
+   * the upcoming year (currentYear+1) and the year after (currentYear+2),
+   * keeping a rolling 2-year forward window populated automatically.
+   *
+   * Idempotent: P2002 collisions (already-existing rows) are skipped silently.
+   * Timezone Europe/Paris ensures the cron fires on 1 Dec French time.
+   */
+  @Cron('0 2 1 12 *', { timeZone: 'Europe/Paris' })
+  async autoImportHolidaysYearBoundary(): Promise<void> {
+    try {
+      const adminUser = await this.prisma.user.findFirst({
+        where: { role: { templateKey: 'ADMIN' } },
+        select: { id: true },
+      });
+
+      if (!adminUser) {
+        this.logger.warn(
+          'Year-boundary holiday cron skipped: no ADMIN user found.',
+        );
+        return;
+      }
+
+      const currentYear = new Date().getFullYear();
+      for (const year of [currentYear + 1, currentYear + 2]) {
+        const { created, skipped } = await this.importFrenchHolidays(
+          year,
+          adminUser.id,
+        );
+        this.logger.log(
+          `Holiday year-boundary cron ${year}: created=${created} skipped=${skipped}`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(
+        `Year-boundary holiday cron failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  // --- End DAT-031 ---
 
   /**
    * Récupère tous les jours fériés
