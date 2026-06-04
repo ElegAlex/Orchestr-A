@@ -9468,7 +9468,7 @@ Set JWT_SECRET= (empty) in .env.example too, forcing the developer to consciousl
 TBD — manual verification (env config), plus boot-assert test if applicable
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 9c0cb8d6
 **Learnings:**
 Extracted assertJwtSecretStrength() pure helper into apps/api/src/common/config/jwt-secret.ts (matches SEC-001/SEC-018 prod-gate pattern). Gated on NODE_ENV===production only, so short test-secret values in specs remain unaffected. .env.example placeholder cleared to empty + openssl generation hint to eliminate memorable default. fail-pre: Cannot find module ./jwt-secret when impl absent; 8 tests RED then GREEN after fix. Acceptance #4 (audit_logs) N/A — boot-time assertion has no request context.
 
