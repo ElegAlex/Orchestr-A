@@ -8430,7 +8430,7 @@ Add REGISTRATION_ENABLED=false default in production; if enabled, accept only @M
 pnpm test apps/api/src/auth/auth.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** ce82cbe
 **Learnings:**
 REGISTRATION_ENABLED gate (default false, must be true to allow registration) + REGISTRATION_EMAIL_DOMAIN comma-list enforced at top of register() via ForbiddenException before any DB access. DTO: @MaxLength(50) + @Matches(/^[^\\p{Cc}\\p{Cn}]+$/u) on firstName/lastName rejecting control chars while allowing accented French names. Fail-pre: 5 RED tests (gate rejection, domain rejection, MaxLength x2, control-char) on unfixed code; all 36 GREEN after fix. Documented in .env.example. Mock isolation: nested describe with beforeEach save/afterEach restore of getMockImplementation to prevent implementation bleed (vi.clearAllMocks does not reset impls).
 
