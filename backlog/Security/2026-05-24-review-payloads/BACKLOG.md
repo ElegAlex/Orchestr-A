@@ -8840,7 +8840,7 @@ TBD — manual verification (config change, no automated test)
 ---
 ### TST-023 — Critical Frontend pages have no test — projects/[id], leaves, settings, telework
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8878,7 +8878,16 @@ pnpm --filter web test  # no targeted spec inferred from apps/web/src/components
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added page-integration tests for leaves, settings, telework pages asserting RBAC-gated affordances via usePermissions mock.
+
+Design: Each test file uses a mutable `mockPermissions` array (leaves/telework) or `mockHasPermission` boolean (settings) to drive the usePermissions mock, making permission states fully controllable per-test.
+
+Fail-pre witness (settings): The committed test asserts `expect(mockPush).toHaveBeenCalledWith("/fr/dashboard")` when `mockHasPermission=false` (DENIED). If the mock is set to `true` (GRANTED) instead, the settings page does NOT call router.push → assertion fails with "Expected: called, Received: not called" → RED. This is the canonical fail-pre for a route-guard test.
+
+Leaves: 10 tests covering 4 permission levels (none/approve/readAll/manage). Telework: 7 tests covering regular user vs manager with telework:manage_any+users:read. Settings: 5 tests for the hard route-guard.
+
+Gate: pnpm run build=0, pnpm run test=0. No production code modified (test-only commits).
 
 ---
 ### TST-024 — No multi-role E2E for reject, cancel, delegation, or balance restoration
