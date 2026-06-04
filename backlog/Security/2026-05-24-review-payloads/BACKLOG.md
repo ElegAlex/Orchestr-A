@@ -7543,7 +7543,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+KEPT FAILED — re-verified from primary source 2026-06-04 (post-run cleanup pass; not trusting the prior verdict). The reported defect (date-filtered `findAll` returns a bare array, no `meta.total`) is GENUINELY GONE: `leaves.service.ts` `findAll` returns a uniform `{ data, meta:{ total, page, limit, totalPages } }` shape on every path — `grep "return enrichedLeaves"` = 0 hits; the early-return was deleted by PER-006 (`4b2fd004`, commit msg verbatim: "Remove early `return enrichedLeaves` that bypassed pagination… Date-filtered queries now always return {data,meta}" and references "the COR-011 guard"). `take: safeLimit` (capped 500) is applied uniformly and `total` comes from `prisma.leave.count`. The only API caller (`leaves.controller.ts:216`) consumes `{data,meta}`. No gap remains. Closing COR-011 would require an AC#2 RED, but the fix is already committed under `[closes PER-006]`; reverting it to manufacture a RED = retro-editing closed work (contract rule 3). Honest non-close: already fixed by PER-006.
 
 ---
 ### COR-015 — Project date validation: create uses <= (rejects same-day), tasks uses < (accepts) — inconsistent
@@ -7896,7 +7897,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+KEPT FAILED — re-verified from primary source 2026-06-04 (post-run cleanup; re-derived). The reported defect (the **Description**: missing `@@index` on `date`, `parentEventId`, `createdById` → calendar `WHERE date BETWEEN …` table-scans) is FULLY COVERED in the current schema: `Event` now has `@@index([date])` + `@@index([createdById, date])` (PER-012) and `@@index([projectId])`, `@@index([createdById])`, `@@index([parentEventId])` (DAT-011) (`schema.prisma` ~971-975). The only unimplemented items are from the **Suggested fix** advisory list, NOT the reported defect: `@@index([projectId, date])` (a composite optimization — `[projectId]`+`[date]` already prevent the scan the Description names; not a reported table-scan) and the "Consider @db.Date" note (intentionally declined — Events carry a time component, unlike `Holiday`). NB: the prior one-line verdict's "no RED possible for an index" rationale is wrong-in-general (DAT-029 closed index additions, `25a17322`); the correct rationale is that the reported defect is already covered and the residual items are non-required suggestions. Honest non-close: reported issue already addressed by DAT-011 + PER-012.
 
 ---
 ### OBS-009 — No correlation/request ID propagation
@@ -9046,7 +9048,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+KEPT FAILED — re-verified from primary source 2026-06-04 (post-run cleanup; re-derived, not trusting the prior verdict). NON-DEFECT confirmed. In `leaves.service.ts` `create()`: `declaredByManager` is set true ONLY when `targetUserId && targetUserId !== requestingUserId` (line ~360); `isForSelf = !declaredByManager` and `canSelfApprove = isForSelf && roleHasPermission(role,'leaves:self_approve')` (lines ~479-482). The two flags are therefore MUTUALLY EXCLUSIVE by construction — declaring-for-self (target===self or omitted) is the self-service path where `leaves:self_approve` legitimately applies; declaring-for-others is its own path where self-approve never fires. A role auto-approving its OWN leave is exactly what the `leaves:self_approve` permission grants — not a privilege bypass (a role without it gets PENDING). The precedence the audit asked to "make explicit" is already explicit AND commented (lines ~476-478). There is no failure mode to exercise → no AC#2 RED possible → cannot be closed under the gate. Honest non-close: working as designed.
 
 ---
 ### COR-029 — getPendingDays counts by deprecated type enum, not leaveTypeId
@@ -9229,7 +9232,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+KEPT FAILED — re-verified from primary source 2026-06-04 (post-run cleanup; re-derived). NON-DEFECT, backend-enforced. The `enrichLeavesWithPermissions` `canEdit`/`canDelete` flags (owner: canEdit only PENDING, canDelete PENDING|REJECTED — `leaves.service.ts` lines ~259-292) are UI affordance HINTS that MIRROR the backend's own independent enforcement: `update()` rejects anything but PENDING ("Seules les demandes en attente peuvent être modifiées", line ~1239) and `remove()` allows only PENDING|REJECTED ("Seules les demandes en attente ou refusées peuvent être supprimées", line ~1502). So the flagged "asymmetry" (owner may delete but not edit a REJECTED leave) is correct domain logic — a rejected request is a closed decision you dismiss, not edit — and it is enforced at the service layer, not merely the hint. The hint flags cannot be exploited (mutations re-check status server-side). No failure mode → no AC#2 RED → cannot be closed under the gate. Honest non-close: intentional + backend-enforced.
 
 ---
 ### DAT-028 — PasswordResetToken: no index on (userId, usedAt) and no auto-cleanup of expired tokens
