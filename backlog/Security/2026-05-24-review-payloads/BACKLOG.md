@@ -9733,7 +9733,7 @@ Introduce a thin CacheService and wrap: /analytics (60s), /planning/overview (15
 pnpm test apps/api/src/auth/jwt-blacklist.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** e62ad89c
 **Learnings:**
 Introduced thin CacheService (ioredis get/set/del, fail-open) in apps/api/src/common/services/. Wired into AnalyticsService constructor (injected via DI). Cache key includes userId to prevent cross-user data leak (user A scope never served to user B). TTL=60s, no mutation-bust hooks (AC#6 scope constraint: mutation modules untouched). Fail-pre: analytics.service.spec.ts PER-026 test RED on unfixed code (prisma.project.findMany called 2x instead of 1x on 2nd identical call). GREEN after fix. Existing PER-001 test unaffected (miss-only cache mock in base TestingModule). ConfigModule isGlobal=true so no explicit import needed. analytics.module.ts registers CacheService as provider.
 
