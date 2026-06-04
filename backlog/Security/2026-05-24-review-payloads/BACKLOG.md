@@ -5961,7 +5961,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### DAT-008 — Leave.user onDelete: Cascade erases approved leave history when a user is deleted
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 10
 - **Cluster:** G
 - **Confidence:** claude-only
@@ -6000,11 +6000,16 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:**
-HALTED — operator compliance decision. Decision-prep written 2026-06-04:
-`DAT-008-026-COMPLIANCE-SPEC.md` (anonymise-don't-delete posture, the DAT-022
-Restrict / DAT-015 unique+LOWER-index coherence constraints, and the 3 open
-operator decisions — PII fields, retention window, reversibility). NOT decided,
-NOT implemented. Resume per that spec once the operator answers DECISIONS 1–3.
+Re-grounded by operator decision A′ (2026-06-04): this app is NOT the SIRH of legal
+record → no Code du Travail retention obligation. The Cascade DAT-008 flagged is now
+CORRECT behaviour: a deleted user's owned leave/time/balance rows ARE erased (full
+erasure), made explicit in `UsersService.hardDelete` rather than relying on silent
+CASCADE. Where the immutable audit trail forbids physical deletion (audit-bearing
+users), the row is anonymised in place and the audit trail preserved — so history is
+never silently lost the way DAT-008 feared; it is either intentionally erased (no
+retention) or kept as an immutable, attributable audit record. No anonymisation of
+the audit trail; OBS-002 untouched. Shares the implementation + witnesses with
+DAT-026 (see `DAT-008-026-COMPLIANCE-SPEC.md`, now superseded to A′).
 
 ---
 ### DAT-022 — User.departmentId nullable + onDelete:SetNull conflicts with RBAC scope checks
@@ -6049,6 +6054,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 **Closed_by:** 0ac82e3
 **Learnings:**
 Changed User.department onDelete from SetNull to Restrict (schema.prisma line 48). Created migration 20260603215133_dat022_department_fk_restrict (drop+re-add users_departmentId_fkey with ON DELETE RESTRICT). App-layer guard in DepartmentsService.remove() already blocks deletes when _count.users>0 — Restrict is the coherent DB-level backstop that prevents silent RBAC scope loss if any bypass path is ever introduced. Fail-pre witness: int test RED on unfixed code (delete succeeded, message empty, /P2003|23001|23503/ did not match). Pass-post: DB emits 23001 restrict_violation, both int tests GREEN. Acceptance #4 (audit_logs): Restrict means the delete is rejected at the DB, so there is no mutation to snapshot — no audit row needed. Postgres RESTRICT uses code 23001 (restrict_violation), not 23503 (foreign_key_violation used by NoAction).
+DAT-008/026 re-derivation (decision A′, 2026-06-04) confirms this FK is the User→Department direction — it constrains DEPARTMENT deletion, never USER deletion — so it does NOT block the full-erasure user-deletion work and correctly stays Restrict (no change made). The operator's "close DAT-022 too" instruction is already satisfied by this prior closure (`0ac82e3`).
 
 ---
 ### DAT-025 — Document model: no integrity hash, no soft-delete, no FK on uploadedBy
@@ -6097,7 +6103,7 @@ Added uploadedBy String?->String? FK @relation(DocumentUploader) onDelete:SetNul
 ---
 ### DAT-026 — User has no @@index on (isActive) and no soft-delete column
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 10
 - **Cluster:** G
 - **Confidence:** claude-only
@@ -6136,12 +6142,20 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
 **Learnings:**
-HALTED — operator compliance decision. Note: `@@index([isActive])` already
-exists (PER-011), so only `deletedAt` + `@@index([deletedAt])` + the
-soft-delete/anonymisation posture remain. Decision-prep written 2026-06-04:
-`DAT-008-026-COMPLIANCE-SPEC.md` (shared with DAT-008 — same anonymise-don't-delete
-work, same 3 open operator decisions). NOT decided, NOT implemented. Resume per
-that spec once the operator answers DECISIONS 1–3.
+Implemented per operator decision A′ (2026-06-04, full erasure; audit-bearing users
+→ anonymised shell; no retention; OBS-002 untouched). The "soft-delete +
+anonymisation of LIVE users" posture is dropped. `@@index([isActive])` already
+existed (PER-011). `User.deletedAt DateTime?` + `@@index([deletedAt])` added
+(migration 20260604110510) as the shell marker — the "index half" that survives.
+`hardDelete` branches on authored-audit count: trail-less → physical delete;
+audit-bearing → anonymise in place (email/login tombstone keyed by id → DAT-015
+unique+LOWER safe; firstName/lastName tombstone constant since NOT NULL; avatarUrl/
+preset null + on-disk file removed; deletedAt set; isActive=false). 12 secondary
+User-referencing FKs flipped to nullable+SetNull (migration 20260604103344) so an
+actor leaving never blocks/over-deletes others' data. checkDependencies no longer
+blocks (audit count is informational). findAll/findOne filter deletedAt:null.
+Witnesses: secondary-FK int spec (RED→GREEN), anonymised-shell int spec, unit specs.
+Gate green; audit_logs/OBS-002 untouched. See `DAT-008-026-COMPLIANCE-SPEC.md`.
 
 ---
 

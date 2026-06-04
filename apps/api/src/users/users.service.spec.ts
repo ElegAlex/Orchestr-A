@@ -5,11 +5,7 @@ import { join, resolve, sep } from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 // Mock fs/promises for avatar tests
@@ -107,6 +103,31 @@ describe('UsersService', () => {
     task: {
       findMany: vi.fn(),
       count: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    // DAT-008/026 — owned-record models hardDelete now erases explicitly.
+    refreshToken: {
+      deleteMany: vi.fn(),
+    },
+    passwordResetToken: {
+      deleteMany: vi.fn(),
+    },
+    teleworkRecurringRule: {
+      deleteMany: vi.fn(),
+    },
+    eventParticipant: {
+      deleteMany: vi.fn(),
+    },
+    taskAssignee: {
+      deleteMany: vi.fn(),
+    },
+    predefinedTaskAssignment: {
+      deleteMany: vi.fn(),
+    },
+    predefinedTaskRecurringRule: {
+      deleteMany: vi.fn(),
+    },
+    leaveBalance: {
       deleteMany: vi.fn(),
     },
     auditLog: {
@@ -552,7 +573,7 @@ describe('UsersService', () => {
 
       expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { role: { code: 'ADMIN' } },
+          where: { deletedAt: null, role: { code: 'ADMIN' } },
         }),
       );
     });
@@ -580,8 +601,8 @@ describe('UsersService', () => {
       // Full payload: sensitive fields exposed to management.
       expect(args.select.email).toBe(true);
       expect(args.select.login).toBe(true);
-      // Set NOT horizontally scoped — no OR buckets merged.
-      expect(args.where).toEqual({});
+      // Set NOT horizontally scoped — no OR buckets merged. Shells excluded.
+      expect(args.where).toEqual({ deletedAt: null });
       expect(args.where.OR).toBeUndefined();
     });
 
@@ -600,12 +621,13 @@ describe('UsersService', () => {
       // Directory fields still present.
       expect(args.select.firstName).toBe(true);
       expect(args.select.role).toBeDefined();
-      // Set unchanged: no horizontal scope — same users as management would see.
-      expect(args.where).toEqual({});
+      // Set unchanged: no horizontal scope — same users as management would see
+      // (shells excluded via deletedAt:null).
+      expect(args.where).toEqual({ deletedAt: null });
       expect(args.where.OR).toBeUndefined();
       // count uses the same unscoped where (totals reflect the full directory).
       const countArgs = mockPrismaService.user.count.mock.calls[0][0];
-      expect(countArgs.where).toEqual({});
+      expect(countArgs.where).toEqual({ deletedAt: null });
     });
 
     // PER-004: hard ceiling of 200 to prevent 5-20 MB planning payloads
@@ -665,9 +687,10 @@ describe('UsersService', () => {
 
       expect(result).toBeDefined();
       expect(result.id).toBe('1');
-      // Management caller resolves to an empty scope where (every user).
+      // Management caller resolves to an empty scope where (every user); shells
+      // (deletedAt set) are excluded.
       const args = mockPrismaService.user.findFirst.mock.calls[0][0];
-      expect(args.where).toEqual({ id: '1' });
+      expect(args.where).toEqual({ id: '1', deletedAt: null });
       // Full payload exposes the sensitive fields.
       expect(args.select.email).toBe(true);
       expect(args.select.login).toBe(true);
@@ -1636,16 +1659,12 @@ describe('UsersService', () => {
   });
 
   describe('checkDependencies', () => {
-    it('should return canDelete true when no dependencies', async () => {
+    it('should return canDelete true when no audit history', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'user-1',
         email: 'user@example.com',
       });
-      mockPrismaService.task.count.mockResolvedValue(0);
-      mockPrismaService.projectMember.count.mockResolvedValue(0);
-      mockPrismaService.leave.count.mockResolvedValue(0);
-      mockPrismaService.department.count.mockResolvedValue(0);
-      mockPrismaService.service.count.mockResolvedValue(0);
+      mockPrismaService.auditLog.count.mockResolvedValue(0);
 
       const result = await service.checkDependencies('user-1');
 
@@ -1654,33 +1673,42 @@ describe('UsersService', () => {
       expect(result.dependencies).toHaveLength(0);
     });
 
-    it('should return canDelete false with dependencies', async () => {
+    // DAT-008/026 (A′): deletion ALWAYS succeeds (canDelete=true) — audit-bearing
+    // users are anonymised (shell), not blocked. Audit history is surfaced only as
+    // an INFORMATIONAL dependency so the UI can warn it will be an anonymised shell.
+    // Former "active dependencies" (tasks, project memberships, managed
+    // departments/services, pending leaves) are gone — erased (owned) or unlinked
+    // (SetNull) by hardDelete.
+    it('reports audit history as informational only (canDelete stays true)', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'user-1',
         email: 'user@example.com',
       });
+      // Active tasks/memberships present, but they are no longer consulted.
       mockPrismaService.task.count.mockResolvedValue(3);
       mockPrismaService.projectMember.count.mockResolvedValue(2);
-      mockPrismaService.leave.count.mockResolvedValue(0);
       mockPrismaService.department.count.mockResolvedValue(1);
-      mockPrismaService.service.count.mockResolvedValue(0);
+      mockPrismaService.auditLog.count.mockResolvedValue(5);
 
       const result = await service.checkDependencies('user-1');
 
-      expect(result.canDelete).toBe(false);
-      expect(result.dependencies.length).toBeGreaterThan(0);
+      // Audit history does NOT block — the account is anonymised, not refused.
+      expect(result.canDelete).toBe(true);
+      expect(result.dependencies).toHaveLength(1);
 
-      const taskDep = result.dependencies.find((d) => d.type === 'TASKS');
-      expect(taskDep).toBeDefined();
-      expect(taskDep!.count).toBe(3);
+      const auditDep = result.dependencies.find((d) => d.type === 'AUDIT_LOGS');
+      expect(auditDep).toBeDefined();
+      expect(auditDep!.count).toBe(5);
+      expect(auditDep!.description).toMatch(/anonymis/i);
 
-      const projectDep = result.dependencies.find((d) => d.type === 'PROJECTS');
-      expect(projectDep).toBeDefined();
-      expect(projectDep!.count).toBe(2);
-
-      const deptDep = result.dependencies.find((d) => d.type === 'DEPARTMENTS');
-      expect(deptDep).toBeDefined();
-      expect(deptDep!.count).toBe(1);
+      // The former active-dependency types are gone.
+      expect(result.dependencies.some((d) => d.type === 'TASKS')).toBe(false);
+      expect(result.dependencies.some((d) => d.type === 'PROJECTS')).toBe(
+        false,
+      );
+      expect(result.dependencies.some((d) => d.type === 'DEPARTMENTS')).toBe(
+        false,
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {
@@ -1698,12 +1726,8 @@ describe('UsersService', () => {
         id: 'user-1',
         email: 'user@example.com',
       });
-      // checkDependencies mocks (no dependencies)
-      mockPrismaService.task.count.mockResolvedValue(0);
-      mockPrismaService.projectMember.count.mockResolvedValue(0);
-      mockPrismaService.leave.count.mockResolvedValue(0);
-      mockPrismaService.department.count.mockResolvedValue(0);
-      mockPrismaService.service.count.mockResolvedValue(0);
+      // checkDependencies: no audit history → deletable (full-erasure)
+      mockPrismaService.auditLog.count.mockResolvedValue(0);
       // Transaction mocks
       mockPrismaService.personalTodo.deleteMany.mockResolvedValue({ count: 0 });
       mockPrismaService.timeEntry.deleteMany.mockResolvedValue({ count: 0 });
@@ -1757,65 +1781,81 @@ describe('UsersService', () => {
       );
     });
 
-    it('should throw ConflictException when dependencies exist', async () => {
+    // DAT-008/026 — full erasure: active tasks / project memberships used to
+    // block hardDelete; they no longer do. With no audit history the user is
+    // fully erasable (owned records deleted, secondary references SetNull).
+    it('no longer blocks on active tasks/memberships — full erasure proceeds', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'user-1',
         email: 'user@example.com',
       });
-      // checkDependencies mocks (has dependencies)
       mockPrismaService.task.count.mockResolvedValue(5);
-      mockPrismaService.projectMember.count.mockResolvedValue(0);
-      mockPrismaService.leave.count.mockResolvedValue(0);
-      mockPrismaService.department.count.mockResolvedValue(0);
-      mockPrismaService.service.count.mockResolvedValue(0);
+      mockPrismaService.projectMember.count.mockResolvedValue(2);
+      mockPrismaService.auditLog.count.mockResolvedValue(0);
+      mockPrismaService.user.delete.mockResolvedValue({ id: 'user-1' });
 
-      await expect(service.hardDelete('user-1', 'admin-1')).rejects.toThrow(
-        ConflictException,
-      );
+      const result = await service.hardDelete('user-1', 'admin-1');
+
+      expect(result.success).toBe(true);
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+      expect(mockPrismaService.user.delete).toHaveBeenCalled();
     });
 
-    // USR-DEL-001 — audit_logs.actor_id is ON DELETE NO ACTION (d6299cc), so a
-    // user who authored ≥1 audit row cannot be hard-deleted; checkDependencies
-    // must surface this as a typed ConflictException (not a raw P2003) naming
-    // the audit count and recommending soft-deactivation (USER_DEACTIVATED).
-    it('throws ConflictException (not raw P2003) when the user authored audit_logs rows, and does NOT delete', async () => {
+    // DAT-008/026 (decision A′) — an audit-authoring user cannot be physically
+    // deleted (audit_logs.actorId FK is ON DELETE NO ACTION + OBS-002 forbids the
+    // SET NULL), so full erasure is achieved by ANONYMISING the User row in place:
+    // identifiers tombstoned (keyed by id → DAT-015 unique-safe), names cleared,
+    // deletedAt set, deactivated. Owned data is still erased; audit_logs rows are
+    // kept intact and still reference the (now anonymised) id. The audit subsystem
+    // is never touched.
+    it('anonymises the User row (shell) instead of physically deleting when the user authored audit_logs rows', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
-        id: 'user-1',
-        email: 'user@example.com',
+        id: 'user-7',
+        email: 'real.person@example.com',
+        login: 'rperson',
+        firstName: 'Real',
+        lastName: 'Person',
+        avatarUrl: '/api/uploads/avatars/user-7.png',
+        avatarPreset: null,
+        isActive: true,
       });
-      // No "active" dependencies — only audit history blocks the delete.
-      mockPrismaService.task.count.mockResolvedValue(0);
-      mockPrismaService.projectMember.count.mockResolvedValue(0);
-      mockPrismaService.leave.count.mockResolvedValue(0);
-      mockPrismaService.department.count.mockResolvedValue(0);
-      mockPrismaService.service.count.mockResolvedValue(0);
       mockPrismaService.auditLog.count.mockResolvedValue(7);
+      mockPrismaService.user.update.mockResolvedValue({ id: 'user-7' });
 
-      let caught: ConflictException | undefined;
-      try {
-        await service.hardDelete('user-1', 'admin-1');
-      } catch (err) {
-        caught = err as ConflictException;
-      }
+      const result = await service.hardDelete('user-7', 'admin-1');
 
-      expect(caught).toBeInstanceOf(ConflictException);
-      const response = caught!.getResponse() as {
-        message: string;
-        dependencies: { type: string; count: number; description: string }[];
-      };
-      const auditDep = response.dependencies.find(
-        (d) => d.type === 'AUDIT_LOGS',
-      );
-      expect(auditDep).toBeDefined();
-      expect(auditDep!.count).toBe(7);
-      // Description names the count and recommends soft-deactivation.
-      expect(auditDep!.description).toContain('7');
-      expect(auditDep!.description).toMatch(/USER_DEACTIVATED|désactiv/i);
+      expect(result.success).toBe(true);
 
-      // The row is NOT erased and no USER_DELETED event is emitted.
+      // No physical delete; the row is anonymised in place, owned data still erased.
       expect(mockPrismaService.user.delete).not.toHaveBeenCalled();
-      expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
-      expect(mockAuditPersistence.log).not.toHaveBeenCalled();
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-7' },
+          data: expect.objectContaining({
+            email: 'deleted-user-7@anonymized.invalid',
+            login: 'deleted-user-7',
+            avatarUrl: null,
+            avatarPreset: null,
+            isActive: false,
+            deletedAt: expect.any(Date),
+          }),
+        }),
+      );
+      // Names are cleared (tombstoned, not the originals) — NOT NULL forces a
+      // constant rather than literal null.
+      const updateArg = mockPrismaService.user.update.mock.calls[0][0] as {
+        data: Record<string, unknown>;
+      };
+      expect(updateArg.data.firstName).not.toBe('Real');
+      expect(updateArg.data.lastName).not.toBe('Person');
+
+      // The deletion is still audited (USER_DELETED snapshot, captured before
+      // anonymisation), and the snapshot never leaks the password hash.
+      expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'USER_DELETED', entityId: 'user-7' }),
+      );
     });
 
     it('hard-deletes and emits USER_DELETED with a column snapshot when the user has zero audit_logs rows', async () => {

@@ -43,6 +43,13 @@ model User {
   forcePasswordChange Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  // DAT-026 — soft-delete marker for the anonymised-shell deletion path. Set
+  // only when a user who authored immutable audit_logs rows is "deleted": the
+  // row is anonymised in place (identifiers tombstoned) and kept so the audit
+  // trail's actorId references stay valid, with deletedAt excluding the shell
+  // from active reads. Trail-less users are still physically deleted (deletedAt
+  // never set). NULL = live user.
+  deletedAt           DateTime?
 
   // Relations
   department                       Department?                   @relation("DepartmentUsers", fields: [departmentId], references: [id], onDelete: Restrict)
@@ -92,6 +99,7 @@ model User {
   @@index([isActive])     // PER-011: hot predicate — presence, analytics, workload, leaves import
   @@index([departmentId]) // PER-011: hot predicate — organigramme, per-department queries
   @@index([roleId])       // PER-011: hot predicate — RBAC V4 role-scoped queries
+  @@index([deletedAt])    // DAT-026: soft-delete (anonymised-shell) filter performance
   @@map("users")
 }
 
@@ -439,7 +447,7 @@ model TimeEntry {
   id           String       @id @default(uuid())
   userId       String?
   thirdPartyId String?
-  declaredById String
+  declaredById String?
   projectId    String?
   taskId       String?
   date         DateTime     @db.Date
@@ -453,7 +461,7 @@ model TimeEntry {
   // Relations
   user       User?       @relation("TimeEntryUser", fields: [userId], references: [id], onDelete: Cascade)
   thirdParty ThirdParty? @relation(fields: [thirdPartyId], references: [id], onDelete: Cascade)
-  declaredBy User        @relation("TimeEntryDeclaredBy", fields: [declaredById], references: [id], onDelete: Restrict)
+  declaredBy User?       @relation("TimeEntryDeclaredBy", fields: [declaredById], references: [id], onDelete: SetNull)
   project    Project?    @relation(fields: [projectId], references: [id], onDelete: Restrict) // DAT-007: Restrict (was SetNull) — logged time must not silently lose its Project link on hard-delete
   task       Task?       @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
@@ -493,11 +501,11 @@ model ThirdParty {
   contactEmail     String?
   notes            String?
   isActive         Boolean        @default(true)
-  createdById      String
+  createdById      String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  createdBy          User                      @relation("ThirdPartyCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy          User?                     @relation("ThirdPartyCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   taskAssignments    TaskThirdPartyAssignee[]
   projectMemberships ProjectThirdPartyMember[]
   timeEntries        TimeEntry[]
@@ -511,12 +519,12 @@ model TaskThirdPartyAssignee {
   id           String   @id @default(uuid())
   taskId       String
   thirdPartyId String
-  assignedById String
+  assignedById String?
   createdAt    DateTime @default(now())
 
   task       Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
   thirdParty ThirdParty @relation(fields: [thirdPartyId], references: [id], onDelete: Cascade)
-  assignedBy User       @relation("TaskThirdPartyAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+  assignedBy User?      @relation("TaskThirdPartyAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
 
   @@unique([taskId, thirdPartyId])
   @@index([taskId])
@@ -529,12 +537,12 @@ model ProjectThirdPartyMember {
   projectId    String
   thirdPartyId String
   allocation   Int?
-  assignedById String
+  assignedById String?
   createdAt    DateTime @default(now())
 
   project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   thirdParty ThirdParty @relation(fields: [thirdPartyId], references: [id], onDelete: Cascade)
-  assignedBy User       @relation("ProjectThirdPartyAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+  assignedBy User?      @relation("ProjectThirdPartyAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
 
   @@unique([projectId, thirdPartyId])
   @@index([projectId])
@@ -882,10 +890,10 @@ model Holiday {
   recurring   Boolean     @default(false) // Se répète chaque année à la même date
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  createdById String
+  createdById String?
 
   // Relations
-  createdBy User @relation("HolidayCreator", fields: [createdById], references: [id])
+  createdBy User? @relation("HolidayCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@unique([date])
   @@index([date])
@@ -923,12 +931,12 @@ model SchoolVacation {
   zone        SchoolVacationZone
   year        Int
   source      SchoolVacationSource @default(MANUAL)
-  createdById String
+  createdById String?
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
 
   // Relations
-  createdBy User @relation("SchoolVacationCreator", fields: [createdById], references: [id])
+  createdBy User? @relation("SchoolVacationCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@unique([name, zone, year])
   @@index([startDate, endDate])
@@ -950,7 +958,7 @@ model Event {
   isAllDay               Boolean  @default(true)
   isExternalIntervention Boolean  @default(false)
   projectId              String?
-  createdById            String
+  createdById            String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -963,7 +971,7 @@ model Event {
 
   // Relations
   project      Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  createdBy    User               @relation("EventCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy    User?              @relation("EventCreator", fields: [createdById], references: [id], onDelete: SetNull)
   participants EventParticipant[]
   parentEvent  Event?             @relation("EventRecurrence", fields: [parentEventId], references: [id], onDelete: Cascade)
   childEvents  Event[]            @relation("EventRecurrence")
@@ -1000,13 +1008,13 @@ model TeleworkRecurringRule {
   startDate   DateTime
   endDate     DateTime?
   isActive    Boolean   @default(true)
-  createdById String
+  createdById String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   // Relations
   user      User @relation("TeleworkRecurringRuleUser", fields: [userId], references: [id], onDelete: Cascade)
-  createdBy User @relation("TeleworkRecurringRuleCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy User? @relation("TeleworkRecurringRuleCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@unique([userId, dayOfWeek, startDate])
   @@map("telework_recurring_rules")
@@ -1057,12 +1065,12 @@ model PredefinedTask {
   isTeleworkAllowed      Boolean  @default(true)
   isActive               Boolean  @default(true)
   weight                 Int      @default(1) // 1..5, pondération pour équilibrage
-  createdById            String
+  createdById            String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
   // Relations
-  createdBy      User                          @relation("PredefinedTaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy      User?                         @relation("PredefinedTaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
   assignments    PredefinedTaskAssignment[]
   recurringRules PredefinedTaskRecurringRule[]
 
@@ -1076,7 +1084,7 @@ model PredefinedTaskAssignment {
   userId              String
   date                DateTime
   period              DayPeriod // DAT-012: was String "MORNING"|"AFTERNOON"|"FULL_DAY"
-  assignedById        String
+  assignedById        String?
   isRecurring         Boolean   @default(false)
   recurringRuleId     String?
   completionStatus    AssignmentCompletionStatus @default(NOT_DONE) // DAT-012: was String
@@ -1089,7 +1097,7 @@ model PredefinedTaskAssignment {
   // Relations
   predefinedTask PredefinedTask               @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
   user           User                         @relation("PredefinedTaskAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
-  assignedBy     User                         @relation("PredefinedTaskAssignmentAssigner", fields: [assignedById], references: [id], onDelete: Cascade)
+  assignedBy     User?                        @relation("PredefinedTaskAssignmentAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
   recurringRule  PredefinedTaskRecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
   completedBy    User?                        @relation("AssignmentCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
 
@@ -1112,14 +1120,14 @@ model PredefinedTaskRecurringRule {
   startDate         DateTime
   endDate           DateTime?
   isActive          Boolean   @default(true)
-  createdById       String
+  createdById       String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   // Relations
   predefinedTask PredefinedTask             @relation(fields: [predefinedTaskId], references: [id], onDelete: Cascade)
   user           User                       @relation("PredefinedTaskRecurringRuleUser", fields: [userId], references: [id], onDelete: Cascade)
-  createdBy      User                       @relation("PredefinedTaskRecurringRuleCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy      User?                      @relation("PredefinedTaskRecurringRuleCreator", fields: [createdById], references: [id], onDelete: SetNull)
   assignments    PredefinedTaskAssignment[]
 
   @@index([predefinedTaskId]) // DAT-011: FK without auto-index
@@ -1138,12 +1146,12 @@ model PasswordResetToken {
   token       String    @unique
   expiresAt   DateTime
   usedAt      DateTime?
-  createdById String // Admin qui a généré le token
+  createdById String? // Admin qui a généré le token
   createdAt   DateTime  @default(now())
 
   // Relations
   user      User @relation("PasswordResetTokenUser", fields: [userId], references: [id], onDelete: Cascade)
-  createdBy User @relation("PasswordResetTokenCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdBy User? @relation("PasswordResetTokenCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([userId])         // DAT-011: FK without auto-index
   @@index([createdById])    // DAT-011: FK without auto-index

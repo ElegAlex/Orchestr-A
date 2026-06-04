@@ -232,7 +232,11 @@ export class UsersService {
         : Math.min(limit || 20, HARD_CEILING);
     const skip = (page - 1) * safeLimit;
 
-    const where = roleCode ? { role: { code: roleCode } } : {};
+    // DAT-026: exclude anonymised-shell users (deletedAt set) from the directory.
+    const where = {
+      deletedAt: null,
+      ...(roleCode ? { role: { code: roleCode } } : {}),
+    };
 
     // SEC-031: payload restriction only — the directory list is intentionally
     // NOT where-scoped (see FULL_LIST_SELECT comment). Management-tier callers
@@ -480,7 +484,8 @@ export class UsersService {
     ]);
 
     const user = await this.prisma.user.findFirst({
-      where: { id, ...scopeWhere },
+      // DAT-026: an anonymised shell (deletedAt set) is not a viewable user.
+      where: { id, deletedAt: null, ...scopeWhere },
       select: isManagement
         ? UsersService.FULL_USER_SELECT
         : UsersService.DIRECTORY_USER_SELECT,
@@ -825,7 +830,24 @@ export class UsersService {
   }
 
   /**
-   * Vérifie les dépendances d'un utilisateur avant suppression définitive
+   * Décrit l'effet d'une suppression définitive (endpoint informatif).
+   *
+   * DAT-008 / DAT-026 (decision A′, 2026-06-04): this app is NOT the SIRH of legal
+   * record — a deleted user is fully erased (PII + owned operational data) in ALL
+   * cases. There is therefore no longer any BLOCKING dependency: the former checks
+   * (pending leaves, active project memberships, managed departments/services,
+   * in-flight tasks) are gone — those records are deleted (owned) or unlinked
+   * (secondary FK SET NULL, migration 20260604103344). `canDelete` is always true.
+   *
+   * The only nuance is the deletion MECHANISM, surfaced here as an informational
+   * `AUDIT_LOGS` entry (it does NOT block): a user who authored immutable
+   * `audit_logs` rows (`actorId` is ON DELETE NO ACTION + OBS-002 forbids the SET
+   * NULL a delete would cascade) cannot be physically deleted, so `hardDelete`
+   * ANONYMISES the row in place (identifiers tombstoned, `deletedAt` set) and keeps
+   * it + its audit rows intact. A trail-less user is physically deleted. Either way
+   * PII and owned data are erased and the audit subsystem is never touched.
+   * (Because LOGIN_SUCCESS sets `actorId = self`, every user who has ever logged in
+   * takes the anonymised-shell path.)
    */
   async checkDependencies(userId: string): Promise<UserDependenciesResponse> {
     const user = await this.prisma.user.findUnique({
@@ -838,93 +860,8 @@ export class UsersService {
 
     const dependencies: UserDependency[] = [];
 
-    const assignedTasks = await this.prisma.task.count({
-      where: {
-        assigneeId: userId,
-        status: { not: 'DONE' },
-      },
-    });
-    if (assignedTasks > 0) {
-      dependencies.push({
-        type: 'TASKS',
-        count: assignedTasks,
-        description: `${assignedTasks} tâche(s) assignée(s) en cours`,
-      });
-    }
-
-    const projectMemberships = await this.prisma.projectMember.count({
-      where: {
-        userId,
-        project: {
-          status: { notIn: ['COMPLETED', 'CANCELLED'] },
-        },
-      },
-    });
-    if (projectMemberships > 0) {
-      dependencies.push({
-        type: 'PROJECTS',
-        count: projectMemberships,
-        description: `Membre de ${projectMemberships} projet(s) actif(s)`,
-      });
-    }
-
-    const pendingLeaves = await this.prisma.leave.count({
-      where: {
-        userId,
-        status: 'PENDING',
-      },
-    });
-    if (pendingLeaves > 0) {
-      dependencies.push({
-        type: 'LEAVES',
-        count: pendingLeaves,
-        description: `${pendingLeaves} demande(s) de congé en attente`,
-      });
-    }
-
-    const leavesToValidate = await this.prisma.leave.count({
-      where: {
-        validatorId: userId,
-        status: 'PENDING',
-      },
-    });
-    if (leavesToValidate > 0) {
-      dependencies.push({
-        type: 'LEAVES_VALIDATION',
-        count: leavesToValidate,
-        description: `${leavesToValidate} congé(s) en attente de validation`,
-      });
-    }
-
-    const managedDepartments = await this.prisma.department.count({
-      where: { managerId: userId },
-    });
-    if (managedDepartments > 0) {
-      dependencies.push({
-        type: 'DEPARTMENTS',
-        count: managedDepartments,
-        description: `Manager de ${managedDepartments} département(s)`,
-      });
-    }
-
-    const managedServices = await this.prisma.service.count({
-      where: { managerId: userId },
-    });
-    if (managedServices > 0) {
-      dependencies.push({
-        type: 'SERVICES',
-        count: managedServices,
-        description: `Manager de ${managedServices} service(s)`,
-      });
-    }
-
-    // USR-DEL-001 — audit_logs.actor_id is ON DELETE NO ACTION (d6299cc, forced
-    // by the OBS-002 immutability trigger which rejects the implicit UPDATE a
-    // SET NULL would issue). A user who authored ≥1 audit row therefore cannot
-    // be hard-deleted: the DB raises a raw P2003. Counting the rows here turns
-    // that into the same typed ConflictException as the other dependencies and
-    // points the caller at the canonical alternative — soft-deactivation
-    // (USER_DEACTIVATED via update()/remove()), which preserves the trail.
+    // Informational only — does NOT block. Audit history means the deletion is an
+    // anonymised shell rather than a physical row delete.
     const auditLogs = await this.prisma.auditLog.count({
       where: { actorId: userId },
     });
@@ -932,13 +869,13 @@ export class UsersService {
       dependencies.push({
         type: 'AUDIT_LOGS',
         count: auditLogs,
-        description: `${auditLogs} entrée(s) d'audit attribuée(s) à cet utilisateur — désactivez le compte (USER_DEACTIVATED) au lieu de le supprimer pour préserver la traçabilité`,
+        description: `${auditLogs} entrée(s) d'audit attribuée(s) — la suppression anonymisera le compte (coquille) au lieu de l'effacer physiquement, pour préserver la traçabilité immuable`,
       });
     }
 
     return {
       userId,
-      canDelete: dependencies.length === 0,
+      canDelete: true,
       dependencies,
     };
   }
@@ -958,25 +895,24 @@ export class UsersService {
       );
     }
 
-    const { canDelete, dependencies } = await this.checkDependencies(id);
+    // DAT-008/026 (A′) — a user who authored immutable audit_logs rows cannot be
+    // physically deleted: audit_logs.actorId is ON DELETE NO ACTION and the OBS-002
+    // trigger forbids the SET NULL a delete would cascade. For them, full erasure is
+    // achieved by ANONYMISING the row in place (identifiers tombstoned, deletedAt
+    // set); trail-less users are physically removed. Both paths erase PII + ALL the
+    // user's OWNED operational data. The audit subsystem is never touched.
+    const authoredAuditRows = await this.prisma.auditLog.count({
+      where: { actorId: id },
+    });
+    const anonymiseShell = authoredAuditRows > 0;
 
-    if (!canDelete) {
-      throw new ConflictException({
-        message:
-          'Impossible de supprimer cet utilisateur en raison de dépendances actives',
-        dependencies,
-      });
-    }
-
-    // USR-DEL-001 — final snapshot to the immutable audit trail BEFORE the row
-    // is erased, mirroring DAT-007's PROJECT_DELETED and OBS-005's ROLE_DELETED.
-    // The pre-check above guarantees this user authored zero audit_logs rows, so
-    // hardDelete is reserved for trail-less accounts; this USER_DELETED row is
-    // the deletion's only record. Plain await, non-transactional with the delete
-    // (AuditPersistenceService runs its own client + advisory lock and takes no
-    // tx client — the archive()/unarchive() + DAT-007 precedent). The snapshot
-    // is an explicit allow-list: passwordHash and the token relations are never
-    // included.
+    // USR-DEL-001 — snapshot to the immutable audit trail BEFORE erasure/anonymise,
+    // mirroring DAT-007's PROJECT_DELETED and OBS-005's ROLE_DELETED. actorId is the
+    // requesting admin (not the target), so it does not add to the target's own
+    // audit count. Plain await, non-transactional (AuditPersistenceService runs its
+    // own client + advisory lock and takes no tx client — the archive()/unarchive()
+    // + DAT-007 precedent). The snapshot is an explicit allow-list: passwordHash and
+    // the token relations are never included.
     await this.auditPersistence.log({
       action: AuditAction.USER_DELETED,
       entityType: 'User',
@@ -1001,61 +937,75 @@ export class UsersService {
       },
     });
 
+    // Full erasure in ONE transaction. Every record OWNED by the user (their own
+    // data) is deleted explicitly here, never relying on a silent ON DELETE
+    // CASCADE, so the erasure set is auditable in code. Records that merely
+    // REFERENCE the user as a secondary actor (manager / validator / declaredBy /
+    // createdBy / assignedBy on someone else's or shared rows) are left intact:
+    // their FK is ON DELETE SET NULL (migration 20260604103344), so the physical
+    // delete nulls only the link; in the anonymise-shell path those references keep
+    // pointing at the now-anonymised id (intended — the trail stays attributable to
+    // one opaque internal id). Assigned tasks (Task.assignee SetNull) are unassigned,
+    // not deleted — they are project deliverables, not user data.
     await this.prisma.$transaction(async (tx) => {
-      await tx.personalTodo.deleteMany({
-        where: { userId: id },
-      });
-
-      await tx.timeEntry.deleteMany({
-        where: { userId: id },
-      });
-
-      await tx.comment.deleteMany({
-        where: { authorId: id },
-      });
-
-      await tx.userSkill.deleteMany({
-        where: { userId: id },
-      });
-
-      await tx.teleworkSchedule.deleteMany({
-        where: { userId: id },
-      });
-
+      await tx.personalTodo.deleteMany({ where: { userId: id } });
+      await tx.refreshToken.deleteMany({ where: { userId: id } });
+      await tx.passwordResetToken.deleteMany({ where: { userId: id } });
+      await tx.userSkill.deleteMany({ where: { userId: id } });
+      await tx.teleworkSchedule.deleteMany({ where: { userId: id } });
+      await tx.teleworkRecurringRule.deleteMany({ where: { userId: id } });
+      await tx.eventParticipant.deleteMany({ where: { userId: id } });
+      await tx.taskAssignee.deleteMany({ where: { userId: id } });
+      await tx.comment.deleteMany({ where: { authorId: id } });
       await tx.leaveValidationDelegate.deleteMany({
-        where: {
-          OR: [{ delegatorId: id }, { delegateId: id }],
-        },
+        where: { OR: [{ delegatorId: id }, { delegateId: id }] },
       });
-
-      await tx.projectMember.deleteMany({
+      await tx.predefinedTaskAssignment.deleteMany({ where: { userId: id } });
+      await tx.predefinedTaskRecurringRule.deleteMany({
         where: { userId: id },
       });
+      await tx.projectMember.deleteMany({ where: { userId: id } });
+      await tx.userService.deleteMany({ where: { userId: id } });
+      await tx.leaveBalance.deleteMany({ where: { userId: id } });
+      await tx.leave.deleteMany({ where: { userId: id } });
+      await tx.timeEntry.deleteMany({ where: { userId: id } });
 
-      await tx.userService.deleteMany({
-        where: { userId: id },
-      });
-
-      await tx.leave.deleteMany({
-        where: {
-          userId: id,
-          status: { in: ['APPROVED', 'REJECTED'] },
-        },
-      });
-
-      await tx.task.deleteMany({
-        where: {
-          assigneeId: id,
-          status: 'DONE',
-        },
-      });
-
-      await tx.user.delete({
-        where: { id },
-      });
+      if (anonymiseShell) {
+        // Anonymise in place — KEEP the row + its audit_logs references. Email/login
+        // get a UNIQUE tombstone keyed by the opaque id so they cannot collide on
+        // the DAT-015 unique + LOWER() indexes (id is lowercase, ≤ 254 chars, RFC-
+        // invalid TLD). firstName/lastName are NOT NULL → constant tombstone (literal
+        // null would need a high-blast-radius nullable migration). deletedAt excludes
+        // the shell from active reads; isActive=false blocks login (auth.service:101).
+        await tx.user.update({
+          where: { id },
+          data: {
+            email: `deleted-${id}@anonymized.invalid`,
+            login: `deleted-${id}`,
+            firstName: 'Utilisateur',
+            lastName: 'supprimé',
+            avatarUrl: null,
+            avatarPreset: null,
+            isActive: false,
+            deletedAt: new Date(),
+          },
+        });
+      } else {
+        await tx.user.delete({ where: { id } });
+      }
     });
 
-    return { success: true, message: 'Utilisateur supprimé définitivement' };
+    // Remove the on-disk avatar file (PII) in BOTH paths — file I/O is kept out of
+    // the DB transaction (it cannot roll back). Reuses the SEC-015/017-hardened
+    // path reconstruction (never derived from the stored avatarUrl).
+    await this.removeAvatarFiles(id);
+
+    return {
+      success: true,
+      message: anonymiseShell
+        ? 'Utilisateur anonymisé (traçabilité préservée)'
+        : 'Utilisateur supprimé définitivement',
+    };
   }
 
   async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
@@ -1941,20 +1891,18 @@ export class UsersService {
     });
   }
 
-  async deleteAvatar(userId: string) {
-    // SEC-015: never derive the filesystem path from the stored avatarUrl — a
-    // DB-held string could traverse (e.g. "/api/../../../etc/passwd") and lead
-    // to arbitrary file deletion. Reconstruct strictly from server-controlled
-    // components: the fixed uploads dir + the userId stem, mirroring
-    // uploadAvatar's own cleanup. readdir entries are bare basenames (cannot
-    // traverse); the resolve() boundary check is a belt-and-suspenders guard so
-    // even a logic slip (or a malformed userId) cannot escape the uploads dir.
+  /**
+   * SEC-015/SEC-017 — remove a user's on-disk avatar file(s). The path is
+   * reconstructed strictly from server-controlled components (the fixed uploads
+   * dir + the userId stem), NEVER from the stored avatarUrl (a DB-held string could
+   * traverse, e.g. "/api/../../../etc/passwd"). readdir entries are bare basenames
+   * (cannot traverse); only the three known image extensions matched by exact
+   * basename are unlinked, with a resolve() boundary guard as belt-and-suspenders.
+   * Shared by deleteAvatar and the hardDelete erasure paths (DAT-026).
+   */
+  private async removeAvatarFiles(userId: string): Promise<void> {
     const uploadsDir = join(process.cwd(), 'uploads', 'avatars');
     const resolvedUploadsDir = resolve(uploadsDir);
-
-    // SEC-017: mirror uploadAvatar's tightened cleanup — only the three known
-    // image extensions, matched by exact basename. The resolve() boundary check
-    // is kept as belt-and-suspenders from SEC-015.
     const KNOWN_AVATAR_EXTS = ['.jpg', '.png', '.webp'];
     try {
       const existing = await fs.readdir(uploadsDir);
@@ -1969,6 +1917,10 @@ export class UsersService {
     } catch {
       // uploads dir may not exist yet — nothing to delete
     }
+  }
+
+  async deleteAvatar(userId: string) {
+    await this.removeAvatarFiles(userId);
 
     return this.prisma.user.update({
       where: { id: userId },

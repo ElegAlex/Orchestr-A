@@ -1,180 +1,174 @@
-# DAT-008 / DAT-026 — User deletion & retention compliance spec (DECISION-PREP)
+# DAT-008 / DAT-026 — User deletion: FULL ERASURE; audit-bearing users → anonymised shell (no retention, OBS-002 untouched)
 
-> **Status: HALTED — awaiting operator compliance decisions.**
-> This document PREPARES the work. It does NOT decide and does NOT implement.
-> Nothing here closes DAT-008 or DAT-026. Three operator decisions (§5) gate
-> implementation; do not start coding until they are answered.
+> **Status: IMPLEMENTED & CLOSED.** Supersedes the original "anonymise-don't-delete
+> + 5-year retention" prep (false premise) and the interim "option A/B pending" draft.
 >
-> Author: post-run cleanup pass, 2026-06-04. Reviewer/decider: operator (DSI).
+> Operator decision (A′, 2026-06-04): user deletion = **full erasure of PII +
+> owned operational data in ALL cases**. This app is **NOT the SIRH of legal
+> record** → no *Code du Travail* retention obligation. Where the **immutable**
+> audit trail (`audit_logs.actorId`, OBS-002) blocks physical row deletion, keep an
+> **anonymised shell** of the User row instead — **the audit subsystem is never
+> touched**.
 
 ---
 
-## 1. The problem (verified from primary source)
+## 1. The decision (A′)
 
-**DAT-008** — `schema.prisma`: the User back-relations cascade-delete on hard
-delete of a user:
-- `Leave.user` (`"UserLeaves"`) → `onDelete: Cascade` (schema.prisma ~626)
-- `TimeEntry.user` (`"TimeEntryUser"`) → `onDelete: Cascade` (~454)
-- `LeaveBalance.user` → `onDelete: Cascade` (~701)
+Two deletion paths, one invariant. **Invariant (both paths): PII gone + owned
+operational data gone.**
 
-A hard delete therefore **erases approved leave history, time entries and leave
-balances**. French *Code du Travail* requires conservation of leave/working-time
-records for **5 years** (and payslip-adjacent records up to 5 years; some social
-documents longer). Cascade-on-delete conflicts with that obligation.
+- **Trail-less user** (authored zero `audit_logs` rows) → **physical row delete**.
+- **Audit-bearing user** (authored ≥1 `audit_logs` row — i.e. anyone who has ever
+  logged in, since `LOGIN_SUCCESS` sets `actorId = self`) → **anonymised shell**:
+  the User row is kept (so the immutable `audit_logs.actorId` references stay
+  valid) but **anonymised in place**, with all owned operational data erased.
 
-**DAT-026** — User has **no `deletedAt` soft-delete column**. (`@@index([isActive])`
-already exists — added by PER-011 — so the audit's "no `@@index([isActive])`"
-sub-point is already addressed; only the soft-delete column + index and the
-"hard delete → soft delete + anonymization (RGPD)" posture remain.) Today a
-"deletion" is either an `isActive=false` toggle (no erasure) or
-`UsersService.hardDelete` (full cascade erasure).
+There is **no retention window, no second-stage purge, no soft-delete of live
+users, no anonymisation of the audit trail**. `audit_logs.actorId` stays
+`ON DELETE NO ACTION`; the OBS-002 immutability trigger is **not** carved or
+altered. The audit rows simply now point at an anonymised shell id.
 
-**Current `hardDelete` behaviour** (`users.service.ts` ~916) — important context:
-- It is **reserved for trail-less accounts**: `checkDependencies()` blocks the
-  delete (409) when the user has active dependencies, and the design comment
-  states it only runs for users who authored **zero `audit_logs` rows**.
-- It emits a `USER_DELETED` audit snapshot (allow-listed fields, never the
-  password hash) **before** erasing, then in one transaction deletes
-  personalTodos, timeEntries, comments, userSkills, teleworkSchedules,
-  validation-delegates, projectMembers, userServices, the user's
-  `APPROVED`/`REJECTED` leaves, their `DONE` tasks, and finally the user row.
-
-So the erasure of retained records (DAT-008) happens **inside `hardDelete`**, and
-the RGPD tension is: *right-to-erasure* (delete the person's data) vs.
-*legal retention* (keep leave/time records for 5 years). These pull in opposite
-directions; **anonymisation reconciles them** (see §2).
-
----
-
-## 2. Recommended posture — anonymise, don't delete
-
-**Keep the records, erase the person.** Instead of cascading deletes, the user
-row is **soft-deleted and its direct identifiers wiped**, while the
-leave/time/balance rows are **retained** (their `userId` FK still points at the
-now-anonymised user). The legal retention obligation is satisfied (records
-persist, attributable to an internal pseudonymous id), and RGPD erasure is
-satisfied (the person is no longer identifiable).
-
-Concretely the posture is:
-
-1. **Add `User.deletedAt DateTime?`** + `@@index([deletedAt])` (DAT-026). All
-   read paths filter `deletedAt: null` (mirror the DAT-025 Document soft-delete
-   precedent: `remove()` sets `deletedAt`, `findAll`/`findOne` filter it).
-2. **Anonymise the direct identifiers** on the soft-deleted row (which PII
-   fields exactly = **OPEN DECISION 1**, §5). At minimum the direct identifiers:
-   `firstName`, `lastName`, `email`, `login`, `avatarUrl`/`avatarPreset`.
-3. **UNIQUE tombstone for `email` / `login`** — DAT-015 added `@db.VarChar(254)`
-   + a `@unique` constraint AND a **functional `LOWER()` unique index** (raw SQL)
-   on both `email` and `login`. Anonymisation **cannot blank them to a constant**
-   (the 2nd anonymised user would collide on the unique / LOWER-unique index).
-   Each anonymised user must get a **unique, non-reversible tombstone**, e.g.
-   `email = "deleted-<uuid>@anonymized.invalid"`, `login = "deleted-<uuid>"`
-   (lower-cased, ≤254 chars, RFC-invalid TLD so it can never be a real address).
-   The `<uuid>` is the user's own id (already opaque) or a fresh random — see
-   OPEN DECISION 3 (reversibility).
-4. **Retain Leave / TimeEntry / LeaveBalance** rows and their `userId` links —
-   do **not** cascade. This requires **flipping the three FKs off `Cascade`**
-   (to `Restrict`, so a hard delete is refused while rows exist, OR keeping the
-   relation and never hard-deleting — the soft-delete path never deletes the
-   user row at all). The exact FK action depends on whether hard delete is
-   retired entirely or kept as an admin escape hatch (tied to OPEN DECISION 3).
-
-This is the **same shape DAT-025 already applied to `Document`** (soft-delete via
-`deletedAt`, filtered reads) and is consistent with the existing
-`USER_DELETED` audit snapshot (the snapshot becomes the controlled,
-RGPD-governed record of who was anonymised and when).
+### Anonymise-shell mechanics (inside `hardDelete`, one transaction)
+1. Delete the user's **OWNED** records (§2a) — identical to the trail-less path.
+2. **SET NULL** the secondary references — done at the DB by the FKs (§2b/§2c).
+3. **Anonymise the User row in place**:
+   - `email` → `deleted-{id}@anonymized.invalid`, `login` → `deleted-{id}`
+     (UNIQUE tombstone keyed by the opaque id → respects the DAT-015 unique +
+     `LOWER()` indexes; lowercase, ≤254 chars, RFC-invalid TLD).
+   - `firstName`/`lastName` → constant tombstone (`'Utilisateur'`/`'supprimé'`).
+     **NOTE:** these columns are NOT NULL, so they get a constant tombstone rather
+     than literal `null` (the operator's "→ null" intent, realised the same way the
+     operator tombstones email/login; making them nullable would be a
+     high-blast-radius migration touching every name-display path — bounded out).
+   - `avatarUrl` → null, `avatarPreset` → null; the on-disk avatar file is removed.
+   - `deletedAt` = now → excludes the shell from active reads; `isActive` = false →
+     blocks login (`auth.service.ts:101`).
+   - `id` and non-identifying fields kept.
+4. **Remove the on-disk uploaded avatar file** (PII) — in BOTH paths.
+5. **Keep** the User row + its `audit_logs` rows intact.
 
 ---
 
-## 3. Coherence constraints (already-landed decisions this work must respect)
+## 2. FK classification table (every FK referencing `User`, re-derived from schema.prisma)
 
-- **DAT-022 set `User.department` → `onDelete: Restrict`** (schema.prisma ~48,
-  migration `20260603215133_dat022_department_fk_restrict`). A department cannot
-  be deleted while users reference it; users must be reassigned first. The
-  soft-delete/anonymisation posture must stay coherent with this — an anonymised
-  user keeps its `departmentId` (or it is nulled as PII? = OPEN DECISION 1), and
-  must not reintroduce a path that silently strips RBAC scope (the original
-  DAT-022 concern).
-- **DAT-015 unique + `LOWER()` indexes on `email`/`login`** — the tombstone
-  scheme (§2.3) is mandatory; a blanked/constant identifier breaks the unique
-  and the functional `LOWER()` unique index. `email` is `@db.VarChar(254)` so the
-  tombstone must fit 254 chars.
-- **`hardDelete` is trail-less-only today** — any user with `audit_logs` history
-  already cannot be hard-deleted (409). So for the majority of real users the
-  ONLY available "deletion" is `isActive=false`; anonymisation gives them a
-  proper erasure path that does not violate retention.
-- **`USER_DELETED` audit emit + chain** — the audit trail is hash-chained
-  (`audit_logs` 5-layer defense-in-depth, live in prod). An anonymisation action
-  should emit its own audited event (before/after, AC#4 of the backlog template)
-  rather than silently mutating identifiers.
+42 back-relations reference `User`. (`User.roleId`→Role and `User.departmentId`→
+Department are the user's OWN forward FKs — columns on the user row; they never
+block a user deletion.)
 
----
+### 2a. OWNED → deleted explicitly in `hardDelete` (17)
 
-## 4. Implementation sketch (for AFTER the decisions — NOT to be built yet)
+`UserService.userId`, `ProjectMember.userId`, `TaskAssignee.userId`,
+`Leave.userId` (ALL statuses), `LeaveValidationDelegate.delegatorId` +
+`.delegateId`, `LeaveBalance.userId`, `TeleworkSchedule.userId`,
+`TeleworkRecurringRule.userId`, `UserSkill.userId`, `TimeEntry.userId`,
+`Comment.authorId`, `PersonalTodo.userId`, `EventParticipant.userId`,
+`PredefinedTaskAssignment.userId`, `PredefinedTaskRecurringRule.userId`,
+`PasswordResetToken.userId`, `RefreshToken.userId`.
 
-- **Schema** (`schema.prisma`): add `User.deletedAt DateTime?` + `@@index([deletedAt])`;
-  change `Leave.user` / `TimeEntry.user` / `LeaveBalance.user` `onDelete`
-  per OPEN DECISION 3 (Cascade → Restrict, or remove the hard-delete path).
-  One forward migration (append-only; respects TOOL-DBSYNC-001 dev-DB hygiene).
-- **Service** (`users.service.ts`): new `anonymise(userId)` (soft-delete + wipe
-  identifiers + UNIQUE tombstone + `deletedAt=now` + `isActive=false`), emitting
-  an audited `USER_ANONYMISED` (or reuse `USER_DELETED`) event. Repurpose / gate
-  `hardDelete` per OPEN DECISION 3. Add `deletedAt: null` filters to user reads.
-- **Witness (AC#2)**: a test proving (a) anonymise wipes identifiers + sets a
-  unique tombstone that does not collide on the email/login (+LOWER) unique
-  indexes, and (b) Leave/TimeEntry/LeaveBalance rows survive — FAILS before
-  (cascade erases / blank identifier collides), PASSES after.
-- **Gate**: tests + types + lint (now green) + build; one migration; coherence
-  gate stays green; `[closes DAT-008]` and `[closes DAT-026]` once both land.
+> Scope choice (flagged): owned FKs are **left `Cascade`** and deleted **explicitly**
+> in the service transaction (explicit deletes are the operative, auditable path;
+> `Cascade` is only a backstop). No owned FK was ever `Restrict` (DAT-022 touched no
+> user-referencing FK — §4), so flipping ~17 Cascade→Restrict would be a large,
+> correctness-neutral migration. Bounded out; easy to add later for DB-layer
+> defence-in-depth.
 
----
+### 2b. SECONDARY → already `SET NULL` (unchanged, 11)
 
-## 5. The three OPEN DECISIONS (operator-owned — answer these to unblock)
+`Department.managerId`, `Service.managerId`, `Project.{createdById, managerId,
+sponsorId, archivedById}`, `Task.assigneeId`, `Leave.{validatorId, validatedById}`,
+`PredefinedTaskAssignment.completedById`, `Document.uploadedBy` (DAT-025).
 
-These are the under-specifications that caused DAT-008/026 to HALT. They are
-compliance/policy calls, not engineering calls — they must NOT be auto-decided.
+### 2c. SECONDARY → flipped to nullable + `SET NULL` (12) — migration `20260604103344`
 
-### DECISION 1 — Which PII fields are anonymised vs. kept?
-For an anonymised user, which columns are wiped/tombstoned and which are kept for
-the retained records to remain meaningful?
-- **Direct identifiers** (clearly wipe): `firstName`, `lastName`, `email`,
-  `login`, `avatarUrl`, `avatarPreset`.
-- **Borderline (you decide)**: `departmentId` / service memberships (keep for
-  workforce statistics on the retained leave/time records? or strip as PII?),
-  `roleId`, `createdAt`. Stripping `departmentId` interacts with DAT-022 and with
-  any analytics that aggregate retained records by department.
-- **Question**: keep department/service linkage on retained records (statistics)
-  or strip it (stricter minimisation)?
+| Model.field | Before | Failure mode it caused |
+|---|---|---|
+| `TimeEntry.declaredById` | Restrict | BLOCKED delete (P2003) |
+| `ThirdParty.createdById` | Restrict | BLOCKED delete |
+| `TaskThirdPartyAssignee.assignedById` | Restrict | BLOCKED delete |
+| `ProjectThirdPartyMember.assignedById` | Restrict | BLOCKED delete |
+| `Holiday.createdById` | Restrict* | BLOCKED delete |
+| `SchoolVacation.createdById` | Restrict* | BLOCKED delete |
+| `Event.createdById` | Cascade | ORPHANED shared event + others' participants |
+| `PredefinedTask.createdById` | Cascade | ORPHANED shared template |
+| `PredefinedTaskAssignment.assignedById` | Cascade | ORPHANED another user's assignment |
+| `PredefinedTaskRecurringRule.createdById` | Cascade | ORPHANED shared rule |
+| `TeleworkRecurringRule.createdById` | Cascade | ORPHANED another user's rule |
+| `PasswordResetToken.createdById` | Cascade | ORPHANED another user's token |
 
-### DECISION 2 — Retention window?
-How long are the retained Leave / TimeEntry / LeaveBalance records kept after a
-user is anonymised, before a *second-stage* purge (if any)?
-- French *Code du Travail* baseline ≈ **5 years** for leave/working-time records.
-- **Question**: is there a hard purge at N years (e.g. a scheduled job deleting
-  anonymised users' leave/time rows older than 5 years), or are they kept
-  indefinitely (anonymised, so RGPD-safe)? If purge: what triggers it and what is
-  N?
+\* required relation, no explicit `onDelete` → Postgres default Restrict/NO ACTION.
 
-### DECISION 3 — Reversibility / when does it become irreversible?
-- **Question A**: should anonymisation be **reversible** for a window (e.g. an
-  "undo" within X days using a sealed mapping of `<uuid>` → original identifiers
-  held in a restricted store) or **irreversible from the first commit** (tombstone
-  derived from a fresh random uuid, original identifiers never persisted anywhere
-  except the immutable `USER_DELETED`/`USER_ANONYMISED` audit snapshot)?
-- **Question B**: is `hardDelete` (true row erasure) **retired entirely** (only
-  anonymisation remains), or **kept as an admin escape hatch** for genuinely
-  trail-less accounts (in which case the Cascade FKs may stay, since such users
-  have no retained records by definition)? This determines the `onDelete` FK
-  action in §4.
-- Note: the audit snapshot itself contains the original identifiers (PII). If
-  anonymisation must be **fully** irreversible/erasing, the audit snapshot's PII
-  fields may also need redaction — which conflicts with the hash-chained
-  immutability of `audit_logs`. **This tension is itself an operator call.**
+### 2d. SECONDARY → kept immutable (1) — the reason the shell exists
+
+`AuditLog.actorId` (`onDelete: NoAction`, OBS-002 immutability trigger). **Not
+changed.** A user referenced here cannot be physically deleted → the
+anonymised-shell path (§1) keeps the row and references intact.
 
 ---
 
-## 6. Status
+## 3. Implemented changes
 
-**DAT-008 and DAT-026 remain HALTED / TODO.** No schema change, no service
-change, no migration has been made. Resume only after DECISIONS 1–3 are answered;
-then implement §4 and close both with `[closes DAT-008]` / `[closes DAT-026]`.
+- **Migration `20260604103344_dat008_026_user_fk_full_erasure`**: the 12 §2c FKs →
+  nullable + `ON DELETE SET NULL`. Relation fields made optional in `schema.prisma`.
+- **Migration `20260604110510_dat026_user_deletedat_shell`**: `User.deletedAt
+  DateTime?` + `@@index([deletedAt])` (the soft-delete marker for the shell path —
+  this is DAT-026's "index half", now valid under A′).
+- **`UsersService.hardDelete`**: one transaction; explicit `deleteMany` over the
+  full §2a owned set, then **branch** on `auditLog.count({ actorId: id })`:
+  `> 0` → `tx.user.update` to the anonymised shell (tombstone + `deletedAt` +
+  `isActive:false`); `= 0` → `tx.user.delete`. Keeps the self-delete guard and the
+  `USER_DELETED` audit snapshot (captured before, allow-list, never the password
+  hash). On-disk avatar removed after the tx (both paths) via the shared
+  SEC-015/017-hardened `removeAvatarFiles` helper.
+- **`UsersService.checkDependencies`**: no longer blocks (deletion always succeeds);
+  the audit count is reported as an INFORMATIONAL `AUDIT_LOGS` entry so the UI can
+  signal "anonymised shell, not physical delete". `canDelete` is always true.
+- **Read paths**: `findAll` + `findOne` filter `deletedAt: null` (mirror DAT-025) so
+  shells are excluded from the directory and profile reads. `isActive=false` +
+  tombstoned credentials keep the shell out of auth/active-user queries.
+- **Witnesses** (RED→GREEN):
+  - `user-harddelete-secondary-fk.int.spec.ts` (real DB): declaredBy no longer
+    BLOCKS; `Event.createdBy` no longer ORPHANS.
+  - `user-harddelete-fk.int.spec.ts` (real DB): the existing FK-NO-ACTION witness
+    PLUS a new anonymised-shell witness — the row is anonymised in place, the audit
+    row persists referencing the id, and a raw physical delete is STILL rejected
+    (proving `audit_logs`/OBS-002 were not weakened).
+  - `users.service.spec.ts` (unit): audit-bearing → anonymise (not 409, not delete);
+    trail-less → physical delete; the new `checkDependencies`/read-filter semantics.
+
+---
+
+## 4. DAT-022 coherence — re-derived: **no change needed** (already closed)
+
+DAT-022 set `User.departmentId → onDelete: Restrict` (migration `20260603215133`,
+already DONE, Closed_by `0ac82e3`). That is the **User→Department** direction — a
+column on the user's OWN row. Its `onDelete` fires when a **Department** is deleted,
+**never** when a **User** is. It does **not** block user deletion, is **not**
+touched by this work, and stays `Restrict` (preserving the DAT-022 RBAC-scope
+protection). The operator's "DAT-022 coherence" branch assumed it had set a Restrict
+on a user-*referencing* FK; it did not — the real user-referencing Restrict FKs were
+`declaredBy` / the `createdBy` / `assignedBy` set (§2c), now flipped to SetNull.
+
+---
+
+## 5. Task status
+
+- **DAT-008** — DONE. The retention premise is rejected; owned leave/time/balance
+  records are erased intentionally (full erasure), and the immutable audit trail is
+  preserved on the audit-bearing path (shell). No anonymisation of the audit trail,
+  no SetNull-for-retention.
+- **DAT-026** — DONE. "soft-delete + anonymisation of live users" dropped; instead
+  `deletedAt` is the shell marker (the "index half"), `@@index([isActive])` already
+  existed (PER-011), and the deletion-semantics rework (§1–§3) is implemented.
+- **DAT-022** — already DONE (`0ac82e3`); re-derivation confirms no change.
+
+---
+
+## 6. Confirmation: `audit_logs` / OBS-002 untouched
+
+- No change to `audit_logs.actorId` (`onDelete: NoAction` retained).
+- No carve-out / alteration of the OBS-002 immutability trigger.
+- No new audit-subsystem migration. The two new migrations touch only the 12
+  secondary FKs (§2c) and add `User.deletedAt`.
+- Witnessed: the existing `audit-immutability.int.spec.ts` (trigger rejects audit
+  mutation) and the `user-harddelete-fk.int.spec.ts` FK-NO-ACTION test stay green;
+  the new shell witness shows a raw user delete is still P2003-rejected.
