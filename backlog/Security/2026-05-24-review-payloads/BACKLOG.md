@@ -6978,7 +6978,7 @@ Standardize on TanStack Query for ALL list/detail endpoints. Set sensible defaul
 pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/dashboard/page.tsx
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** af12127
 **Learnings:**
 Added global QueryProvider (apps/web/src/components/QueryProvider.tsx) using useState pattern to avoid SSR cache leaks.
 Registered in apps/web/app/[locale]/layout.tsx wrapping NextIntlClientProvider children.
