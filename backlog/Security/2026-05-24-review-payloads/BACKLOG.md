@@ -8716,7 +8716,7 @@ Add a test 'falls through department.manager when manager.isActive=false' that m
 pnpm test apps/api/src/leaves/leaves.service.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 9bcd44bb
 **Learnings:**
 Added test TST-020: dormant manager (isActive=false) must be skipped and MANAGE_ANY fallback used. RED before fix: findValidatorForUser returned managerId without checking manager.isActive, test failed with expected manager-1 not to be manager-1. Fix: gate condition changed from `user.department?.managerId` to `user.department?.managerId && user.department.manager?.isActive !== false`. GREEN after: all 188 tests pass. Scope: leaves.service.ts L711 + leaves.service.spec.ts new test after COR-005.
 
