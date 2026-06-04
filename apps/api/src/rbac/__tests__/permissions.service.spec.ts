@@ -249,4 +249,69 @@ describe('PermissionsService — V4', () => {
       expect(redis.del).toHaveBeenCalledWith('role-permissions:ADMIN');
     });
   });
+
+  describe('Singleflight (PER-014)', () => {
+    it('N concurrent calls for the same role trigger ONE DB lookup', async () => {
+      // Deferred resolve to keep all concurrent calls in-flight simultaneously
+      let resolveDb!: (v: { templateKey: string } | null) => void;
+      const dbPromise = new Promise<{ templateKey: string } | null>(
+        (res) => (resolveDb = res),
+      );
+      prisma.role.findUnique.mockReturnValue(dbPromise);
+
+      // Launch 5 concurrent requests before any resolves
+      const calls = Array.from({ length: 5 }, () =>
+        service.getPermissionsForRole('ADMIN'),
+      );
+
+      // Flush microtasks so all calls register cache-miss and reach singleflight check
+      await new Promise((r) => setImmediate(r));
+
+      // Now resolve the DB
+      resolveDb({ templateKey: 'ADMIN' });
+
+      const results = await Promise.all(calls);
+
+      // All should return the same permissions
+      for (const r of results) {
+        expect(r).toEqual([...ROLE_TEMPLATES.ADMIN.permissions]);
+      }
+
+      // DB must have been called exactly once (singleflight coalesced the rest)
+      expect(prisma.role.findUnique).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Negative cache (PER-014)', () => {
+    it('unknown role result is cached with short TTL to avoid repeated DB hits', async () => {
+      prisma.role.findUnique.mockResolvedValue(null);
+
+      const perms = await service.getPermissionsForRole('GHOST_ROLE');
+
+      expect(perms).toEqual([]);
+      // setex must have been called: negative caching writes [] with short TTL
+      expect(redis.setex).toHaveBeenCalledWith(
+        'role-permissions:GHOST_ROLE',
+        expect.any(Number),
+        '[]',
+      );
+      // The TTL for negative entries must be shorter than the positive TTL (300s)
+      const [, negativeTtl] = redis.setex.mock.calls[0] as [
+        string,
+        number,
+        string,
+      ];
+      expect(negativeTtl).toBeLessThan(300);
+    });
+
+    it('transient DB error does NOT negative-cache (fail-soft, no poisoning)', async () => {
+      prisma.role.findUnique.mockRejectedValue(new Error('DB timeout'));
+
+      const perms = await service.getPermissionsForRole('ADMIN');
+
+      expect(perms).toEqual([]);
+      // setex must NOT have been called — errors are not cached
+      expect(redis.setex).not.toHaveBeenCalled();
+    });
+  });
 });

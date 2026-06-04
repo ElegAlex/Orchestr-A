@@ -8218,7 +8218,7 @@ pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missi
 ---
 ### PER-014 — Role-permissions cache stampede risk + no negative caching
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8256,7 +8256,8 @@ pnpm test apps/api/src/rbac/permissions.service.spec.ts  # may need creation if 
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added in-process singleflight (Map<roleCode,Promise>) to coalesce concurrent DB lookups into a single call, eliminating cache stampede. Added negative caching (NEGATIVE_CACHE_TTL=30s) for not-found/orphan-template roles to stop repeated Postgres hits. Transient DB errors return [] without caching (no cache poisoning). cacheSet gains optional ttl param; positive path unchanged at 300s. Extracted _resolveFromDb private helper for clean control flow. fail-pre: singleflight RED=findUnique called 5 times not 1; negative cache RED=setex never called for unknown role. Both GREEN after fix.
 
 ---
 ### PER-022 — User/project time reports do reduce() aggregations in JS instead of SQL groupBy

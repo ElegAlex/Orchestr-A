@@ -26,6 +26,13 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PermissionsService {
   private readonly redis: Redis;
   private readonly CACHE_TTL = 300;
+  /** TTL for negative cache entries (unknown/orphan roles) — shorter than positive. */
+  private readonly NEGATIVE_CACHE_TTL = 30;
+  /**
+   * In-process singleflight map: prevents cache stampede by coalescing concurrent
+   * DB lookups for the same roleCode into a single Promise.
+   */
+  private readonly inflight = new Map<string, Promise<readonly PermissionCode[]>>();
   private readonly logger = new Logger(PermissionsService.name);
 
   constructor(
@@ -59,6 +66,7 @@ export class PermissionsService {
 
     const cacheKey = `role-permissions:${roleCode}`;
 
+    // 1. Redis cache check (shared, cross-process)
     try {
       const cached = await this.redis.get(cacheKey);
       if (cached) {
@@ -68,11 +76,36 @@ export class PermissionsService {
       console.warn('[PermissionsService] Redis read error:', error);
     }
 
+    // 2. In-process singleflight: coalesce concurrent DB lookups for the same role
+    const existing = this.inflight.get(roleCode);
+    if (existing) {
+      return existing;
+    }
+
+    const promise = this._resolveFromDb(roleCode, cacheKey);
+    this.inflight.set(roleCode, promise);
+    try {
+      return await promise;
+    } finally {
+      this.inflight.delete(roleCode);
+    }
+  }
+
+  /**
+   * Resolves role permissions from the DB (Prisma → ROLE_TEMPLATES).
+   * Writes to Redis on success or for definitive not-found/orphan cases.
+   * Transient errors (catch path) return [] without caching.
+   */
+  private async _resolveFromDb(
+    roleCode: string,
+    cacheKey: string,
+  ): Promise<readonly PermissionCode[]> {
     try {
       const role = await this.prisma.role.findUnique({
         where: { code: roleCode },
         select: { templateKey: true },
       });
+
       if (role) {
         const templateKey = role.templateKey as RoleTemplateKey;
         const tpl = ROLE_TEMPLATES[templateKey];
@@ -81,20 +114,24 @@ export class PermissionsService {
           this.logger.debug(
             `[RBAC v4] ${roleCode} → ${templateKey}: ${perms.length} perms (template)`,
           );
-          await this.cacheSet(cacheKey, perms);
+          await this.cacheSet(cacheKey, perms, this.CACHE_TTL);
           return perms;
         }
         this.logger.warn(
           `[RBAC v4] ${roleCode} a templateKey="${templateKey}" inconnu — retour []`,
         );
       }
+
+      // Definitive not-found or orphan templateKey: negative-cache to stop repeated DB hits
+      await this.cacheSet(cacheKey, [], this.NEGATIVE_CACHE_TTL);
+      return [];
     } catch (error) {
+      // Transient error: return [] without caching (do not poison cache)
       this.logger.warn(
         `[RBAC v4] erreur lookup roles pour ${roleCode}: ${(error as Error).message}`,
       );
+      return [];
     }
-
-    return [];
   }
 
   /**
@@ -152,9 +189,10 @@ export class PermissionsService {
   private async cacheSet(
     key: string,
     perms: readonly PermissionCode[],
+    ttl: number = this.CACHE_TTL,
   ): Promise<void> {
     try {
-      await this.redis.setex(key, this.CACHE_TTL, JSON.stringify(perms));
+      await this.redis.setex(key, ttl, JSON.stringify(perms));
     } catch (error) {
       console.warn('[PermissionsService] Redis write error:', error);
     }
