@@ -9269,7 +9269,7 @@ Add @@index([userId, usedAt]) and a periodic cleanup job (or partial index CREAT
 pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test apps/api/src/  # verify migration + regression
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 1f0e32ab
 **Learnings:**
 Added @@index([userId, usedAt]) and @@index([expiresAt]) to PasswordResetToken (schema.prisma). Added eager deleteMany of expired tokens in generateResetToken (auth.service.ts). Migration: 20260604050007_dat028_password_reset_token_indexes. Fail-pre: unit test DAT-028 RED (deleteMany not called, AssertionError); int spec RED (both pg_indexes absent). Pass-post: unit 37/37 green, int spec 3/3 green, gate build+test both 0. AC#4: existing PASSWORD_CHANGED audit entry covers the reset-token action; GC deleteMany is housekeeping, no extra audit entry needed.
 
