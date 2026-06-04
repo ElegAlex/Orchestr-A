@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { AuditPersistenceService } from './audit-persistence.service';
 import { AuditAction } from './audit-action.enum';
 
@@ -91,16 +91,14 @@ const ENTITY_TYPE_BY_ACTION: Record<
  */
 const BCRYPT_SHAPE = /\$2[aby]\$/;
 
-const MAX_ENTITY_ID_LENGTH = 254;
-
 /**
  * OBS-013 — `attemptedEmail` (the raw, attacker-controlled login of a
  * LOGIN_FAILURE / ACCOUNT_LOCKED) must never reach the stdout log sink: it can
- * be email PII or arbitrary free-text. The persisted `entityId` keeps the
- * readable-but-sanitized subject (OBS-001) inside the RGPD-controlled
- * `audit_logs` table; stdout — broadly shipped and far less controlled — gets
- * only a short, non-reversible digest, enough to correlate repeated attempts on
- * the same target without exposing the identifier.
+ * be email PII or arbitrary free-text. stdout — broadly shipped and far less
+ * controlled — gets only a short, non-reversible digest, enough to correlate
+ * repeated attempts on the same target without exposing the identifier.
+ * (OBS-028 — the PERSISTED `entityId` is likewise no longer raw: it is a KEYED
+ * HMAC, see `resolveEntityId` / `hashAttemptedSubject`.)
  */
 const hashAttemptedLogin = (value: string): string =>
   createHash('sha256').update(value).digest('hex').slice(0, 8);
@@ -210,10 +208,13 @@ export class AuditService {
   }
 
   /**
-   * Resolve the event subject. For LOGIN_FAILURE the attempted identifier is
-   * the subject, lowercased and length-capped. A bcrypt-shaped value (a client
-   * that fat-fingered the password into the login field) is refused so the
-   * trail never records a credential — falls back to 'unknown'.
+   * Resolve the event subject. For LOGIN_FAILURE / ACCOUNT_LOCKED the attempted
+   * identifier is the subject, but it must NOT enter the immutable trail raw
+   * (OBS-028): it is stored as a KEYED HMAC of the normalised value (see
+   * `hashAttemptedSubject`). A bcrypt-shaped value (a client that fat-fingered
+   * the password into the login field) is refused so the trail never records a
+   * credential — falls back to 'unknown'. Every other subject is an opaque id
+   * (targetId/userId), passed through unchanged.
    */
   private resolveEntityId(event: {
     action: AuditAction;
@@ -229,8 +230,30 @@ export class AuditService {
       if (BCRYPT_SHAPE.test(event.attemptedEmail)) {
         return 'unknown';
       }
-      return event.attemptedEmail.toLowerCase().slice(0, MAX_ENTITY_ID_LENGTH);
+      return this.hashAttemptedSubject(event.attemptedEmail);
     }
     return event.targetId ?? event.userId ?? 'unknown';
+  }
+
+  /**
+   * OBS-028 — pseudonymise the attempted-login identifier before it becomes the
+   * persisted `entityId` of a LOGIN_FAILURE / ACCOUNT_LOCKED row. Keyed HMAC
+   * (AUDIT_HASH_KEY) so it is NOT dictionary-reversible; deterministic over the
+   * normalised value (trim + lowercase, the DAT-015 LOWER() convention) so
+   * brute-force forensics still correlate repeat attempts / lockouts per target
+   * by hash. `assertAuditHashKey` validates the key at boot; this throw is
+   * defence-in-depth — a missing key makes the persist reject (logger-only via the
+   * caller's `.catch`) rather than EVER fall back to storing the raw identifier.
+   */
+  private hashAttemptedSubject(identifier: string): string {
+    const key = process.env.AUDIT_HASH_KEY;
+    if (!key) {
+      throw new Error(
+        'AUDIT_HASH_KEY is not set — refusing to store a raw attempted identifier in audit_logs',
+      );
+    }
+    return createHmac('sha256', key)
+      .update(identifier.trim().toLowerCase())
+      .digest('hex');
   }
 }

@@ -1850,6 +1850,11 @@ describe('UsersService', () => {
       };
       expect(updateArg.data.firstName).not.toBe('Real');
       expect(updateArg.data.lastName).not.toBe('Person');
+      // OBS-028 (PART B) — the credential is wiped on the shell (pure
+      // data-minimisation; isActive=false already blocks login). NOT NULL forces a
+      // fixed unusable non-bcrypt constant rather than literal null.
+      expect(updateArg.data.passwordHash).toBeDefined();
+      expect(updateArg.data.passwordHash).not.toMatch(/^\$2[aby]\$/);
 
       // The deletion is still audited (USER_DELETED snapshot, captured before
       // anonymisation), and the snapshot never leaks the password hash.

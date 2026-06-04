@@ -21,6 +21,7 @@ import {
 } from './common/error-reporter';
 import { resolveAllowedOrigins } from './common/fastify/cors.config';
 import { assertJwtSecretStrength } from './common/config/jwt-secret';
+import { assertAuditHashKey } from './common/config/audit-hash-key';
 import { JwtService } from '@nestjs/jwt';
 import { createUploadsAuthHook } from './common/fastify/uploads-auth.hook';
 
@@ -60,6 +61,12 @@ async function bootstrap() {
   // characters. A weak or absent secret allows token forgery. The check is
   // prod-only so test/dev short secrets (e.g. 'test-secret') are unaffected.
   assertJwtSecretStrength(process.env.JWT_SECRET, process.env.NODE_ENV);
+
+  // OBS-028: refuse to start (ANY environment) without AUDIT_HASH_KEY. It keys the
+  // HMAC that pseudonymises attempted-login identifiers in the immutable audit
+  // trail; absent it there is no safe degraded mode (storing raw / unkeyed hash
+  // both leak). Must be stable — rotating it breaks historical hash-correlation.
+  assertAuditHashKey(process.env.AUDIT_HASH_KEY);
 
   // SEC-018: refuse to start in production if AUTH_EXPOSE_RESET_TOKEN=true.
   // The flag returns the raw reset token in the HTTP response (dev/E2E only).

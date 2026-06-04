@@ -15,6 +15,13 @@ if (process.env.LEAVE_TZ_OVERRIDE_OFF !== '1') {
   process.env.TZ = 'Europe/Paris';
 }
 
+// OBS-028 — AuditService HMACs the attempted-login identifier (LOGIN_FAILURE /
+// ACCOUNT_LOCKED entityId) with AUDIT_HASH_KEY. Provide a fixed, ≥32-char test key
+// so audit specs compute deterministic hashes (the real key is env-provisioned and
+// asserted at boot, never falling back to storing the raw identifier).
+process.env.AUDIT_HASH_KEY ??=
+  'test-audit-hash-key-deterministic-0123456789abcdef';
+
 // Mock Prisma enums for tests
 // These enums are exported from @prisma/client and need to be available in tests
 

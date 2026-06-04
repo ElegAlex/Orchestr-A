@@ -10166,3 +10166,81 @@ emit, just reference-only). No migration; `audit_logs.actorId`/OBS-002 trigger u
 snapshots still hold identifiers** — they are immutable and out of scope here
 (operator/DPO call); this fix changes only FUTURE events. Gate green: 2035 api unit +
 126 int + types + lint + build.
+
+---
+### OBS-028 — Close remaining PII gaps in the immutable audit trail: hash attempted-login identifier + wipe shell credential
+
+- **Status:** DONE
+- **Phase:** 13
+- **Cluster:** —
+- **Confidence:** operator-directed
+- **Blocked_by:** (none)
+- **Severity:** important
+- **Category:** observability · rgpd · pii
+- **File:** `apps/api/src/audit/audit.service.ts` + `apps/api/src/common/config/audit-hash-key.ts` + `apps/api/src/main.ts` + `apps/api/src/users/users.service.ts`
+- **Source:** operator finding 2026-06-04 (follow-on to OBS-027 — the two PII gaps OBS-027 left open: the raw attempted-login in LOGIN_FAILURE/ACCOUNT_LOCKED entityId, and the retained credential on the DAT-026 anonymised shell).
+
+**Description:**
+FORWARD-ONLY closure of the last two paths by which a raw user identifier / credential
+could persist after erasure. (A) LOGIN_FAILURE / ACCOUNT_LOCKED wrote the raw attempted
+login/email into `audit_logs.entityId` (immutable, retained forever). (B) the DAT-026
+anonymised shell kept the original `passwordHash`.
+
+**PART A — keyed HMAC of the attempted identifier:**
+`AuditService.resolveEntityId` set entityId to `attemptedEmail.toLowerCase()` for these
+two actions. Now → `HMAC-SHA256(AUDIT_HASH_KEY, trim+lowercase(identifier))` (hex, 64
+chars). **Keyed** so it is NOT dictionary-reversible; **deterministic** over the
+normalised value (trim+lowercase, DAT-015 LOWER() convention) so brute-force forensics
+still correlate repeat attempts / lockouts per target by hash. The bcrypt-shape guard
+(fat-fingered password → 'unknown') is unchanged; all other subjects stay opaque ids.
+New `AUDIT_HASH_KEY` config: added to local `.env` + `.env.example`, validated at boot
+by `assertAuditHashKey` (main.ts) — fail-closed in EVERY environment (never fall back to
+raw); key must be STABLE (rotation breaks historical correlation). Nothing functional
+reads the raw entityId (SEC-006 lockout counters are in Redis; the only audit reads are
+`count({actorId})` — opaque) so no logic switched to hash-compare.
+
+**PART B — wipe shell credential:**
+`hardDelete`'s anonymise-shell path now also sets `passwordHash` to a fixed unusable
+non-bcrypt constant (NOT NULL → constant, same logic as firstName/lastName). Pure
+data-minimisation; `isActive=false` already blocks login.
+
+**Root cause:**
+OBS-027 minimised denormalised known-user identities but deliberately deferred the
+attacker-controlled attempted identifier (then OBS-013-governed for stdout only) and did
+not touch the shell credential.
+
+**Suggested fix:** as implemented above. No schema change, no migration, existing rows +
+OBS-002 trigger untouched.
+
+**Acceptance criteria:**
+1. The fix described in **Suggested fix** is implemented in code, addressing the exact failure mode described in **Description**.
+2. A test exists that exercises the original failure mode: it FAILS before the fix is applied, PASSES after. Do not commit if this property cannot be demonstrated.
+3. No regression in existing test suite (`pnpm test` and `pnpm test:e2e` both green).
+4. If the change touches audit-sensitive code (auth, leaves approve/reject, RBAC mutations, document access, user delete, password reset), a corresponding entry is created in `audit_logs` with before/after snapshot.
+5. Commit message includes `[closes OBS-028]`.
+6. Do not modify code paths unrelated to **File** and the **Suggested fix** scope within this commit.
+
+**Verification command:**
+```
+pnpm --filter api test -- audit.service audit-hash-key users.service && pnpm --filter api test:integration -- audit-immutability
+```
+
+**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Learnings:**
+Forward-only. PART A: `resolveEntityId` → keyed HMAC-SHA256(AUDIT_HASH_KEY,
+trim+lowercase(id)) via new private `hashAttemptedSubject`; removed the now-dead
+`MAX_ENTITY_ID_LENGTH` slice; OBS-013 stdout digest (unkeyed SHA256/8) unchanged. New
+`common/config/audit-hash-key.ts` `assertAuditHashKey` (min 32 chars, ALL envs — unlike
+JWT_SECRET's prod-only gate, since there is no safe degraded mode), called in main.ts
+after the JWT assertion. `AUDIT_HASH_KEY` added to local `.env` + `apps/api/.env`
+(gitignored, random dev value) + `.env.example` (committed placeholder) + vitest.setup.ts
+(fixed test key). PART B: anonymise-shell `tx.user.update` sets `passwordHash:
+'!ANONYMIZED-NO-LOGIN!'`. Witnesses RED→GREEN: audit.service.spec (entityId is the keyed
+HMAC, never raw; same normalised input → same hash; OBS-013 stdout test updated to expect
+the HMAC persisted); audit-hash-key.spec (absent/short key throws); users.service.spec
+(shell passwordHash wiped, not bcrypt-shaped). audit-immutability.int.spec.ts stays green.
+**EXISTING raw LOGIN_FAILURE entityIds + historical USER_DELETED snapshots remain** —
+immutable, out of scope (operator/DPO call). **DEPLOY DEPENDENCY: AUDIT_HASH_KEY must be
+provisioned in prod `.env.production` BEFORE this ships — the app refuses to boot without
+it; this was NOT touched (separate authorized step).** Gate green: 2040 api unit + 126 int
++ types + lint + build.

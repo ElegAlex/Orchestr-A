@@ -984,6 +984,11 @@ export class UsersService {
             lastName: 'supprimé',
             avatarUrl: null,
             avatarPreset: null,
+            // OBS-028 — wipe the credential (data-minimisation). passwordHash is
+            // NOT NULL, so set a fixed unusable non-bcrypt constant (literal null
+            // would need a nullable migration); bcrypt.compare can never match it
+            // and isActive:false already blocks login — defence-in-depth.
+            passwordHash: '!ANONYMIZED-NO-LOGIN!',
             isActive: false,
             deletedAt: new Date(),
           },

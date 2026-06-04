@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
+import { createHmac } from 'node:crypto';
 import { AuditService, AuditAction } from './audit.service';
 import { AuditPersistenceService } from './audit-persistence.service';
 
@@ -263,12 +264,20 @@ describe('AuditService', () => {
       }
     });
 
-    // OBS-001 (b) — LOGIN_FAILURE subject capture. DAT-002 landed entityId
-    // 'unknown' for anonymous failures; OBS-001 captures the attempted
-    // identifier so an auditor can answer "who was targeted", lowercased and
-    // length-capped.
-    it('should capture LOGIN_FAILURE attemptedEmail as entityId (lowercased, capped)', () => {
+    // OBS-028 — the attempted identifier (OBS-001 captured it so an auditor can
+    // answer "who was targeted") must NOT enter the immutable trail raw. entityId
+    // is now a KEYED HMAC over the normalised (trim+lowercase) value: deterministic
+    // (forensic correlation of repeat attempts / lockouts per target) but not
+    // dictionary-reversible.
+    it('HMACs the LOGIN_FAILURE attemptedEmail into entityId (keyed, never raw)', () => {
       vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+
+      const expected = createHmac(
+        'sha256',
+        process.env.AUDIT_HASH_KEY as string,
+      )
+        .update('ghost.user@example.com')
+        .digest('hex');
 
       service.log({
         action: AuditAction.LOGIN_FAILURE,
@@ -277,14 +286,43 @@ describe('AuditService', () => {
         success: false,
       });
 
-      expect(persistence.log).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: AuditAction.LOGIN_FAILURE,
-          entityType: 'Auth',
-          entityId: 'ghost.user@example.com',
-          actorId: null,
-        }),
-      );
+      const call = persistence.log.mock.calls[0][0] as {
+        action: AuditAction;
+        entityType: string;
+        entityId: string;
+        actorId: string | null;
+      };
+      expect(call.action).toBe(AuditAction.LOGIN_FAILURE);
+      expect(call.entityType).toBe('Auth');
+      expect(call.actorId).toBeNull();
+      // Keyed HMAC of the normalised identifier — 64-hex, never the raw value.
+      expect(call.entityId).toBe(expected);
+      expect(call.entityId).toMatch(/^[0-9a-f]{64}$/);
+      expect(call.entityId).not.toContain('ghost');
+      expect(call.entityId).not.toContain('@');
+    });
+
+    // OBS-028 — correlation: differing case/whitespace of the SAME identifier
+    // yields the SAME hash, so forensics still group attempts per target.
+    it('produces the same entityId hash for the same normalised attempted identifier (LOGIN_FAILURE + ACCOUNT_LOCKED)', () => {
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+
+      service.log({
+        action: AuditAction.ACCOUNT_LOCKED,
+        attemptedEmail: 'Target@Example.com',
+        success: false,
+      });
+      service.log({
+        action: AuditAction.LOGIN_FAILURE,
+        attemptedEmail: '  target@example.com  ',
+        success: false,
+      });
+
+      const a = (persistence.log.mock.calls[0][0] as { entityId: string })
+        .entityId;
+      const b = (persistence.log.mock.calls[1][0] as { entityId: string })
+        .entityId;
+      expect(a).toBe(b);
     });
 
     // OBS-001 (c) — ua + reason enrichment round-trip into the JSONB payload.
@@ -395,10 +433,22 @@ describe('AuditService', () => {
       expect(entry.attemptedEmail).toBeUndefined();
       expect(entry.attemptedEmailHash).toMatch(/^[0-9a-f]{8}$/);
 
-      // The persisted row is unchanged: entityId stays the sanitized subject.
+      // OBS-028 — the persisted row's entityId is the keyed HMAC of the
+      // normalised identifier, never the raw value (in any case).
+      const expectedHmac = createHmac(
+        'sha256',
+        process.env.AUDIT_HASH_KEY as string,
+      )
+        .update(rawLogin.trim().toLowerCase())
+        .digest('hex');
       expect(persistence.log).toHaveBeenCalledWith(
-        expect.objectContaining({ entityId: 'victim.user@example.com' }),
+        expect.objectContaining({ entityId: expectedHmac }),
       );
+      const persistedEntityId = (
+        persistence.log.mock.calls[0][0] as { entityId: string }
+      ).entityId;
+      expect(persistedEntityId).not.toContain('victim');
+      expect(persistedEntityId).not.toContain('@');
     });
   });
 });
