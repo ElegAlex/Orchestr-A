@@ -29,6 +29,7 @@ vi.mock('../common/upload/magic-bytes.validator', () => ({
   assertMagicBytes: vi.fn().mockResolvedValue(undefined),
 }));
 import { RefreshTokenService } from '../auth/refresh-token.service';
+import { JwtNotBeforeService } from '../auth/jwt-not-before.service';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
 import { AccessScopeService } from '../common/services/access-scope.service';
 import { AuditService } from '../audit/audit.service';
@@ -39,6 +40,7 @@ describe('UsersService', () => {
   let service: UsersService;
   const mockAuditPersistence = { log: vi.fn().mockResolvedValue(undefined) };
   const mockAuditService = { log: vi.fn() };
+  const mockJwtNotBefore = { bumpUser: vi.fn().mockResolvedValue(undefined) };
   // Drives the real AccessScopeService's permission resolution. Default = no
   // permissions (plain directory caller); SEC-030 tests override per-case.
   const mockGetPermissionsForRole = vi.fn().mockResolvedValue([]);
@@ -146,6 +148,7 @@ describe('UsersService', () => {
         },
         { provide: AuditService, useValue: mockAuditService },
         { provide: AuditPersistenceService, useValue: mockAuditPersistence },
+        { provide: JwtNotBeforeService, useValue: mockJwtNotBefore },
       ],
     }).compile();
 
@@ -2827,6 +2830,58 @@ describe('UsersService', () => {
       expect(unlinkMock).not.toHaveBeenCalledWith(
         join(uploadsDir, 'user-2.png'),
       );
+    });
+  });
+
+  // SEC-020 — deactivating a user must immediately bump their nbf so any
+  // live access token is rejected by JwtStrategy.validate on the next request.
+  // Both update() (isActive true→false) and remove() (soft-delete) must call
+  // JwtNotBeforeService.bumpUser with the target userId.
+  describe('SEC-020: nbf bump on user deactivation', () => {
+    const callerAdmin = {
+      id: 'caller-admin-1',
+      role: { code: 'ADMIN', templateKey: 'ADMIN' },
+    };
+
+    it('update(isActive:false) bumps nbf for the deactivated user', async () => {
+      // assertCanManageUser → user.count
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      // update() loads existing user (isActive: true = transition will trigger)
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-1',
+        roleId: 'role-x',
+        isActive: true,
+        departmentId: null,
+        role: { code: 'CONTRIBUTEUR' },
+        userServices: [],
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-1',
+        isActive: false,
+        role: { code: 'CONTRIBUTEUR' },
+        userServices: [],
+      });
+
+      await service.update('target-1', { isActive: false }, 'ADMIN', callerAdmin);
+
+      expect(mockJwtNotBefore.bumpUser).toHaveBeenCalledWith('target-1');
+    });
+
+    it('remove() bumps nbf for the soft-deleted user', async () => {
+      // assertCanManageUser → user.count
+      mockPrismaService.user.count.mockResolvedValueOnce(1);
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({
+        id: 'target-2',
+        isActive: true,
+      });
+      mockPrismaService.user.update.mockResolvedValueOnce({
+        id: 'target-2',
+        isActive: false,
+      });
+
+      await service.remove('target-2', callerAdmin);
+
+      expect(mockJwtNotBefore.bumpUser).toHaveBeenCalledWith('target-2');
     });
   });
 });

@@ -30,6 +30,7 @@ import { join, resolve, sep } from 'path';
 import type { MultipartFile } from '@fastify/multipart';
 import { assertMagicBytes } from '../common/upload/magic-bytes.validator';
 import { RefreshTokenService } from '../auth/refresh-token.service';
+import { JwtNotBeforeService } from '../auth/jwt-not-before.service';
 import { validatePasswordStrength } from '../common/validators/password-policy';
 
 /** Type de dépendance utilisateur */
@@ -55,6 +56,10 @@ export class UsersService {
     private readonly accessScope: AccessScopeService,
     private readonly auditService: AuditService,
     private readonly auditPersistence: AuditPersistenceService,
+    // SEC-020 — immediately invalidate live access tokens when a user is
+    // deactivated. JwtNotBeforeService is exported from AuthModule which
+    // UsersModule already imports via forwardRef.
+    private readonly jwtNotBefore: JwtNotBeforeService,
   ) {}
 
   /**
@@ -732,6 +737,15 @@ export class UsersService {
       }
     }
 
+    // SEC-020 — bump per-user nbf so any live access token is rejected on the
+    // next request (JwtStrategy.validate checks nbf on every call). Placed
+    // outside the `if (caller)` audit block so it fires on any code path that
+    // persists the isActive true→false transition, not only when a caller is
+    // present.
+    if (existingUser.isActive === true && updateUserDto.isActive === false) {
+      await this.jwtNotBefore.bumpUser(id);
+    }
+
     return user;
   }
 
@@ -768,6 +782,13 @@ export class UsersService {
           after: { isActive: false },
         },
       });
+    }
+
+    // SEC-020 — bump nbf unconditionally on the actual isActive true→false
+    // transition (not gated on caller) so token invalidation holds on any
+    // code path that soft-deletes a user, including callerless internal paths.
+    if (user.isActive === true) {
+      await this.jwtNotBefore.bumpUser(id);
     }
 
     return { message: 'Utilisateur désactivé avec succès' };

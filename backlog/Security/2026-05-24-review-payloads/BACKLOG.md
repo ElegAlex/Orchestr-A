@@ -8531,7 +8531,7 @@ Extracted CORS origin resolution into apps/api/src/common/fastify/cors.config.ts
 ---
 ### SEC-020 — /users/me/avatar (@AllowSelfService) accepts upload from disabled users until JWT expiry
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8569,7 +8569,11 @@ pnpm test apps/api/src/users/users.controller.spec.ts  # may need creation if mi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+@Throttle({ short: { limit: 5, ttl: 60_000 } }) on uploadAvatar was already present (pre-existing from a prior task). Only missing piece: nbf bump on user deactivation.
+Fix: injected JwtNotBeforeService into UsersService (7th ctor param; AuthModule already exported it via forwardRef already in UsersModule). Added await this.jwtNotBefore.bumpUser(id) in update() after the USER_DEACTIVATED audit (unconditional on the isActive true→false transition, outside the if(caller) block) and in remove() after the USER_DEACTIVATED audit (gated on user.isActive === true). Both paths now invalidate live access tokens immediately on deactivation.
+Fail-pre witness: 2 RED tests (× update(isActive:false) bumps nbf / × remove() bumps nbf) showing bumpUser not called before the fix.
+Gate: build=0 test=0.
 
 ---
 ### SEC-025 — departmentId / serviceIds typed as @IsString without @IsUUID — allows weird values and inconsistent error semantics
