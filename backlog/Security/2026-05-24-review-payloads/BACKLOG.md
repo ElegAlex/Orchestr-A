@@ -7495,7 +7495,7 @@ Include LeaveStatus.CANCELLATION_REQUESTED in the status in list, both in checkO
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 8f44239c
 **Learnings:**
 Added LeaveStatus.CANCELLATION_REQUESTED to the status.in filter at 3 sites in leaves.service.ts: checkOverlap (private method ~line 2939), import-preview findMany (~line 3081), import-tx findMany (~line 3343). Test (fail-pre RED): expected [ PENDING, APPROVED ] to include CANCELLATION_REQUESTED. All 3 sites previously omitted CANCELLATION_REQUESTED, treating those leaves as free slots; rejectCancellation would restore them to APPROVED, producing overlapping approved leaves.
 
