@@ -8981,7 +8981,7 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ---
 ### COR-029 — getPendingDays counts by deprecated type enum, not leaveTypeId
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9019,7 +9019,12 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Deleted private method getPendingDays (leaves.service.ts ~L2673) — dead code confirmed by grep (zero callers) and coverage HTML marking it "function not covered".
+The method used the deprecated type: LeaveType.CP enum filter, which would miss CP leaves whose leaveTypeConfig.code maps to a different enum value.
+Design: Option 1 chosen (delete), not rewrite, because the method is unreferenced — rewriting it to use leaveTypeId would be dead code with a different shape.
+Fail-pre witness: grep showed L2673 `private async getPendingDays` + L2677 `type: LeaveType.CP` BEFORE fix; both absent AFTER.
+Gate: build=0, test=0.
 
 ---
 ### COR-031 — milestonesOverdue treats milestones with null dueDate as overdue

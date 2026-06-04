@@ -2667,21 +2667,6 @@ export class LeavesService {
     };
   }
 
-  /**
-   * Récupérer le nombre de jours en attente (CP) — conservé pour compatibilité interne
-   */
-  private async getPendingDays(userId: string): Promise<number> {
-    const pendingLeaves = await this.prisma.leave.findMany({
-      where: {
-        userId,
-        type: LeaveType.CP,
-        status: LeaveStatus.PENDING,
-      },
-    });
-
-    return pendingLeaves.reduce((sum, leave) => sum + Number(leave.days), 0);
-  }
-
   // ===========================
   // GESTION DES SOLDES (BALANCES)
   // ===========================
