@@ -2,6 +2,9 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/commo
 import { PrismaClient } from 'database';
 import { Decimal } from '@prisma/client/runtime/library';
 
+/** Queries taking longer than this threshold (ms) are logged as slow. */
+const SLOW_QUERY_THRESHOLD_MS = 200;
+
 // DAT-005 : @db.Decimal columns (TimeEntry.hours, Leave.days, LeaveBalance.totalDays,
 // Task.estimatedHours, ProjectSnapshot.progress) come back as Prisma.Decimal whose
 // default toJSON yields a string ("1.50"). The HTTP contract with the frontend ships
@@ -23,7 +26,20 @@ export class PrismaService
 {
   private readonly logger = new Logger('PrismaService');
 
+  constructor() {
+    super({ log: [{ level: 'query', emit: 'event' }] });
+  }
+
   async onModuleInit() {
+    // Register slow-query listener before connecting (OBS-023).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this as any).$on('query', (e: { duration: number; query: string }) => {
+      if (e.duration > SLOW_QUERY_THRESHOLD_MS) {
+        this.logger.warn(
+          `Slow query detected (${e.duration}ms): ${e.query}`,
+        );
+      }
+    });
     await this.$connect();
     this.logger.log('Prisma connected to database');
   }

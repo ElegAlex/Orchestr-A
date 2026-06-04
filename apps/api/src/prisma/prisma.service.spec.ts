@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 
@@ -62,6 +62,57 @@ describe('PrismaService', () => {
 
       expect(loggerSpy).toHaveBeenCalled();
       expect(consoleSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('slow-query observability (OBS-023)', () => {
+    let service: PrismaService;
+    let warnSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      service = new PrismaService();
+      vi.spyOn(service, '$connect').mockResolvedValue(undefined);
+      warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    });
+
+    it('should register a $on("query") listener during onModuleInit', async () => {
+      const onSpy = vi.spyOn(service, '$on');
+
+      await service.onModuleInit();
+
+      expect(onSpy).toHaveBeenCalledWith('query', expect.any(Function));
+    });
+
+    it('should call Logger.warn for queries exceeding the slow-query threshold', async () => {
+      let capturedHandler: ((e: { duration: number; query: string }) => void) | undefined;
+      vi.spyOn(service, '$on').mockImplementation((event: string, handler: (e: unknown) => void) => {
+        if (event === 'query') {
+          capturedHandler = handler as (e: { duration: number; query: string }) => void;
+        }
+      });
+
+      await service.onModuleInit();
+      expect(capturedHandler).toBeDefined();
+
+      // Slow query — above threshold — must trigger warn
+      capturedHandler!({ duration: 250, query: 'SELECT 1' });
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT call Logger.warn for fast queries below the slow-query threshold', async () => {
+      let capturedHandler: ((e: { duration: number; query: string }) => void) | undefined;
+      vi.spyOn(service, '$on').mockImplementation((event: string, handler: (e: unknown) => void) => {
+        if (event === 'query') {
+          capturedHandler = handler as (e: { duration: number; query: string }) => void;
+        }
+      });
+
+      await service.onModuleInit();
+      expect(capturedHandler).toBeDefined();
+
+      // Fast query — below threshold — must NOT trigger warn
+      capturedHandler!({ duration: 50, query: 'SELECT 1' });
+      expect(warnSpy).not.toHaveBeenCalled();
     });
   });
 

@@ -9696,7 +9696,7 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ---
 ### OBS-023 — No Prisma query logging / slow-query observability
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9734,7 +9734,14 @@ pnpm test apps/api/src/prisma/prisma.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added slow-query observability to PrismaService without external deps (OBS-023).
+
+Design: PrismaService constructor passes {log:[{level:"query",emit:"event"}]} to super(); onModuleInit registers $on("query") listener with SLOW_QUERY_THRESHOLD_MS=200. Queries exceeding 200ms trigger Logger.warn with duration and query text.
+
+Key constraints: (1) $on registered in onModuleInit (not constructor) to be spyable in tests; (2) only query event subscribed — warn/error left at Prisma defaults to avoid silent suppression; (3) cast via (this as any).$on() to bypass Prisma generic type constraints with PrismaClient from database package; (4) MockPrismaClient in vitest.setup.ts needed $on=vi.fn() added for test seam.
+
+Fail-pre witness: before fix, all 3 OBS-023 tests FAILED (AssertionError: $on never called with query, capturedHandler undefined). After fix: 10/10 tests GREEN.
 
 ---
 ### PER-026 — Redis usage limited to JWT blacklist + role-permissions — no caching on heavy reports

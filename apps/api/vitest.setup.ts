@@ -168,6 +168,7 @@ export enum AppSettingsCategory {
 class MockPrismaClient {
   $connect = vi.fn();
   $disconnect = vi.fn();
+  $on = vi.fn();
   $transaction = vi.fn((callback: (tx: MockPrismaClient) => Promise<unknown>) =>
     callback(this),
   );
