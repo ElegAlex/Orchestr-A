@@ -7928,7 +7928,7 @@ Add a fastify onRequest hook generating uuid if x-request-id absent; bind via As
 pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 7b448c13
 **Learnings:**
 Implemented AsyncLocalStorage request-id context (OBS-009).
 
