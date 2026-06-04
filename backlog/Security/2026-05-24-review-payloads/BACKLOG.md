@@ -9766,7 +9766,7 @@ Either run cron on a single 'scheduler' replica (env flag), or use a Redis-based
 pnpm test apps/api/src/analytics/advanced/snapshot-scheduler.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** f757f81
 **Learnings:**
 Redis SET NX EX distributed leader-lock around captureDailySnapshots so only the first replica to acquire the lock runs captureSnapshots per tick; others skip silently.
 Design: EX TTL = 600s (no lock release in finally — avoids slightly-slower replica re-acquiring and double-running); fail-open on Redis error so a Redis outage does not silently skip the nightly snapshot.
