@@ -19,6 +19,7 @@ import {
   NoopErrorReporter,
   installGlobalErrorHandlers,
 } from './common/error-reporter';
+import { resolveAllowedOrigins } from './common/fastify/cors.config';
 
 // OBS-010: install process-level error handlers before the app boots so that
 // unhandledRejection and uncaughtException are captured from the very first tick.
@@ -115,16 +116,9 @@ async function bootstrap() {
     },
   });
 
-  // CORS
-  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  // CORS — SEC-012: resolved via cors.config.ts (CORS_ORIGIN canonical, ALLOWED_ORIGINS alias)
   app.enableCors({
-    origin:
-      allowedOrigins ||
-      (process.env.NODE_ENV === 'production'
-        ? false
-        : ['http://localhost:4001', 'http://localhost:3000']),
+    origin: resolveAllowedOrigins(),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
