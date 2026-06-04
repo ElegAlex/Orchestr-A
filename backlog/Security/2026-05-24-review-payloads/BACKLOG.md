@@ -9087,7 +9087,7 @@ Guard m.dueDate != null before each comparison; add a unit test for a milestone 
 pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 63d1c48e
 **Learnings:**
 Added null guard (dueDate != null) before both comparisons in captureSnapshots (lines 1188-1193 of projects.service.ts). Fail-pre: test showed milestonesOverdue=2 for 2 PENDING/IN_PROGRESS milestones with null dueDate instead of 0, because null < now is false in JS (null coerces to 0 = epoch, which is < now). Fix: added m.dueDate != null guard before each date comparison. Test added: COR-031 milestone with null dueDate is not counted as overdue or upcoming.
 
