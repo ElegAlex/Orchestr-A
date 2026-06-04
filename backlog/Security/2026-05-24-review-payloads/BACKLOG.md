@@ -8300,7 +8300,7 @@ Use prisma.timeEntry.groupBy({ by: ['activityType'], _sum: { hours: true }, wher
 pnpm test apps/api/src/time-tracking/time-tracking.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 749af300
 **Learnings:**
 getUserReport and getProjectReport replaced JS reduce() aggregations with prisma.groupBy + aggregate. byType/byDate/totalHours computed by SQL; byProject/byUser/byThirdParty use groupBy + a small findMany for name resolution on the distinct-id set. Raw entries/userEntries/thirdPartyEntries arrays dropped from responses (web does not consume them; grep of apps/web confirmed). date field is @db.Date so groupBy date gives day-level buckets matching old behaviour. FAIL-PRE: 4 tests RED on unfixed code (groupBy never called, expected was vi.fn() called at least once, userEntries present in response). Gate: build+test both exit 0.
 
