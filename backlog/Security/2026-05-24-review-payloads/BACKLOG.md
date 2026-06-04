@@ -9723,7 +9723,7 @@ Note: --grep @smoke may skip the Playwright setup/auth project if it is not tagg
 ---
 ### DAT-030 — Seed creates E2E test users when E2E_SEED=true OR NODE_ENV=test — fragile prod safety
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9761,7 +9761,8 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Extracted `shouldSeedE2EUsers(env)` pure function to packages/database/prisma/seed-utils.ts. The unfixed version (OR-only gate) returned true for {E2E_SEED=true,NODE_ENV=production}; the fix adds `&& env.NODE_ENV !== production`. Fail-pre witness: vitest RED on 2 cases (production+E2E_SEED=true and production+no-flag) before fix; GREEN on all 6 assertions after. Test lives at apps/api/src/__tests__/seed-guard.spec.ts, imported via database alias (vitest.config resolve). Seed.ts updated to import and call the extracted function.
 
 ---
 ### OBS-023 — No Prisma query logging / slow-query observability

@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import Redis from "ioredis";
 import * as crypto from "crypto";
 import * as bcrypt from "bcrypt";
+import { shouldSeedE2EUsers } from "./seed-utils";
 
 const prisma = new PrismaClient();
 
@@ -1614,8 +1615,9 @@ async function main() {
 
   // ============================================================
   // E2E TEST USERS — créés uniquement si E2E_SEED=true ou NODE_ENV=test
+  // ET jamais en production (DAT-030)
   // ============================================================
-  if (process.env.E2E_SEED === "true" || process.env.NODE_ENV === "test") {
+  if (shouldSeedE2EUsers(process.env)) {
     console.log("🧪 E2E seed: creating test users...");
 
     // Département + service de test
