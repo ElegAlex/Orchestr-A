@@ -6847,7 +6847,7 @@ Introduce apps/web/src/lib/logger.ts wrapping console with NODE_ENV guard + stru
 pnpm --filter web test  # no targeted spec inferred from apps/web/src
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 3395fd7
 **Learnings:**
 Created apps/web/src/lib/logger.ts with NODE_ENV guard (debug/info/warn silent in production, error always emits) + PII scrubbing (token/password/email/accessToken/refreshToken replaced with [REDACTED]) + DSN-optional no-op error reporter stub.
 Fail-pre: wrote logger.test.ts (11 tests) + naive passthrough stub, confirmed 6 RED (3 NODE_ENV guard + 3 PII scrub).
