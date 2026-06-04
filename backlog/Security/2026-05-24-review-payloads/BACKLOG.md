@@ -9411,7 +9411,7 @@ Replace with leaveType: { select: { id: true, code: true, name: true, color: tru
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 9aa11720
 **Learnings:**
 Replaced leaveType:true (12 occurrences, 2 indent variants: 6-space and 8-space) with leaveType:{select:{id,code,name,color,icon}} in leaves.service.ts. Used replace_all twice to catch both indentation variants. Test PER-030 in findAll describe asserts findMany was called with the scoped select shape (not boolean true). RED before fix: AssertionError expected true not to be true at leaves.service.spec.ts:1693.
 
