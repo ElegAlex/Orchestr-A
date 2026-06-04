@@ -9131,7 +9131,7 @@ Capture const now = new Date(); once at the top of the method and reuse.
 pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** bedcb20
 **Learnings:**
 Fix: captured const now = new Date() and sevenDaysLater once at the top of getProjectStats (after the !project guard), then replaced the three inline new Date()/Date.now() calls in the upcoming-milestone filter with the captured constants.
 
