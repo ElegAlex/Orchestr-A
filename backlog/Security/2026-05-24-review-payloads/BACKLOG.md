@@ -8568,7 +8568,7 @@ Add @Throttle on uploadAvatar (e.g. 5/min). Combine with SEC-019: bump user nbf 
 pnpm test apps/api/src/users/users.controller.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 6d361b93
 **Learnings:**
 @Throttle({ short: { limit: 5, ttl: 60_000 } }) on uploadAvatar was already present (pre-existing from a prior task). Only missing piece: nbf bump on user deactivation.
 Fix: injected JwtNotBeforeService into UsersService (7th ctor param; AuthModule already exported it via forwardRef already in UsersModule). Added await this.jwtNotBefore.bumpUser(id) in update() after the USER_DEACTIVATED audit (unconditional on the isActive true→false transition, outside the if(caller) block) and in remove() after the USER_DEACTIVATED audit (gated on user.isActive === true). Both paths now invalidate live access tokens immediately on deactivation.
