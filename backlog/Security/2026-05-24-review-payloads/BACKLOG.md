@@ -9591,7 +9591,7 @@ Created ApproveLeaveDto (comment, @IsOptional @IsString @MaxLength(2000)) and Re
 ---
 ### SEC-028 — taskReadWhere allows access via assigneeId — task can be 'leaked' by reassignment
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9629,7 +9629,8 @@ pnpm test apps/api/src/common/services/access-scope.service.spec.ts  # may need 
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added `confidential Boolean @default(false)` to Task model (schema.prisma). Both assignment OR-branches in taskReadWhere (assigneeId and assignees) are now gated on `confidential: false`, so reassignment cannot grant read access to confidential tasks. Project-role branch is intentionally ungated (project membership = full read). Privileged callers (tasks:readAll/manage_any) still get the empty where (no gate). Migration: 20260604050729_add_task_confidential_flag. fail-pre: `expected [{ assigneeId: user-1 }, ...] to contain { assigneeId: user-1, confidential: false }` (vitest RED before fix, GREEN after). No audit log entry needed (AC4 scope = mutations, not read filters; audit module is write-only).
 
 ---
 ### SEC-029 — Refresh token issuance stores UA verbatim with no bounding — log/DB bloat vector

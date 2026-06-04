@@ -106,8 +106,11 @@ export class AccessScopeService {
 
     return {
       OR: [
-        { assigneeId: user.id },
-        { assignees: { some: { userId: user.id } } },
+        // SEC-028: assignment grants read only on non-confidential tasks.
+        // A confidential task is only accessible via project membership or
+        // privileged permission (tasks:readAll / tasks:manage_any above).
+        { assigneeId: user.id, confidential: false },
+        { assignees: { some: { userId: user.id } }, confidential: false },
         {
           project: {
             OR: [
