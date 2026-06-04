@@ -8043,7 +8043,7 @@ Expand redact paths to include all token-bearing query/body keys, sensitive PII 
 pnpm test apps/api/src/common/fastify/redact.config.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** e7526cb
 **Learnings:**
 Widened Pino redact paths from 7 to 21 entries.
 Added: req.headers["x-api-key"], req.headers["proxy-authorization"], req.query.token, req.body.token, req.body.validationComment, req.body.reason, req.body.motif, req.body.justification, res.body.passwordHash, res.body.refresh_token, res.body.access_token.
