@@ -4,6 +4,7 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from '@fastify/helmet';
 import { AppModule } from './app.module';
@@ -105,6 +106,10 @@ async function bootstrap() {
 
   // Global prefix
   app.setGlobalPrefix('api');
+
+  // OBS-017: global exception filter — masks non-HttpException errors to safe
+  // { statusCode, message, timestamp, path } shape, logs full detail server-side.
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Validation
   app.useGlobalPipes(
