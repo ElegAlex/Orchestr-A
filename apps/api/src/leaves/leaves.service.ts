@@ -2026,9 +2026,14 @@ export class LeavesService {
         validatedAt: current.validatedAt?.toISOString() ?? null,
       };
 
+      const cancelledAt = new Date();
       const updated = await tx.leave.update({
         where: { id },
-        data: { status: LeaveStatus.REJECTED },
+        data: {
+          status: LeaveStatus.CANCELLED,
+          validatedById: currentUserId ?? null,
+          validatedAt: cancelledAt,
+        },
         include: {
           user: {
             select: {

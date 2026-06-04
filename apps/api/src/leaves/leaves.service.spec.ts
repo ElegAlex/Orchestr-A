@@ -2991,14 +2991,14 @@ describe('LeavesService', () => {
   describe('cancel', () => {
     it('should cancel an approved leave', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
-      const cancelledLeave = { ...approvedLeave, status: LeaveStatus.REJECTED };
+      const cancelledLeave = { ...approvedLeave, status: LeaveStatus.CANCELLED };
 
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
       mockPrismaService.leave.update.mockResolvedValue(cancelledLeave);
 
       const result = await service.cancel('leave-1');
 
-      expect(result.status).toBe(LeaveStatus.REJECTED);
+      expect(result.status).toBe(LeaveStatus.CANCELLED);
     });
 
     it('should throw NotFoundException when leave not found', async () => {
@@ -3055,13 +3055,13 @@ describe('LeavesService', () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       const cancelledLeave = {
         ...approvedLeave,
-        status: LeaveStatus.REJECTED,
+        status: LeaveStatus.CANCELLED,
       };
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
       mockPrismaService.leave.update.mockResolvedValue(cancelledLeave);
 
       const result = await service.cancel('leave-1', 'admin-1', 'ADMIN');
-      expect(result.status).toBe(LeaveStatus.REJECTED);
+      expect(result.status).toBe(LeaveStatus.CANCELLED);
     });
 
     // DAT-001 — cancel est une transition audit-sensible (APPROVED →
@@ -3078,7 +3078,7 @@ describe('LeavesService', () => {
       };
       const cancelledLeave = {
         ...approvedLeave,
-        status: LeaveStatus.REJECTED,
+        status: LeaveStatus.CANCELLED,
       };
 
       mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
@@ -3099,7 +3099,43 @@ describe('LeavesService', () => {
             validatorAssigned: 'manager-1',
             selfApproved: false,
             before: expect.objectContaining({ status: LeaveStatus.APPROVED }),
-            after: expect.objectContaining({ status: LeaveStatus.REJECTED }),
+            after: expect.objectContaining({ status: LeaveStatus.CANCELLED }),
+          }),
+        }),
+      );
+    });
+
+    // COR-004 — cancel() must write CANCELLED, not REJECTED.
+    // REJECTED is set by reject() (refused by validator); a self-cancellation
+    // and a manager rejection must be distinguishable in audit/report flows.
+    // The update call must stamp the cancelling actor via validatedById/At.
+    it('COR-004 — cancel() writes CANCELLED status (not REJECTED) and stamps actor via validatedById', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        status: LeaveStatus.APPROVED,
+        validatorId: 'manager-1',
+        validatedById: 'manager-1',
+        validatedAt: new Date('2026-05-20T10:00:00Z'),
+        selfApproved: false,
+      };
+      const cancelledLeave = {
+        ...approvedLeave,
+        status: LeaveStatus.CANCELLED,
+        validatedById: 'admin-1',
+      };
+
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      mockPrismaService.leave.update.mockResolvedValue(cancelledLeave);
+
+      await service.cancel('leave-1', 'admin-1', 'ADMIN');
+
+      // The key assertion: leave.update must be called with CANCELLED, not REJECTED,
+      // and must stamp the cancelling actor.
+      expect(mockPrismaService.leave.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: LeaveStatus.CANCELLED,
+            validatedById: 'admin-1',
           }),
         }),
       );

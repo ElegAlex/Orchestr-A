@@ -7372,7 +7372,7 @@ Coverage task (service already correct). Added 6 negative tests: create NotFound
 ---
 ### COR-004 — cancel() overwrites APPROVED with REJECTED, conflating semantics
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7410,7 +7410,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added CANCELLED to LeaveStatus enum (schema.prisma + __mocks__/database.ts). cancel() now writes status=CANCELLED (not REJECTED) and stamps validatedById/validatedAt with the cancelling actor. Migration: 20260604051255_add_cancelled_to_leave_status. fail-pre: COR-004 regression test asserted leave.update called with status=CANCELLED — was RED (got REJECTED) on unfixed code; GREEN after. Updated existing cancel tests (REJECTED→CANCELLED). getAvailableDays already excludes CANCELLED by whitelist. Audit entry LEAVE_CANCELLED was already in place.
 
 ---
 ### COR-006 — update() destructures endHalfDay but never applies it

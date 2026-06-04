@@ -20,6 +20,7 @@ export const LeaveStatus = {
   APPROVED: 'APPROVED',
   REJECTED: 'REJECTED',
   CANCELLATION_REQUESTED: 'CANCELLATION_REQUESTED',
+  CANCELLED: 'CANCELLED',
 } as const;
 
 export const LeaveType = {

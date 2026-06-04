@@ -671,6 +671,7 @@ enum LeaveStatus {
   APPROVED
   REJECTED
   CANCELLATION_REQUESTED
+  CANCELLED
 }
 
 enum HalfDay {
