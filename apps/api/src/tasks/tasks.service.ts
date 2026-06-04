@@ -1174,27 +1174,25 @@ export class TasksService {
             comments: true,
           },
         },
+        timeEntries: {
+          where: { isDismissal: false },
+          select: { hours: true },
+        },
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    const taskIds = tasks.map((t) => t.id);
-    const sums = taskIds.length
-      ? await this.prisma.timeEntry.groupBy({
-          by: ['taskId'],
-          where: { taskId: { in: taskIds }, isDismissal: false },
-          _sum: { hours: true },
-        })
-      : [];
-    const sumByTaskId = new Map<string, number>(
-      sums.map((s) => [s.taskId!, Number(s._sum.hours ?? 0)]),
-    );
-    return tasks.map((t) => ({
-      ...t,
-      totalLoggedHours: sumByTaskId.get(t.id) ?? 0,
-    }));
+    // Fold time aggregation in memory — eliminates the separate timeEntry.groupBy round-trip.
+    return tasks.map((t) => {
+      const { timeEntries, ...rest } = t;
+      const totalLoggedHours = (timeEntries ?? []).reduce(
+        (sum, e) => sum + Number(e.hours ?? 0),
+        0,
+      );
+      return { ...rest, totalLoggedHours };
+    });
   }
 
   /**

@@ -814,18 +814,19 @@ describe('TasksService', () => {
   describe('getTasksByAssignee', () => {
     it('should return tasks assigned to user with totalLoggedHours=0 when no entries', async () => {
       const mockTasks = [
-        { id: 'task-1', title: 'Task 1', assigneeId: 'user-1' },
-        { id: 'task-2', title: 'Task 2', assigneeId: 'user-1' },
+        { id: 'task-1', title: 'Task 1', assigneeId: 'user-1', timeEntries: [] },
+        { id: 'task-2', title: 'Task 2', assigneeId: 'user-1', timeEntries: [] },
       ];
 
       mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
-      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
 
       const result = await service.getTasksByAssignee('user-1');
 
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({ id: 'task-1', totalLoggedHours: 0 });
       expect(result[1]).toMatchObject({ id: 'task-2', totalLoggedHours: 0 });
+      // timeEntries must be stripped from the response shape
+      expect(result[0]).not.toHaveProperty('timeEntries');
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -834,20 +835,22 @@ describe('TasksService', () => {
               { assignees: { some: { userId: 'user-1' } } },
             ],
           },
+          include: expect.objectContaining({
+            timeEntries: { where: { isDismissal: false }, select: { hours: true } },
+          }),
         }),
       );
     });
 
     it('should aggregate hours per task and exclude dismissals', async () => {
+      // timeEntries are folded into findMany include; groupBy is no longer called.
       const mockTasks = [
-        { id: 'task-1', title: 'Task 1' },
-        { id: 'task-2', title: 'Task 2' },
+        { id: 'task-1', title: 'Task 1', timeEntries: [{ hours: 2 }, { hours: 1.5 }] },
+        { id: 'task-2', title: 'Task 2', timeEntries: [] },
       ];
 
       mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
-      mockPrismaService.timeEntry.groupBy.mockResolvedValue([
-        { taskId: 'task-1', _sum: { hours: 3.5 } },
-      ]);
+      mockPrismaService.timeEntry.groupBy.mockClear();
 
       const result = await service.getTasksByAssignee('user-1');
 
@@ -855,11 +858,7 @@ describe('TasksService', () => {
         expect.objectContaining({ id: 'task-1', totalLoggedHours: 3.5 }),
         expect.objectContaining({ id: 'task-2', totalLoggedHours: 0 }),
       ]);
-      expect(mockPrismaService.timeEntry.groupBy).toHaveBeenCalledWith({
-        by: ['taskId'],
-        where: { taskId: { in: ['task-1', 'task-2'] }, isDismissal: false },
-        _sum: { hours: true },
-      });
+      expect(mockPrismaService.timeEntry.groupBy).not.toHaveBeenCalled();
     });
 
     it('should skip groupBy call when no tasks returned', async () => {
@@ -869,6 +868,27 @@ describe('TasksService', () => {
       const result = await service.getTasksByAssignee('user-1');
 
       expect(result).toEqual([]);
+      expect(mockPrismaService.timeEntry.groupBy).not.toHaveBeenCalled();
+    });
+
+    it('PER-023: should NOT call timeEntry.groupBy when tasks exist — single-pass only', async () => {
+      // On unfixed code this is RED: timeEntry.groupBy is called even when tasks exist.
+      // After the fix (timeEntries folded into findMany include), groupBy must never be called.
+      const mockTasks = [
+        {
+          id: 'task-1',
+          title: 'Task 1',
+          assigneeId: 'user-1',
+          timeEntries: [{ hours: 2 }, { hours: 1.5 }],
+        },
+      ];
+      mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
+      mockPrismaService.timeEntry.groupBy.mockClear();
+
+      const result = await service.getTasksByAssignee('user-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].totalLoggedHours).toBeCloseTo(3.5);
       expect(mockPrismaService.timeEntry.groupBy).not.toHaveBeenCalled();
     });
   });

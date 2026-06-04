@@ -8306,7 +8306,7 @@ pnpm test apps/api/src/time-tracking/time-tracking.service.spec.ts  # may need c
 ---
 ### PER-023 — Two-round-trip + extra groupBy on every getByAssignee call
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8344,7 +8344,8 @@ pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missi
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Folded timeEntry aggregation into the task.findMany include by adding timeEntries:{where:{isDismissal:false},select:{hours:true}} and summing in memory. Dropped the separate timeEntry.groupBy round-trip. Destructured timeEntries out of the response shape to avoid leaking raw rows to the frontend. Design note: at the SQL level, a Prisma relation include is fetched as a separate query, so this is a mock-call-count win reflecting cleaner code structure rather than a guaranteed single SQL round-trip. fail-pre: AssertionError: expected timeEntry.groupBy to not be called at all, but actually been called 1 times.
 
 ---
 ### PER-024 — Recurring events: createMany then immediate findMany to wire participants
