@@ -7163,7 +7163,7 @@ In the web app's global API-error interceptor (or route guard), branch on a `403
 pnpm --filter web test  # + Playwright E2E driving a flagged login through the change-password screen
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 8423dea
 **Learnings:**
 Intercepted 403+PASSWORD_CHANGE_REQUIRED in api.ts response interceptor (new branch ABOVE the 401 check). Key design choices:
 1. api.ts: added redirectToChangePassword() helper that dispatches auth:password-change-required event then sets window.location.href to /{locale}/change-password without clearing the token (token is required for PATCH /users/me/change-password).
