@@ -9628,7 +9628,7 @@ Consider a confidential flag on Task/Project with audit trail of who accessed; o
 pnpm test apps/api/src/common/services/access-scope.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 24550641
 **Learnings:**
 Added `confidential Boolean @default(false)` to Task model (schema.prisma). Both assignment OR-branches in taskReadWhere (assigneeId and assignees) are now gated on `confidential: false`, so reassignment cannot grant read access to confidential tasks. Project-role branch is intentionally ungated (project membership = full read). Privileged callers (tasks:readAll/manage_any) still get the empty where (no gate). Migration: 20260604050729_add_task_confidential_flag. fail-pre: `expected [{ assigneeId: user-1 }, ...] to contain { assigneeId: user-1, confidential: false }` (vitest RED before fix, GREEN after). No audit log entry needed (AC4 scope = mutations, not read filters; audit module is write-only).
 
