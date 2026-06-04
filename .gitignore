@@ -170,3 +170,6 @@ playwright/.auth/
 .codex
 .superpowers/
 .claude/scheduled_tasks.lock
+
+# TS incremental build info (BUILD-001 emits tsconfig.build.tsbuildinfo)
+*.tsbuildinfo
