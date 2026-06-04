@@ -9590,7 +9590,7 @@ Add a e2e-smoke job gated by needs: [lint] that runs --grep @smoke with workers=
 TBD — manual verification (config change, no automated test)
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 69dc154
 **Learnings:**
 Added e2e-smoke job (job 4a) in ci.yml that runs --grep @smoke --workers=4, self-contained with full services/seed/build setup, gated on needs:[lint].
 Changed e2e-tests (job 4b) needs from [lint] to [backend-tests, e2e-smoke] so the full suite only runs after unit tests AND smoke are green.
