@@ -8660,7 +8660,7 @@ Add a global setup that calls vi.useFakeTimers({ now: new Date('2025-01-15T10:00
 pnpm test apps/web/src/lib/__tests__/date-utils.test.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 7d051d82
 **Learnings:**
 Added a dedicated clock-freeze describe block with jest.useFakeTimers({now: new Date("2025-01-15T10:00:00Z")}) + afterAll restore in date-utils.test.ts.
 Design decision: per-describe freeze (NOT global jest.setup.js) to avoid breaking async testing-library utilities in other suites.
