@@ -7409,7 +7409,7 @@ Add CANCELLED to LeaveStatus, transition to it instead of REJECTED, include CANC
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** bf5cf483
 **Learnings:**
 Added CANCELLED to LeaveStatus enum (schema.prisma + __mocks__/database.ts). cancel() now writes status=CANCELLED (not REJECTED) and stamps validatedById/validatedAt with the cancelling actor. Migration: 20260604051255_add_cancelled_to_leave_status. fail-pre: COR-004 regression test asserted leave.update called with status=CANCELLED — was RED (got REJECTED) on unfixed code; GREEN after. Updated existing cancel tests (REJECTED→CANCELLED). getAvailableDays already excludes CANCELLED by whitelist. Audit entry LEAVE_CANCELLED was already in place.
 
