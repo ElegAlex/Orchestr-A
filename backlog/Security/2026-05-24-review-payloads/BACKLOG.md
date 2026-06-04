@@ -8611,7 +8611,7 @@ Replace @IsString with @IsUUID('4') on all foreign-key fields. Add Fastify bodyL
 pnpm test apps/api/src/users/dto/create-user.dto.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** bcfa26b3
 **Learnings:**
 Changed @IsString to @IsUUID(4) on departmentId and @IsUUID(4, {each:true}) on serviceIds in create-user.dto.ts (FK fields must be v4 UUID to avoid Prisma 500 on invalid values). Added explicit bodyLimit:1048576 to FastifyAdapter in main.ts. roleCode left as @IsString (it is a role code string, not a UUID). fail-pre: 2 tests RED with TypeError (isUuid constraint absent on unfixed code); pass-post: all 17 tests GREEN after fix.
 
