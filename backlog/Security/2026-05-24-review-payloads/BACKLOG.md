@@ -9018,7 +9018,7 @@ Either delete the method (it's unreferenced) or rewrite it to sum by leaveTypeId
 pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 0ec880a7
 **Learnings:**
 Deleted private method getPendingDays (leaves.service.ts ~L2673) — dead code confirmed by grep (zero callers) and coverage HTML marking it "function not covered".
 The method used the deprecated type: LeaveType.CP enum filter, which would miss CP leaves whose leaveTypeConfig.code maps to a different enum value.
