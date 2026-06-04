@@ -8350,7 +8350,7 @@ Either (a) use prisma.event.create in a loop with participants.create nested; (b
 pnpm test apps/api/src/events/events.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** f643cdd1
 **Learnings:**
 Replaced createMany+findMany(parentEventId)+eventParticipant.createMany with a for-of loop of prisma.event.create({data:{...occ, participants:{create:...}}}) per occurrence (PER-024 design: option a, nested write).
 No transaction needed — original code was non-transactional; keeping same style per Acceptance #6.
