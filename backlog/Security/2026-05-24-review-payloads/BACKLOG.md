@@ -10152,7 +10152,7 @@ migration, no touching existing rows or OBS-002.
 pnpm --filter api test -- users.service auth.service && pnpm --filter api test:integration -- audit-immutability
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** d8743e51
 **Learnings:**
 Forward-only PII minimisation. USER_DELETED snapshot reduced to {id, roleId,
 departmentId, isActive, createdAt, updatedAt}; 4 `details` strings now interpolate
