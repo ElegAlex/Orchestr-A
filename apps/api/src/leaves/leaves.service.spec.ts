@@ -2969,6 +2969,24 @@ describe('LeavesService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
+    // COR-030 — owner cancelling own APPROVED leave must be redirected to requestCancel.
+    // An owner who is not a manager bypassed the guard and could cancel an APPROVED
+    // leave directly. This is wrong: they must go through requestCancel() to enter
+    // CANCELLATION_REQUESTED and await manager validation.
+    it('COR-030 — should throw ForbiddenException when owner cancels own APPROVED leave (must use requestCancel)', async () => {
+      const approvedLeave = {
+        ...mockLeave,
+        userId: 'user-1',
+        status: LeaveStatus.APPROVED,
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValue(approvedLeave);
+      // CONTRIBUTEUR role → canManageLeave returns false (no leaves:delete or leaves:approve)
+
+      await expect(
+        service.cancel('leave-1', 'user-1', 'CONTRIBUTEUR'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it('should allow ADMIN to cancel any leave', async () => {
       const approvedLeave = { ...mockLeave, status: LeaveStatus.APPROVED };
       const cancelledLeave = {

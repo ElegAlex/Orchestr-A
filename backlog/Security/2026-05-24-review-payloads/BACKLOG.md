@@ -7718,7 +7718,7 @@ Added Logger.warn at both fallback sites in leaves.service.ts (create path line 
 ---
 ### COR-030 — cancel() lets the OWNER cancel an APPROVED leave without manager confirmation
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7756,7 +7756,8 @@ pnpm test apps/api/src/leaves/leaves.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Fix: added guard in cancel() at L1990 — if isOwner && !canManage && status===APPROVED throw ForbiddenException (use requestCancel). Test added: COR-030 owner+APPROVED+CONTRIBUTEUR → ForbiddenException. fail-pre: AssertionError expected ForbiddenException, got TypeError (status undefined). No regression (187/187 passing).
 
 ---
 ### DAT-019 — Destructive RBAC V4 migration with no transaction wrapping and no rollback path

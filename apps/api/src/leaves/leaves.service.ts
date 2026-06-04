@@ -1983,6 +1983,15 @@ export class LeavesService {
           "Vous n'êtes pas autorisé à annuler cette demande",
         );
       }
+      // COR-030 — an owner who is not a manager cannot cancel an APPROVED leave
+      // directly: they must go through requestCancel() to enter CANCELLATION_REQUESTED
+      // and await manager validation. Only managers/admins (canManage=true) may
+      // perform the immediate APPROVED→REJECTED transition.
+      if (isOwner && !canManage && leave.status === LeaveStatus.APPROVED) {
+        throw new ForbiddenException(
+          "Vous ne pouvez pas annuler directement un congé approuvé. Utilisez la demande d'annulation.",
+        );
+      }
     }
 
     if (
