@@ -9247,7 +9247,7 @@ Use @nestjs/terminus with separate /healthz (liveness, no auth) and /readyz (DB+
 pnpm test apps/api/src/app.controller.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 7358257
 **Learnings:**
 Replaced stub getHealth() in AppController (which leaked process.uptime + NODE_ENV) with a dedicated HealthModule (health.controller.ts + health.service.ts). HealthService pings DB via $queryRaw SELECT 1 and Redis via PING; throws ServiceUnavailableException (HTTP 503) on any failure. Kept route /health (not /healthz) to preserve docker-compose healthcheck configs (standalone + prod both use /api/health). Removed dead AppService.getHealth() (was never called by controller). No @nestjs/terminus dep — no-dep design per discovery decision. Fail-pre witness: Cannot find module ./health.controller (RED, import-not-found before fix). Pass-post: 3 tests green after fix.
 
