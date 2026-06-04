@@ -8025,7 +8025,7 @@ Add @willsoto/nestjs-prometheus or OTLP exporter; expose /api/metrics behind aut
 pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 70f0ac11
 **Learnings:**
 Implemented minimal in-process Prometheus metrics (no prom-client dep). MetricsService tracks http_requests_total (counter) and http_request_duration_seconds (summary) in Maps keyed by label strings; renderMetrics() emits valid Prometheus text with # HELP / # TYPE lines. MetricsInterceptor (APP_INTERCEPTOR) wraps every HTTP request via tap+catchError; swallows internal errors to never break the response pipeline. MetricsController at GET /api/metrics uses @Public() to bypass JwtAuthGuard then enforces METRICS_TOKEN env var when set (401 if missing/wrong). MetricsModule registered in AppModule. Fail-pre witness: Cannot find module ./metrics.service — all 10 tests failed with import errors before implementation. Design: summary (count+sum) not histogram (no bucket fiddling). route=req.path not routeData to avoid touching router internals.
 
