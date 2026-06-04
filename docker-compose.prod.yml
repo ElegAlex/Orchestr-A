@@ -120,6 +120,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
 
+      # Audit — OBS-028: keys the HMAC of attempted-login identifiers in audit_logs.
+      # main.ts assertAuditHashKey() refuses to boot (any env) without it (>=32 chars).
+      # Like the other required secrets this is a passthrough; without it the value in
+      # .env.production never reaches the container and the app crash-loops on boot.
+      AUDIT_HASH_KEY: ${AUDIT_HASH_KEY:?AUDIT_HASH_KEY is required}
+
       # CORS
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
 
