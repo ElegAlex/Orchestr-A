@@ -9733,7 +9733,7 @@ new PrismaClient({ log: [{level:'query', emit:'event'}, {level:'warn', emit:'eve
 pnpm test apps/api/src/prisma/prisma.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 0a78cc64
 **Learnings:**
 Added slow-query observability to PrismaService without external deps (OBS-023).
 
