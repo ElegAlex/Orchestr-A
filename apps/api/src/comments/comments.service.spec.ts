@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
@@ -86,6 +87,14 @@ describe('CommentsService', () => {
       expect(result).toBeDefined();
       expect(result.content).toBe(createDto.content);
     });
+
+    it('should throw NotFoundException when task does not exist', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue(null);
+
+      await expect(service.create(userId, createDto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
   });
 
   describe('findAll', () => {
@@ -117,6 +126,23 @@ describe('CommentsService', () => {
 
       expect(result.content).toBe('Updated comment');
     });
+
+    it('should throw NotFoundException when comment does not exist on update', async () => {
+      mockPrismaService.comment.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.update('nonexistent', 'user-1', { content: 'X' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException when non-author tries to update', async () => {
+      const existing = { id: '1', content: 'Old', authorId: 'user-1' };
+      mockPrismaService.comment.findUnique.mockResolvedValue(existing);
+
+      await expect(
+        service.update('1', 'user-2', { content: 'Hacked' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('remove', () => {
@@ -127,6 +153,50 @@ describe('CommentsService', () => {
       mockPrismaService.comment.delete.mockResolvedValue(mockComment);
 
       await service.remove('1', 'user-1', 'ADMIN');
+
+      expect(mockPrismaService.comment.delete).toHaveBeenCalledWith({
+        where: { id: '1' },
+      });
+    });
+
+    it('should throw NotFoundException when comment does not exist on remove', async () => {
+      mockPrismaService.comment.findUnique.mockResolvedValue(null);
+
+      await expect(service.remove('nonexistent', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw ForbiddenException when non-author without delete_any permission tries to remove', async () => {
+      const mockComment = { id: '1', content: 'Comment', authorId: 'user-1' };
+      mockPrismaService.comment.findUnique.mockResolvedValue(mockComment);
+      // Default mock returns ['comments:delete'] — no delete_any, no manage_any
+
+      await expect(
+        service.remove('1', 'user-2', {
+          id: 'user-2',
+          role: 'CONTRIBUTEUR',
+        } as any),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow remove when user has comments:delete_any permission', async () => {
+      const mockComment = { id: '1', content: 'Comment', authorId: 'user-1' };
+      mockPrismaService.comment.findUnique.mockResolvedValue(mockComment);
+      mockPrismaService.comment.delete.mockResolvedValue(mockComment);
+
+      // Override permissions mock for this test
+      const permissionsService = (service as any).permissionsService;
+      vi.spyOn(permissionsService, 'getPermissionsForRole').mockResolvedValue([
+        'comments:delete_any',
+      ]);
+
+      await expect(
+        service.remove('1', 'user-2', {
+          id: 'user-2',
+          role: 'ADMIN',
+        } as any),
+      ).resolves.toEqual({ message: 'Commentaire supprimé avec succès' });
 
       expect(mockPrismaService.comment.delete).toHaveBeenCalledWith({
         where: { id: '1' },

@@ -7317,7 +7317,7 @@ TBD — derive test from finding description for apps/api/src
 ---
 ### TST-008 — Comments service spec is 100% happy-path — no negative tests, no ownership checks
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -7355,7 +7355,8 @@ pnpm test apps/api/src/comments/comments.service.spec.ts
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Coverage task (service already correct). Added 6 negative tests: create NotFoundException (task not found), update NotFoundException (comment not found), update ForbiddenException (non-author), remove NotFoundException (comment not found), remove ForbiddenException (non-author without delete_any), remove allowed with delete_any permission. Mutation witness: removed update ownership guard → test "should throw ForbiddenException when non-author tries to update" went RED (AssertionError: promise resolved instead of rejecting); restored → GREEN. findAll unauthorized scope test omitted as theater (AccessScopeService is mocked).
 
 ---
 ### COR-004 — cancel() overwrites APPROVED with REJECTED, conflating semantics
