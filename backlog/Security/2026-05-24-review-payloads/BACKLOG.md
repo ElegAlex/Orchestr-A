@@ -5999,7 +5999,12 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+HALTED — operator compliance decision. Decision-prep written 2026-06-04:
+`DAT-008-026-COMPLIANCE-SPEC.md` (anonymise-don't-delete posture, the DAT-022
+Restrict / DAT-015 unique+LOWER-index coherence constraints, and the 3 open
+operator decisions — PII fields, retention window, reversibility). NOT decided,
+NOT implemented. Resume per that spec once the operator answers DECISIONS 1–3.
 
 ---
 ### DAT-022 — User.departmentId nullable + onDelete:SetNull conflicts with RBAC scope checks
@@ -6130,7 +6135,13 @@ pnpm prisma migrate dev --create-only && pnpm prisma migrate deploy && pnpm test
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+HALTED — operator compliance decision. Note: `@@index([isActive])` already
+exists (PER-011), so only `deletedAt` + `@@index([deletedAt])` + the
+soft-delete/anonymisation posture remain. Decision-prep written 2026-06-04:
+`DAT-008-026-COMPLIANCE-SPEC.md` (shared with DAT-008 — same anonymise-don't-delete
+work, same 3 open operator decisions). NOT decided, NOT implemented. Resume per
+that spec once the operator answers DECISIONS 1–3.
 
 ---
 
