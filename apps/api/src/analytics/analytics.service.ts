@@ -17,6 +17,10 @@ import {
   ArchivedFilter,
   archivedWhere,
 } from '../projects/dto/archived-filter.dto';
+import { CacheService } from '../common/services/cache.service';
+
+/** TTL for analytics cache entries (seconds). Balances freshness vs. Prisma load. */
+const ANALYTICS_CACHE_TTL = 60;
 
 /** Maximum number of projects returned in projectDetails to cap payload size (PER-027). */
 export const PROJECT_DETAILS_LIMIT = 50;
@@ -60,12 +64,24 @@ export class AnalyticsService {
   constructor(
     private prisma: PrismaService,
     private readonly accessScope: AccessScopeService,
+    private readonly cache: CacheService,
   ) {}
+
+  /** Build a stable, user-scoped cache key so user A's report is never served to user B. */
+  private buildAnalyticsCacheKey(query: AnalyticsQueryDto, currentUser?: AccessUser): string {
+    const userId = currentUser?.id ?? 'anonymous';
+    const { projectId, dateRange, archived } = query;
+    return `cache:analytics:${userId}:${projectId ?? ''}:${dateRange ?? ''}:${archived ?? ''}`;
+  }
 
   async getAnalytics(
     query: AnalyticsQueryDto,
     currentUser?: AccessUser,
   ): Promise<AnalyticsResponseDto> {
+    const cacheKey = this.buildAnalyticsCacheKey(query, currentUser);
+    const cached = await this.cache.get<AnalyticsResponseDto>(cacheKey);
+    if (cached) return cached;
+
     const { projectId } = query;
     const projectScope = await this.accessScope.projectScopeWhere(currentUser);
 
@@ -102,12 +118,15 @@ export class AnalyticsService {
     const taskStatusData = this.getTaskStatusData(taskStatusGroupBy);
     const projectDetails = await this.getProjectDetails(projects, tasks);
 
-    return {
+    const result: AnalyticsResponseDto = {
       metrics,
       projectProgressData,
       taskStatusData,
       projectDetails,
     };
+
+    await this.cache.set(cacheKey, result, ANALYTICS_CACHE_TTL);
+    return result;
   }
 
   private async getProjects(

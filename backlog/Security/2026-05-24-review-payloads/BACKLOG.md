@@ -9696,7 +9696,7 @@ pnpm test apps/api/src/prisma/prisma.service.spec.ts  # may need creation if mis
 ---
 ### PER-026 — Redis usage limited to JWT blacklist + role-permissions — no caching on heavy reports
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9734,7 +9734,8 @@ pnpm test apps/api/src/auth/jwt-blacklist.service.spec.ts  # may need creation i
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Introduced thin CacheService (ioredis get/set/del, fail-open) in apps/api/src/common/services/. Wired into AnalyticsService constructor (injected via DI). Cache key includes userId to prevent cross-user data leak (user A scope never served to user B). TTL=60s, no mutation-bust hooks (AC#6 scope constraint: mutation modules untouched). Fail-pre: analytics.service.spec.ts PER-026 test RED on unfixed code (prisma.project.findMany called 2x instead of 1x on 2nd identical call). GREEN after fix. Existing PER-001 test unaffected (miss-only cache mock in base TestingModule). ConfigModule isGlobal=true so no explicit import needed. analytics.module.ts registers CacheService as provider.
 
 ---
 ### PER-029 — Daily snapshot cron runs in-process on the API — risk of blocking event loop

@@ -4,6 +4,7 @@ import { AnalyticsService } from './analytics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DateRangeEnum } from './dto/analytics-query.dto';
 import { AccessScopeService } from '../common/services/access-scope.service';
+import { CacheService } from '../common/services/cache.service';
 import { ArchivedFilter } from '../projects/dto/archived-filter.dto';
 
 describe('AnalyticsService', () => {
@@ -73,6 +74,16 @@ describe('AnalyticsService', () => {
           provide: AccessScopeService,
           useValue: {
             projectScopeWhere: vi.fn().mockResolvedValue({}),
+          },
+        },
+        // Miss-only cache mock: existing tests never hit the cache so Prisma
+        // call counts remain stable (PER-001 regression guard unaffected).
+        {
+          provide: CacheService,
+          useValue: {
+            get: vi.fn().mockResolvedValue(undefined),
+            set: vi.fn().mockResolvedValue(undefined),
+            del: vi.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -763,6 +774,78 @@ describe('AnalyticsService', () => {
       });
 
       expect(result.projectId).toBe('project-1');
+    });
+  });
+
+  // PER-026: Redis caching on heavy analytics endpoint.
+  // Witness: 2nd call to getAnalytics with same user+query returns cached result
+  // — prisma.project.findMany called exactly ONCE regardless of call count.
+  // RED on unfixed code (no CacheService in constructor → DI error or cache miss on every call).
+  // GREEN after fix (stateful cache: 2nd call is a hit, Prisma not called again).
+  describe('PER-026: getAnalytics caches results per user', () => {
+    let cachedService: AnalyticsService;
+
+    const mockPrismaForCache = {
+      project: { findMany: vi.fn() },
+      task: { findMany: vi.fn(), groupBy: vi.fn() },
+      user: { findMany: vi.fn() },
+      timeEntry: { groupBy: vi.fn() },
+    };
+
+    beforeEach(async () => {
+      // Stateful in-memory cache — stores what set() receives, returns it on get()
+      const store = new Map<string, unknown>();
+      const statefulCache = {
+        get: vi.fn(async (key: string) => store.get(key)),
+        set: vi.fn(async (key: string, value: unknown) => { store.set(key, value); }),
+        del: vi.fn(async (key: string) => { store.delete(key); }),
+      };
+
+      const cacheModule = await Test.createTestingModule({
+        providers: [
+          AnalyticsService,
+          { provide: PrismaService, useValue: mockPrismaForCache },
+          {
+            provide: AccessScopeService,
+            useValue: { projectScopeWhere: vi.fn().mockResolvedValue({}) },
+          },
+          { provide: CacheService, useValue: statefulCache },
+        ],
+      }).compile();
+
+      cachedService = cacheModule.get<AnalyticsService>(AnalyticsService);
+
+      mockPrismaForCache.project.findMany.mockResolvedValue([]);
+      mockPrismaForCache.task.findMany.mockResolvedValue([]);
+      mockPrismaForCache.task.groupBy.mockResolvedValue([]);
+      mockPrismaForCache.user.findMany.mockResolvedValue([]);
+      mockPrismaForCache.timeEntry.groupBy.mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('PER-026: 2nd getAnalytics call with same user hits cache — prisma.project.findMany called only once', async () => {
+      const user = { id: 'user-cache-1', role: 'ADMIN' } as Parameters<typeof cachedService.getAnalytics>[1];
+
+      // First call: cache miss → Prisma queries run
+      await cachedService.getAnalytics({}, user);
+      expect(mockPrismaForCache.project.findMany).toHaveBeenCalledTimes(1);
+
+      // Second call: cache hit → Prisma NOT called again
+      await cachedService.getAnalytics({}, user);
+      expect(mockPrismaForCache.project.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('PER-026: different users get independent cache entries (no cross-user data leak)', async () => {
+      const userA = { id: 'user-A', role: 'ADMIN' } as Parameters<typeof cachedService.getAnalytics>[1];
+      const userB = { id: 'user-B', role: 'ADMIN' } as Parameters<typeof cachedService.getAnalytics>[1];
+
+      // Both users call — each should trigger its own Prisma query (separate cache keys)
+      await cachedService.getAnalytics({}, userA);
+      await cachedService.getAnalytics({}, userB);
+      expect(mockPrismaForCache.project.findMany).toHaveBeenCalledTimes(2);
     });
   });
 });
