@@ -1141,8 +1141,10 @@ model PasswordResetToken {
   user      User @relation("PasswordResetTokenUser", fields: [userId], references: [id], onDelete: Cascade)
   createdBy User @relation("PasswordResetTokenCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
-  @@index([userId])      // DAT-011: FK without auto-index
-  @@index([createdById]) // DAT-011: FK without auto-index
+  @@index([userId])         // DAT-011: FK without auto-index
+  @@index([createdById])    // DAT-011: FK without auto-index
+  @@index([userId, usedAt]) // DAT-028: pending-tokens-per-user filter
+  @@index([expiresAt])      // DAT-028: eager expired-token GC scan
   @@map("password_reset_tokens")
 }
 

@@ -490,6 +490,12 @@ export class AuthService {
       data: { usedAt: new Date() },
     });
 
+    // DAT-028: eager GC — remove expired tokens (they can't be used anyway).
+    // Uses the @@index([expiresAt]) added in this fix.
+    await this.prisma.passwordResetToken.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');

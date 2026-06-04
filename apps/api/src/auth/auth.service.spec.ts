@@ -97,6 +97,7 @@ describe('AuthService', () => {
       create: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+      deleteMany: vi.fn(), // DAT-028: eager expired-token cleanup
     },
     role: {
       findFirst: vi.fn(),
@@ -941,6 +942,46 @@ describe('AuthService', () => {
       expect(result).not.toHaveProperty('resetUrl');
       // Le token doit quand même être persisté en DB pour usage ultérieur
       expect(mockPrismaService.passwordResetToken.create).toHaveBeenCalled();
+    });
+
+    it('DAT-028 — should purge expired tokens (deleteMany expiresAt<now) on each generateResetToken call', async () => {
+      // Arrange: valid ADMIN→CONTRIBUTEUR reset
+      const arrangeUsers = (mock: typeof mockPrismaService) => {
+        mock.user.findUnique.mockImplementation(
+          ({ where }: { where: { id: string } }) => {
+            if (where.id === 'user-id-1')
+              return Promise.resolve({
+                id: 'user-id-1',
+                login: 'jdoe',
+                role: { code: 'CONTRIBUTEUR' },
+              });
+            return Promise.resolve({ role: { code: 'ADMIN' } });
+          },
+        );
+      };
+      arrangeUsers(mockPrismaService);
+      mockPrismaService.passwordResetToken.updateMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.passwordResetToken.deleteMany.mockResolvedValue({
+        count: 2,
+      });
+      mockPrismaService.passwordResetToken.create.mockResolvedValue({
+        id: 'token-id',
+      });
+
+      await service.generateResetToken('user-id-1', 'admin-id');
+
+      // DAT-028: eager cleanup — deleteMany must be called with expiresAt < now
+      expect(
+        mockPrismaService.passwordResetToken.deleteMany,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            expiresAt: expect.objectContaining({ lt: expect.any(Date) }),
+          }),
+        }),
+      );
     });
   });
 
