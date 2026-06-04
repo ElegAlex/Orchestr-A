@@ -8263,7 +8263,7 @@ Added in-process singleflight (Map<roleCode,Promise>) to coalesce concurrent DB 
 ---
 ### PER-022 — User/project time reports do reduce() aggregations in JS instead of SQL groupBy
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8301,7 +8301,8 @@ pnpm test apps/api/src/time-tracking/time-tracking.service.spec.ts  # may need c
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+getUserReport and getProjectReport replaced JS reduce() aggregations with prisma.groupBy + aggregate. byType/byDate/totalHours computed by SQL; byProject/byUser/byThirdParty use groupBy + a small findMany for name resolution on the distinct-id set. Raw entries/userEntries/thirdPartyEntries arrays dropped from responses (web does not consume them; grep of apps/web confirmed). date field is @db.Date so groupBy date gives day-level buckets matching old behaviour. FAIL-PRE: 4 tests RED on unfixed code (groupBy never called, expected was vi.fn() called at least once, userEntries present in response). Gate: build+test both exit 0.
 
 ---
 ### PER-023 — Two-round-trip + extra groupBy on every getByAssignee call

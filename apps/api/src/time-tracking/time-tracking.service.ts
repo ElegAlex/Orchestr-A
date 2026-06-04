@@ -707,65 +707,79 @@ export class TimeTrackingService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    const entries = await this.prisma.timeEntry.findMany({
-      where: {
-        userId,
-        isDismissal: false,
-        date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
-        },
+    const dateWhere = {
+      userId,
+      isDismissal: false,
+      date: {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
       },
-      include: {
-        task: { select: { id: true, title: true } },
-        project: { select: { id: true, name: true } },
-      },
-      orderBy: { date: 'asc' },
-    });
+    };
 
-    const totalHours = entries.reduce(
-      (sum, entry) => sum + Number(entry.hours),
-      0,
-    );
+    // Push all aggregation to Postgres via groupBy — no JS reduce() over rows
+    const [totalAgg, byTypeRows, byProjectRows, byDateRows, entryCount] =
+      await Promise.all([
+        this.prisma.timeEntry.aggregate({
+          where: dateWhere,
+          _sum: { hours: true },
+          _count: { _all: true },
+        }),
+        this.prisma.timeEntry.groupBy({
+          by: ['activityType'],
+          where: dateWhere,
+          _sum: { hours: true },
+        }),
+        this.prisma.timeEntry.groupBy({
+          by: ['projectId'],
+          where: { ...dateWhere, projectId: { not: null } },
+          _sum: { hours: true },
+        }),
+        this.prisma.timeEntry.groupBy({
+          by: ['date'],
+          where: dateWhere,
+          _sum: { hours: true },
+        }),
+        // entryCount comes from the aggregate above
+        Promise.resolve(null),
+      ]);
 
-    const byType = entries.reduce(
-      (acc, entry) => {
-        acc[entry.activityType] =
-          (acc[entry.activityType] || 0) + Number(entry.hours);
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
+    const totalHours = Number(totalAgg._sum.hours ?? 0);
+    const totalEntries = totalAgg._count._all;
 
-    const byProject = entries.reduce(
-      (acc, entry) => {
-        if (entry.project) {
-          const key = entry.project.id;
-          if (!acc[key]) {
-            acc[key] = {
-              projectId: entry.project.id,
-              projectName: entry.project.name,
-              hours: 0,
-            };
-          }
-          acc[key].hours += Number(entry.hours);
-        }
-        return acc;
-      },
-      {} as Record<
-        string,
-        { projectId: string; projectName: string; hours: number }
-      >,
-    );
+    // byType: flat map from groupBy result
+    const byType: Record<string, number> = {};
+    for (const row of byTypeRows) {
+      byType[row.activityType] = Number(row._sum.hours ?? 0);
+    }
 
-    const byDate = entries.reduce(
-      (acc, entry) => {
-        const dateKey = entry.date.toISOString().split('T')[0];
-        acc[dateKey] = (acc[dateKey] || 0) + Number(entry.hours);
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
+    // byProject: resolve project names for the small set of distinct projectIds
+    const projectIds = byProjectRows
+      .map((r) => r.projectId)
+      .filter((id): id is string => id !== null);
+    const projectNameMap: Record<string, string> = {};
+    if (projectIds.length > 0) {
+      const projects = await this.prisma.project.findMany({
+        where: { id: { in: projectIds } },
+        select: { id: true, name: true },
+      });
+      for (const p of projects) {
+        projectNameMap[p.id] = p.name;
+      }
+    }
+    const byProject = byProjectRows
+      .filter((r): r is typeof r & { projectId: string } => r.projectId !== null)
+      .map((r) => ({
+        projectId: r.projectId,
+        projectName: projectNameMap[r.projectId] ?? '',
+        hours: Number(r._sum.hours ?? 0),
+      }));
+
+    // byDate: date key as YYYY-MM-DD (date field is @db.Date — no time component)
+    const byDate: Record<string, number> = {};
+    for (const row of byDateRows) {
+      const dateKey = row.date.toISOString().split('T')[0];
+      byDate[dateKey] = Number(row._sum.hours ?? 0);
+    }
 
     return {
       userId,
@@ -774,11 +788,12 @@ export class TimeTrackingService {
         end: new Date(endDate),
       },
       totalHours,
-      totalEntries: entries.length,
+      totalEntries,
       byType,
-      byProject: Object.values(byProject),
+      byProject,
       byDate,
-      entries,
+      // NOTE: raw entries array intentionally omitted — web app does not consume
+      // it; returning all rows on annual exports was the original performance bug.
     };
   }
 
@@ -812,128 +827,122 @@ export class TimeTrackingService {
           }
         : {};
 
-    const [userEntries, thirdPartyEntries] = await Promise.all([
-      this.prisma.timeEntry.findMany({
-        where: {
-          projectId,
-          userId: { not: null },
-          isDismissal: false,
-          ...dateFilter,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
-            },
-          },
-          declaredBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
-            },
-          },
-          task: { select: { id: true, title: true } },
-        },
-        orderBy: { date: 'asc' },
+    const userWhere = {
+      projectId,
+      userId: { not: null } as Prisma.StringNullableFilter,
+      isDismissal: false,
+      ...dateFilter,
+    };
+    const thirdPartyWhere = {
+      projectId,
+      thirdPartyId: { not: null } as Prisma.StringNullableFilter,
+      isDismissal: false,
+      ...dateFilter,
+    };
+
+    // Push all aggregation to Postgres via groupBy + aggregate — no JS reduce()
+    const [
+      userTotalAgg,
+      thirdPartyTotalAgg,
+      byUserRows,
+      byThirdPartyRows,
+      byTypeUserRows,
+      byTypeThirdPartyRows,
+    ] = await Promise.all([
+      this.prisma.timeEntry.aggregate({
+        where: userWhere,
+        _sum: { hours: true },
+        _count: { _all: true },
       }),
-      this.prisma.timeEntry.findMany({
-        where: {
-          projectId,
-          thirdPartyId: { not: null },
-          isDismissal: false,
-          ...dateFilter,
-        },
-        include: {
-          thirdParty: {
-            select: {
-              id: true,
-              organizationName: true,
-              type: true,
-            },
-          },
-          declaredBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
-            },
-          },
-          task: { select: { id: true, title: true } },
-        },
-        orderBy: { date: 'asc' },
+      this.prisma.timeEntry.aggregate({
+        where: thirdPartyWhere,
+        _sum: { hours: true },
+        _count: { _all: true },
+      }),
+      this.prisma.timeEntry.groupBy({
+        by: ['userId'],
+        where: userWhere,
+        _sum: { hours: true },
+      }),
+      this.prisma.timeEntry.groupBy({
+        by: ['thirdPartyId'],
+        where: thirdPartyWhere,
+        _sum: { hours: true },
+      }),
+      this.prisma.timeEntry.groupBy({
+        by: ['activityType'],
+        where: userWhere,
+        _sum: { hours: true },
+      }),
+      this.prisma.timeEntry.groupBy({
+        by: ['activityType'],
+        where: thirdPartyWhere,
+        _sum: { hours: true },
       }),
     ]);
 
-    const userHours = userEntries.reduce(
-      (sum, e) => sum + Number(e.hours),
-      0,
-    );
-    const thirdPartyHours = thirdPartyEntries.reduce(
-      (sum, e) => sum + Number(e.hours),
-      0,
-    );
+    const userHours = Number(userTotalAgg._sum.hours ?? 0);
+    const thirdPartyHours = Number(thirdPartyTotalAgg._sum.hours ?? 0);
 
-    const byUser = userEntries.reduce(
-      (acc, entry) => {
-        if (!entry.user) return acc;
-        const key = entry.user.id;
-        if (!acc[key]) {
-          acc[key] = {
-            userId: entry.user.id,
-            userName: `${entry.user.firstName} ${entry.user.lastName}`,
-            hours: 0,
-          };
-        }
-        acc[key].hours += Number(entry.hours);
-        return acc;
-      },
-      {} as Record<string, { userId: string; userName: string; hours: number }>,
-    );
+    // byUser: resolve names for distinct userIds
+    const userIds = byUserRows
+      .map((r) => r.userId)
+      .filter((id): id is string => id !== null);
+    const userMap: Record<
+      string,
+      { firstName: string; lastName: string; avatarUrl: string | null; avatarPreset: string | null }
+    > = {};
+    if (userIds.length > 0) {
+      const users = await this.prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, firstName: true, lastName: true, avatarUrl: true, avatarPreset: true },
+      });
+      for (const u of users) {
+        userMap[u.id] = u;
+      }
+    }
+    const byUser = byUserRows
+      .filter((r): r is typeof r & { userId: string } => r.userId !== null)
+      .map((r) => ({
+        userId: r.userId,
+        userName: userMap[r.userId]
+          ? `${userMap[r.userId].firstName} ${userMap[r.userId].lastName}`
+          : r.userId,
+        hours: Number(r._sum.hours ?? 0),
+      }));
 
-    const byThirdParty = thirdPartyEntries.reduce(
-      (acc, entry) => {
-        if (!entry.thirdParty) return acc;
-        const key = entry.thirdParty.id;
-        if (!acc[key]) {
-          acc[key] = {
-            thirdPartyId: entry.thirdParty.id,
-            organizationName: entry.thirdParty.organizationName,
-            type: entry.thirdParty.type,
-            hours: 0,
-          };
-        }
-        acc[key].hours += Number(entry.hours);
-        return acc;
-      },
-      {} as Record<
-        string,
-        {
-          thirdPartyId: string;
-          organizationName: string;
-          type: string;
-          hours: number;
-        }
-      >,
-    );
+    // byThirdParty: resolve org names for distinct thirdPartyIds
+    const thirdPartyIds = byThirdPartyRows
+      .map((r) => r.thirdPartyId)
+      .filter((id): id is string => id !== null);
+    const thirdPartyMap: Record<
+      string,
+      { organizationName: string; type: string }
+    > = {};
+    if (thirdPartyIds.length > 0) {
+      const tps = await this.prisma.thirdParty.findMany({
+        where: { id: { in: thirdPartyIds } },
+        select: { id: true, organizationName: true, type: true },
+      });
+      for (const tp of tps) {
+        thirdPartyMap[tp.id] = { organizationName: tp.organizationName, type: tp.type };
+      }
+    }
+    const byThirdParty = byThirdPartyRows
+      .filter((r): r is typeof r & { thirdPartyId: string } => r.thirdPartyId !== null)
+      .map((r) => ({
+        thirdPartyId: r.thirdPartyId,
+        organizationName: thirdPartyMap[r.thirdPartyId]?.organizationName ?? '',
+        type: thirdPartyMap[r.thirdPartyId]?.type ?? '',
+        hours: Number(r._sum.hours ?? 0),
+      }));
 
-    const allEntries = [...userEntries, ...thirdPartyEntries];
-    const byType = allEntries.reduce(
-      (acc, entry) => {
-        acc[entry.activityType] =
-          (acc[entry.activityType] || 0) + Number(entry.hours);
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
+    // byType: merge user+thirdParty activityType sums
+    const byType: Record<string, number> = {};
+    for (const row of [...byTypeUserRows, ...byTypeThirdPartyRows]) {
+      byType[row.activityType] =
+        (byType[row.activityType] ?? 0) + Number(row._sum.hours ?? 0);
+    }
 
     return {
       projectId,
@@ -947,14 +956,14 @@ export class TimeTrackingService {
         thirdPartyHours,
       },
       totalEntries: {
-        user: userEntries.length,
-        thirdParty: thirdPartyEntries.length,
+        user: userTotalAgg._count._all,
+        thirdParty: thirdPartyTotalAgg._count._all,
       },
-      byUser: Object.values(byUser),
-      byThirdParty: Object.values(byThirdParty),
+      byUser,
+      byThirdParty,
       byType,
-      userEntries,
-      thirdPartyEntries,
+      // NOTE: raw userEntries/thirdPartyEntries arrays intentionally omitted —
+      // web app does not consume them; returning all rows was the performance bug.
     };
   }
 }

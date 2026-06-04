@@ -26,12 +26,14 @@ describe('TimeTrackingService', () => {
       findUnique: vi.fn(),
       count: vi.fn(),
       aggregate: vi.fn(),
+      groupBy: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
     },
-    user: { findUnique: vi.fn() },
+    user: { findUnique: vi.fn(), findMany: vi.fn() },
     task: { findUnique: vi.fn() },
-    project: { findUnique: vi.fn() },
+    project: { findUnique: vi.fn(), findMany: vi.fn() },
+    thirdParty: { findMany: vi.fn() },
     $transaction: vi.fn(),
   };
 
@@ -708,14 +710,27 @@ describe('TimeTrackingService', () => {
   describe('getUserReport', () => {
     it('returns report with user-only entries', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([
-        {
-          id: '1',
-          hours: 4,
-          activityType: 'DEVELOPMENT',
-          date: new Date('2025-01-01'),
-          project: { id: 'p1', name: 'Project 1' },
-        },
+      // aggregate for totalHours + count
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: '4.00' },
+        _count: { _all: 1 },
+      });
+      // groupBy: activityType
+      mockPrismaService.timeEntry.groupBy
+        .mockResolvedValueOnce([
+          { activityType: 'DEVELOPMENT', _sum: { hours: '4.00' } },
+        ])
+        // groupBy: projectId
+        .mockResolvedValueOnce([
+          { projectId: 'p1', _sum: { hours: '4.00' } },
+        ])
+        // groupBy: date
+        .mockResolvedValueOnce([
+          { date: new Date('2025-01-01'), _sum: { hours: '4.00' } },
+        ]);
+      // name resolution for byProject
+      mockPrismaService.project.findMany.mockResolvedValue([
+        { id: 'p1', name: 'Project 1' },
       ]);
       const result = await service.getUserReport(
         'user-1',
@@ -735,44 +750,45 @@ describe('TimeTrackingService', () => {
   });
 
   describe('getProjectReport (segregated)', () => {
-    it('returns segregated user and third party entries with separate totals', async () => {
+    beforeEach(() => {
+      // Default mocks for name resolution (empty — overridden per test as needed)
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.thirdParty.findMany.mockResolvedValue([]);
+    });
+
+    it('returns segregated user and third party totals (groupBy-based)', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         id: 'project-1',
         name: 'Test Project',
       });
-      const userEntries = [
-        {
-          id: 'u1',
-          hours: 5,
-          activityType: 'DEVELOPMENT',
-          user: { id: 'user-1', firstName: 'John', lastName: 'Doe' },
-        },
-      ];
-      const thirdPartyEntries = [
-        {
-          id: 'tp1',
-          hours: 3,
-          activityType: 'MEETING',
-          thirdParty: {
-            id: 'tp-1',
-            organizationName: 'Acme',
-            type: 'EXTERNAL_PROVIDER',
-          },
-        },
-      ];
-      mockPrismaService.timeEntry.findMany
-        .mockResolvedValueOnce(userEntries)
-        .mockResolvedValueOnce(thirdPartyEntries);
+      // aggregate: userHours + thirdPartyHours
+      mockPrismaService.timeEntry.aggregate
+        .mockResolvedValueOnce({ _sum: { hours: '5.00' }, _count: { _all: 1 } })
+        .mockResolvedValueOnce({ _sum: { hours: '3.00' }, _count: { _all: 1 } });
+      // groupBy: byUser, byThirdParty, byTypeUser, byTypeThirdParty
+      mockPrismaService.timeEntry.groupBy
+        .mockResolvedValueOnce([{ userId: 'user-1', _sum: { hours: '5.00' } }])
+        .mockResolvedValueOnce([{ thirdPartyId: 'tp-1', _sum: { hours: '3.00' } }])
+        .mockResolvedValueOnce([{ activityType: 'DEVELOPMENT', _sum: { hours: '5.00' } }])
+        .mockResolvedValueOnce([{ activityType: 'MEETING', _sum: { hours: '3.00' } }]);
+      // Name resolution
+      mockPrismaService.user.findMany.mockResolvedValue([
+        { id: 'user-1', firstName: 'John', lastName: 'Doe', avatarUrl: null, avatarPreset: null },
+      ]);
+      mockPrismaService.thirdParty.findMany.mockResolvedValue([
+        { id: 'tp-1', organizationName: 'Acme', type: 'EXTERNAL_PROVIDER' },
+      ]);
 
       const result = await service.getProjectReport('project-1');
 
       expect(result.totals.userHours).toBe(5);
       expect(result.totals.thirdPartyHours).toBe(3);
-      expect(result.userEntries).toHaveLength(1);
-      expect(result.thirdPartyEntries).toHaveLength(1);
       expect(result.byUser).toHaveLength(1);
       expect(result.byThirdParty).toHaveLength(1);
       expect(result.byType).toEqual({ DEVELOPMENT: 5, MEETING: 3 });
+      // Raw entry arrays must not be present (explicit contract change PER-022)
+      expect(result).not.toHaveProperty('userEntries');
+      expect(result).not.toHaveProperty('thirdPartyEntries');
     });
 
     it('throws NotFoundException when project missing', async () => {
@@ -782,31 +798,30 @@ describe('TimeTrackingService', () => {
       );
     });
 
-    it('applies date range filter on both queries', async () => {
+    it('applies date range filter on groupBy/aggregate queries', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         id: 'project-1',
         name: 'Project',
       });
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      // All groupBy and aggregate calls return empty/zero
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: null },
+        _count: { _all: 0 },
+      });
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
 
       await service.getProjectReport('project-1', '2025-01-01', '2025-01-31');
 
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledTimes(2);
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenNthCalledWith(
-        1,
+      // groupBy must be called (not findMany) and include the date range filter
+      expect(mockPrismaService.timeEntry.groupBy).toHaveBeenCalled();
+      expect(mockPrismaService.timeEntry.groupBy).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             projectId: 'project-1',
-            userId: { not: null },
-          }),
-        }),
-      );
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenNthCalledWith(
-        2,
-        expect.objectContaining({
-          where: expect.objectContaining({
-            projectId: 'project-1',
-            thirdPartyId: { not: null },
+            date: expect.objectContaining({
+              gte: new Date('2025-01-01'),
+              lte: new Date('2025-01-31'),
+            }),
           }),
         }),
       );
@@ -1217,6 +1232,100 @@ describe('TimeTrackingService', () => {
     });
   });
 
+  // ── PER-022 — SQL groupBy replaces JS reduce() in getUserReport/getProjectReport ──
+  // FAIL-PRE: asserts groupBy is called with _sum; RED before fix (unfixed code calls
+  // findMany+reduce only, groupBy is never invoked). GREEN after the fix.
+  describe('getUserReport — aggregation via groupBy not reduce-over-findMany (PER-022)', () => {
+    beforeEach(() => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      // aggregate for totalHours + totalEntries count
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: '8.00' },
+        _count: { _all: 2 },
+      });
+      // groupBy order: activityType, projectId (with filter), date
+      mockPrismaService.timeEntry.groupBy
+        .mockResolvedValueOnce([
+          { activityType: 'DEVELOPMENT', _sum: { hours: 6 } },
+          { activityType: 'MEETING', _sum: { hours: 2 } },
+        ])
+        .mockResolvedValueOnce([
+          { projectId: 'p1', _sum: { hours: 8 } },
+        ])
+        .mockResolvedValueOnce([
+          { date: new Date('2025-01-15'), _sum: { hours: 8 } },
+        ]);
+      // project name resolution
+      mockPrismaService.project.findMany.mockResolvedValue([
+        { id: 'p1', name: 'Project 1' },
+      ]);
+    });
+
+    it('uses groupBy (not findMany) to compute totals — fails before fix', async () => {
+      await service.getUserReport('user-1', '2025-01-01', '2025-01-31');
+
+      // After the fix: groupBy must be called for aggregation
+      expect(mockPrismaService.timeEntry.groupBy).toHaveBeenCalled();
+    });
+
+    it('aggregates totalHours from SQL (not JS reduce) and returns correct byType — fails before fix', async () => {
+      const result = await service.getUserReport('user-1', '2025-01-01', '2025-01-31');
+
+      expect(result.byType).toMatchObject({ DEVELOPMENT: 6, MEETING: 2 });
+      expect(result.totalHours).toBe(8);
+      // After fix: entries array must not be present in the response
+      expect(result).not.toHaveProperty('entries');
+    });
+  });
+
+  describe('getProjectReport — aggregation via groupBy not reduce-over-findMany (PER-022)', () => {
+    beforeEach(() => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Test Project',
+      });
+      // aggregate: userHours + thirdPartyHours (called twice in Promise.all)
+      mockPrismaService.timeEntry.aggregate
+        .mockResolvedValueOnce({ _sum: { hours: '5.00' }, _count: { _all: 1 } })
+        .mockResolvedValueOnce({ _sum: { hours: '3.00' }, _count: { _all: 1 } });
+      // groupBy order: byUser, byThirdParty, byTypeUser, byTypeThirdParty
+      mockPrismaService.timeEntry.groupBy
+        .mockResolvedValueOnce([
+          { userId: 'user-1', _sum: { hours: 5 } },
+        ])
+        .mockResolvedValueOnce([
+          { thirdPartyId: 'tp-1', _sum: { hours: 3 } },
+        ])
+        .mockResolvedValueOnce([
+          { activityType: 'DEVELOPMENT', _sum: { hours: 5 } },
+        ])
+        .mockResolvedValueOnce([
+          { activityType: 'MEETING', _sum: { hours: 3 } },
+        ]);
+      // name resolution via findMany (not findUnique)
+      mockPrismaService.user.findMany.mockResolvedValue([
+        { id: 'user-1', firstName: 'John', lastName: 'Doe', avatarUrl: null, avatarPreset: null },
+      ]);
+      mockPrismaService.thirdParty.findMany.mockResolvedValue([
+        { id: 'tp-1', organizationName: 'Acme', type: 'EXTERNAL_PROVIDER' },
+      ]);
+    });
+
+    it('uses groupBy (not findMany for entries) to compute project report totals — fails before fix', async () => {
+      await service.getProjectReport('project-1');
+
+      // After the fix: groupBy must be called for aggregation
+      expect(mockPrismaService.timeEntry.groupBy).toHaveBeenCalled();
+    });
+
+    it('does not include raw entry arrays in project report — fails before fix', async () => {
+      const result = await service.getProjectReport('project-1');
+
+      expect(result).not.toHaveProperty('userEntries');
+      expect(result).not.toHaveProperty('thirdPartyEntries');
+    });
+  });
+
   describe('findAll — includeDismissals filter (D3)', () => {
     beforeEach(() => {
       mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
@@ -1251,13 +1360,28 @@ describe('TimeTrackingService', () => {
   });
 
   describe('report dismissal filter (D3)', () => {
-    it('getUserReport filters out dismissals', async () => {
+    it('getUserReport filters out dismissals (isDismissal:false in groupBy/aggregate where)', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: null },
+        _count: { _all: 0 },
+      });
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+      mockPrismaService.project.findMany.mockResolvedValue([]);
 
       await service.getUserReport('user-1', '2025-01-01', '2025-01-31');
 
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenCalledWith(
+      // aggregate must carry isDismissal:false in where
+      expect(mockPrismaService.timeEntry.aggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-1',
+            isDismissal: false,
+          }),
+        }),
+      );
+      // groupBy must also carry it
+      expect(mockPrismaService.timeEntry.groupBy).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             userId: 'user-1',
@@ -1267,17 +1391,23 @@ describe('TimeTrackingService', () => {
       );
     });
 
-    it('getProjectReport filters out dismissals on both queries', async () => {
+    it('getProjectReport filters out dismissals on all groupBy/aggregate queries', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         id: 'project-1',
         name: 'Project',
       });
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: null },
+        _count: { _all: 0 },
+      });
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.thirdParty.findMany.mockResolvedValue([]);
 
       await service.getProjectReport('project-1');
 
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenNthCalledWith(
-        1,
+      // Both aggregate calls must carry isDismissal:false
+      expect(mockPrismaService.timeEntry.aggregate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             projectId: 'project-1',
@@ -1286,8 +1416,7 @@ describe('TimeTrackingService', () => {
           }),
         }),
       );
-      expect(mockPrismaService.timeEntry.findMany).toHaveBeenNthCalledWith(
-        2,
+      expect(mockPrismaService.timeEntry.aggregate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             projectId: 'project-1',
