@@ -10266,4 +10266,4 @@ The prior middleware was a bare `export default createMiddleware({ locales, defa
 **Fix (this commit):**
 `apps/web/middleware.ts` prod branch now constructs `new NextRequest(request, { headers })` (preserves `.nextUrl`) and passes it to next-intl unchanged, restoring full next-intl behaviour including Accept-Language detection (`/`→`/fr` default; `/`→`/en` for an `en` client). The SEC-CSP-001 nonce logic (request-header injection + response CSP) is **untouched** — no pre-emption or collision with the still-blocked SEC-CSP-001 work; `csp-nonce.test.ts` stays green. Witness `apps/web/src/__tests__/middleware-locale-redirect.test.ts` (RED→GREEN: next-intl now receives a `NextRequest` whose `.nextUrl` is defined; CSP still stamped). Verified by a local production run (`next build` + standalone server): `/`→**307** `/fr` (and `/en` under `Accept-Language: en`), `/fr/*`=200, `wget --spider /` follows the redirect → rc 0 (the compose `/` healthcheck would now pass → clears the unhealthy/nginx-gate). **LOCAL ONLY** — prepares a follow-up web redeploy (separate authorized step).
 
-**Closed_by:** (pending — set by the follow-up commit)
+**Closed_by:** a5b7080c
