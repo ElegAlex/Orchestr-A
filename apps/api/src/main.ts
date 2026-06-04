@@ -21,6 +21,8 @@ import {
 } from './common/error-reporter';
 import { resolveAllowedOrigins } from './common/fastify/cors.config';
 import { assertJwtSecretStrength } from './common/config/jwt-secret';
+import { JwtService } from '@nestjs/jwt';
+import { createUploadsAuthHook } from './common/fastify/uploads-auth.hook';
 
 // OBS-010: install process-level error handlers before the app boots so that
 // unhandledRejection and uncaughtException are captured from the very first tick.
@@ -106,6 +108,15 @@ async function bootstrap() {
   await app.register(fastifyMultipart as Parameters<typeof app.register>[0], {
     limits: { fileSize: 2 * 1024 * 1024 },
   });
+
+  // SEC-016: @fastify/static below serves /api/uploads/* as raw Fastify routes
+  // that bypass Nest's global guards. Register an onRequest auth hook FIRST so
+  // every uploads request must carry a valid Bearer access token (closes the
+  // anonymous GET = 200 hole). See uploads-auth.hook.ts for the scope rationale.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addHook('onRequest', createUploadsAuthHook(app.get(JwtService)));
 
   // Static files (avatars uploads)
   await app.register(fastifyStatic as Parameters<typeof app.register>[0], {

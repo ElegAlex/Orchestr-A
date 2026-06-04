@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, type ReactNode } from "react";
 import { getGradient, getInitials } from "@/lib/avatar";
+import { useAuthedAvatar } from "@/hooks/useAuthedAvatar";
 import type { UserSummary } from "@/types";
 
 interface UserAvatarProps {
@@ -37,6 +38,10 @@ export function UserAvatar({
   const fullName = `${user.firstName} ${user.lastName}`.trim();
   const [imageFailed, setImageFailed] = useState(false);
 
+  // SEC-016: uploaded avatars (/api/uploads/*) are now auth-gated; load them as
+  // an authenticated blob → object URL. Preset/external URLs pass through.
+  const { src: resolvedAvatarSrc } = useAuthedAvatar(user.avatarUrl);
+
   const [prevUserId, setPrevUserId] = useState(user.id);
   if (prevUserId !== user.id) {
     setPrevUserId(user.id);
@@ -58,11 +63,14 @@ export function UserAvatar({
     </div>
   );
 
-  if (user.avatarUrl && !imageFailed) {
+  if (resolvedAvatarSrc && !imageFailed) {
+    const finalSrc = resolvedAvatarSrc.startsWith("blob:")
+      ? resolvedAvatarSrc
+      : getAvatarSrc(resolvedAvatarSrc);
     return renderShell(
       <span className="rounded-full overflow-hidden block w-full h-full">
         <Image
-          src={getAvatarSrc(user.avatarUrl)}
+          src={finalSrc}
           alt={fullName}
           width={dim}
           height={dim}

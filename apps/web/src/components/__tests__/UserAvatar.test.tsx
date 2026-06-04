@@ -1,5 +1,14 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { UserAvatar } from "@/components/UserAvatar";
+import api from "@/lib/api";
+
+jest.mock("@/lib/api", () => ({
+  __esModule: true,
+  default: { get: jest.fn() },
+  api: { get: jest.fn() },
+}));
+
+const mockedGet = api.get as jest.Mock;
 
 const user = { id: "1", firstName: "Alice", lastName: "Martin" };
 
@@ -53,5 +62,45 @@ describe("UserAvatar", () => {
   it("renders title attribute with full name", () => {
     render(<UserAvatar user={user} />);
     expect(screen.getByTitle("Alice Martin")).toBeInTheDocument();
+  });
+
+  // SEC-016 — uploaded avatars (/api/uploads/*) are auth-gated and fetched as a
+  // blob via the authenticated axios client, then rendered as an object URL.
+  describe("uploaded avatar (auth-gated /api/uploads)", () => {
+    const realCreate = URL.createObjectURL;
+    beforeEach(() => {
+      mockedGet.mockReset();
+      URL.createObjectURL = jest.fn(() => "blob:mock-avatar");
+    });
+    afterEach(() => {
+      URL.createObjectURL = realCreate;
+    });
+
+    it("fetches the avatar with the axios client and renders the object URL", async () => {
+      mockedGet.mockResolvedValueOnce({ data: new Blob(["x"]) });
+      render(
+        <UserAvatar
+          user={{ ...user, avatarUrl: "/api/uploads/avatars/sec016-a.png" }}
+        />,
+      );
+      // axios baseURL is /api → the /api prefix is stripped before the call.
+      await waitFor(() =>
+        expect(mockedGet).toHaveBeenCalledWith("/uploads/avatars/sec016-a.png", {
+          responseType: "blob",
+        }),
+      );
+      const img = await screen.findByAltText("Alice Martin");
+      expect(img).toHaveAttribute("src", "blob:mock-avatar");
+    });
+
+    it("falls back to the monogram when the authed fetch fails (e.g. 401)", async () => {
+      mockedGet.mockRejectedValueOnce(new Error("401"));
+      render(
+        <UserAvatar
+          user={{ ...user, avatarUrl: "/api/uploads/avatars/sec016-b.png" }}
+        />,
+      );
+      await waitFor(() => expect(screen.getByText("AM")).toBeInTheDocument());
+    });
   });
 });
