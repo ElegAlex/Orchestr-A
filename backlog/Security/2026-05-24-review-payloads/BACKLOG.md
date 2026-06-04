@@ -7626,7 +7626,7 @@ In update(), reject the request if existingProject.status === CANCELLED and the 
 pnpm test apps/api/src/projects/projects.service.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 34291b70
 **Learnings:**
 Guard added at line ~565 in update() right after the NotFoundException check: if existingProject.status===CANCELLED, throw ConflictException(409). Design: reject ALL updates on CANCELLED projects (not just status changes back to ACTIVE) — any mutation of a cancelled project must go through a dedicated restore path. ConflictException chosen to match existing archive conflict convention in the same file. fail-pre witness: 2 COR-016 tests RED before fix (expected ConflictException, received resolved value). SCOPE NOTE: archived projects (archivedAt field) not guarded — separate axis, no design decision provided. No restore endpoint exists yet; CANCELLED projects are PATCH-immutable by design until one is added.
 
