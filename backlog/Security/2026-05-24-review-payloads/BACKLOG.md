@@ -7981,7 +7981,7 @@ Wire @sentry/nestjs and @sentry/nextjs (or self-hosted GlitchTip for French sove
 pnpm test apps/api/src/main.spec.ts  # may need creation if missing
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 5a4bd54e
 **Learnings:**
 Scaffolded DSN-optional no-op error reporter (apps/api/src/common/error-reporter.ts): ErrorReporter interface + NoopErrorReporter (logs to stdout, zero egress, zero deps) + installGlobalErrorHandlers (idempotent via WeakSet, injectable emitter for test isolation). Wired in main.ts before bootstrap() so unhandledRejection/uncaughtException are captured from first tick. Provider choice (Sentry vs GlitchTip RGPD-sovereignty) deferred to operator config — no SDK imported. Existing SentryClient stub in all-exceptions.filter.ts left in place (out of scope, OBS-017 code). Fail-pre: module import error (Cannot find module ./common/error-reporter) on unfixed code. Pass-post: 5 tests green.
 
