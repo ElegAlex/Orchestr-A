@@ -8349,7 +8349,7 @@ pnpm test apps/api/src/events/events.service.spec.ts  # may need creation if mis
 ---
 ### PER-027 — Analytics /reports payload is unbounded — confirms documented regression
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8387,7 +8387,8 @@ pnpm test apps/api/src/analytics/analytics.service.spec.ts  # may need creation 
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added PROJECT_DETAILS_LIMIT=50 const to analytics.service.ts; added take: PROJECT_DETAILS_LIMIT to project.findMany at line 125 (formerly 122 before const insertion). Test: assert project.findMany called with take:50 — RED before (undefined), GREEN after. No payload truncation in-memory needed: take is the DB-level bound. Existing 33 tests unaffected.
 
 ---
 ### SEC-008 — Self-registration accepts arbitrary email and login with no domain restriction

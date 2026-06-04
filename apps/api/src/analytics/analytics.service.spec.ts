@@ -693,6 +693,26 @@ describe('AnalyticsService', () => {
       expect(result.projectProgressData[0].tasks).toBe(6);
     });
 
+    // PER-027: projectDetails payload was unbounded — tenant-admin could receive 36+ projects
+    // in a single response with no upper bound on the project.findMany query.
+    // Fix: add take: PROJECT_DETAILS_LIMIT (50) to the findMany call.
+    // RED before fix: findMany called without take → expect(undefined).toBe(50) fails.
+    // GREEN after fix: findMany called with take: 50.
+    it('PER-027: project.findMany is called with take: 50 to cap projectDetails payload', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+
+      await service.getAnalytics({});
+
+      const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+        take?: number;
+        where: Record<string, unknown>;
+      };
+      expect(callArgs.take).toBe(50);
+    });
+
     it('should filter dismissed time entries from both user and third-party groupBy (D3)', async () => {
       mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
       mockPrismaService.task.findMany.mockResolvedValue([]);

@@ -18,6 +18,9 @@ import {
   archivedWhere,
 } from '../projects/dto/archived-filter.dto';
 
+/** Maximum number of projects returned in projectDetails to cap payload size (PER-027). */
+export const PROJECT_DETAILS_LIMIT = 50;
+
 // Types for analytics data
 interface ProjectMember {
   role: string;
@@ -121,6 +124,7 @@ export class AnalyticsService {
 
     const projects = await this.prisma.project.findMany({
       where,
+      take: PROJECT_DETAILS_LIMIT,
       include: {
         _count: {
           select: { tasks: true },
