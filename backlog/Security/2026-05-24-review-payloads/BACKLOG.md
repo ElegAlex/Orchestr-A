@@ -6941,7 +6941,7 @@ Converted useEffect filter (line 158) to useMemo — eliminates extra render com
 ---
 ### PER-019 — TanStack Query barely used (3 components total) — no client-side cache
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 12
 - **Cluster:** I
 - **Confidence:** claude-only
@@ -6979,7 +6979,13 @@ pnpm --filter web test  # no targeted spec inferred from apps/web/app/[locale]/d
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added global QueryProvider (apps/web/src/components/QueryProvider.tsx) using useState pattern to avoid SSR cache leaks.
+Registered in apps/web/app/[locale]/layout.tsx wrapping NextIntlClientProvider children.
+Created useUsers/useProjects/useTasks hooks (staleTime 30s, retry 1) in apps/web/src/hooks/.
+Fail-pre: test imports ../useUsers which did not exist → Cannot find module (RED). After creating the hook the 5 behavioral tests pass including dedup assertion (2 concurrent renders → 1 service call).
+AdvancedAnalyticsTab local client left untouched (its own module-scope client, acceptable per design decision).
+Scope: hooks + provider + layout + tests only.
 
 ---
 ### PER-020 — next.config.ts has no image domains, no bundle optimization, no analyzer
