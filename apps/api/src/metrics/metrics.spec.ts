@@ -1,0 +1,176 @@
+/**
+ * metrics.spec.ts — OBS-011
+ *
+ * Tests for the minimal in-process Prometheus metrics module.
+ *
+ * Verifies:
+ *  1. MetricsService: recordRequest increments counter; renderMetrics emits
+ *     valid Prometheus text with # HELP, # TYPE lines.
+ *  2. MetricsController: GET /metrics returns Prometheus text.
+ *  3. MetricsController: when METRICS_TOKEN is set, missing/wrong token → 401.
+ *  4. MetricsInterceptor: calling intercept increments the request counter.
+ *
+ * Fail-pre witness (RED before fix):
+ *   Cannot find module './metrics.service' or './metrics.interceptor'
+ *   → all tests fail with import errors (module absent).
+ */
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Test, TestingModule } from '@nestjs/testing';
+import { UnauthorizedException } from '@nestjs/common';
+import { of } from 'rxjs';
+import { MetricsService } from './metrics.service';
+import { MetricsController } from './metrics.controller';
+import { MetricsInterceptor } from './metrics.interceptor';
+
+describe('MetricsService (OBS-011)', () => {
+  let service: MetricsService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [MetricsService],
+    }).compile();
+    service = module.get<MetricsService>(MetricsService);
+  });
+
+  it('recordRequest increments the http_requests_total counter', () => {
+    service.recordRequest('GET', '/api/projects', 200, 42);
+    const text = service.renderMetrics();
+    expect(text).toContain('http_requests_total{');
+    // counter should be at 1
+    expect(text).toMatch(/http_requests_total\{[^}]+\}\s+1/);
+  });
+
+  it('renderMetrics emits # HELP and # TYPE lines for http_requests_total', () => {
+    const text = service.renderMetrics();
+    expect(text).toContain('# HELP http_requests_total');
+    expect(text).toContain('# TYPE http_requests_total counter');
+  });
+
+  it('renderMetrics emits # HELP and # TYPE lines for http_request_duration_seconds', () => {
+    const text = service.renderMetrics();
+    expect(text).toContain('# HELP http_request_duration_seconds');
+    expect(text).toContain('# TYPE http_request_duration_seconds summary');
+  });
+
+  it('recordRequest accumulates multiple calls for the same label set', () => {
+    service.recordRequest('GET', '/api/tasks', 200, 10);
+    service.recordRequest('GET', '/api/tasks', 200, 20);
+    const text = service.renderMetrics();
+    // Both count and sum should reflect two calls
+    expect(text).toMatch(/http_request_duration_seconds_count\{[^}]+\}\s+2/);
+    expect(text).toMatch(/http_request_duration_seconds_sum\{[^}]+\}\s+0\.030/);
+  });
+});
+
+describe('MetricsController (OBS-011)', () => {
+  let controller: MetricsController;
+  let service: MetricsService;
+  const OLD_ENV = process.env;
+
+  beforeEach(async () => {
+    process.env = { ...OLD_ENV };
+    delete process.env['METRICS_TOKEN'];
+
+    service = new MetricsService();
+
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [MetricsController],
+      providers: [{ provide: MetricsService, useValue: service }],
+    }).compile();
+    controller = module.get<MetricsController>(MetricsController);
+  });
+
+  afterEach(() => {
+    process.env = OLD_ENV;
+  });
+
+  it('returns Prometheus text when METRICS_TOKEN is not set (dev mode)', () => {
+    vi.spyOn(service, 'renderMetrics').mockReturnValue(
+      '# HELP http_requests_total count\n# TYPE http_requests_total counter\n',
+    );
+    const result = controller.getMetrics(undefined);
+    expect(result).toContain('# TYPE http_requests_total counter');
+  });
+
+  it('returns Prometheus text when METRICS_TOKEN matches Authorization header', () => {
+    process.env['METRICS_TOKEN'] = 'secret123';
+    vi.spyOn(service, 'renderMetrics').mockReturnValue(
+      '# HELP http_requests_total count\n# TYPE http_requests_total counter\n',
+    );
+    const result = controller.getMetrics('Bearer secret123');
+    expect(result).toContain('# TYPE http_requests_total counter');
+  });
+
+  it('throws UnauthorizedException when METRICS_TOKEN is set and header is missing', () => {
+    process.env['METRICS_TOKEN'] = 'secret123';
+    expect(() => controller.getMetrics(undefined)).toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('throws UnauthorizedException when METRICS_TOKEN is set and token is wrong', () => {
+    process.env['METRICS_TOKEN'] = 'secret123';
+    expect(() => controller.getMetrics('Bearer wrong')).toThrow(
+      UnauthorizedException,
+    );
+  });
+});
+
+describe('MetricsInterceptor (OBS-011)', () => {
+  let service: MetricsService;
+  let interceptor: MetricsInterceptor;
+
+  beforeEach(() => {
+    service = new MetricsService();
+    interceptor = new MetricsInterceptor(service);
+  });
+
+  it('intercept calls recordRequest after the handler resolves', async () => {
+    const spy = vi.spyOn(service, 'recordRequest');
+
+    const mockContext = {
+      getType: () => 'http',
+      switchToHttp: () => ({
+        getRequest: () => ({ method: 'GET', path: '/api/test' }),
+        getResponse: () => ({ statusCode: 200 }),
+      }),
+    } as any;
+
+    const mockHandler = {
+      handle: () => of('response'),
+    };
+
+    await new Promise<void>((resolve) => {
+      interceptor.intercept(mockContext, mockHandler).subscribe({
+        complete: () => resolve(),
+      });
+    });
+
+    expect(spy).toHaveBeenCalledWith('GET', '/api/test', 200, expect.any(Number));
+  });
+
+  it('does not throw when the handler errors', async () => {
+    const spy = vi.spyOn(service, 'recordRequest');
+
+    const mockContext = {
+      getType: () => 'http',
+      switchToHttp: () => ({
+        getRequest: () => ({ method: 'POST', path: '/api/tasks' }),
+        getResponse: () => ({ statusCode: 500 }),
+      }),
+    } as any;
+
+    const { throwError } = await import('rxjs');
+    const mockHandler = {
+      handle: () => throwError(() => new Error('boom')),
+    };
+
+    await new Promise<void>((resolve) => {
+      interceptor.intercept(mockContext, mockHandler).subscribe({
+        error: () => resolve(),
+      });
+    });
+
+    expect(spy).toHaveBeenCalledWith('POST', '/api/tasks', 500, expect.any(Number));
+  });
+});

@@ -37,6 +37,7 @@ import { PlanningModule } from './planning/planning.module';
 import { CommonModule } from './common/common.module';
 import { TestingModule } from './testing/testing.module';
 import { HealthModule } from './health/health.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { HealthModule } from './health/health.module';
     AuditModule,
     DeploymentsModule,
     HealthModule,
+    MetricsModule,
     PrismaModule,
     AuthModule,
     UsersModule,
