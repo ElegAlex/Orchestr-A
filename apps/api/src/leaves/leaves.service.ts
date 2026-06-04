@@ -1237,7 +1237,6 @@ export class LeavesService {
       endDate,
       halfDay,
       startHalfDay,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       endHalfDay,
       reason,
     } = updateLeaveDto;
@@ -1260,11 +1259,14 @@ export class LeavesService {
     const gateHalfDay = effectiveHalfDay ?? existingLeave.halfDay;
     // COR-003 — même set de jours fériés pour le stockage et la gate.
     const holidayKeys = await this.getHolidayKeySet(start, end);
+    // COR-006 — thread endHalfDay from the DTO through to both the day-count
+    // engine and the per-year bucket splitter, consistent with create().
+    const effectiveEndHalfDay = endHalfDay ?? null;
     const days = calculateLeaveDays(
       start,
       end,
       gateHalfDay,
-      undefined,
+      effectiveEndHalfDay,
       holidayKeys,
     );
 
@@ -1293,7 +1295,7 @@ export class LeavesService {
       start,
       end,
       gateHalfDay,
-      undefined,
+      effectiveEndHalfDay,
       holidayKeys,
     );
     let leaveTypeConfigCache: { name: string } | null = null;

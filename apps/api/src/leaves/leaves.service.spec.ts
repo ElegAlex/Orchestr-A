@@ -2077,6 +2077,33 @@ describe('LeavesService', () => {
         ),
       ).rejects.toThrow(BadRequestException);
     });
+
+    // COR-006 — endHalfDay from update DTO was destructured but silently dropped
+    // (passed as undefined to calculateLeaveDays / splitLeaveByYear). A user
+    // editing a multi-day leave with endHalfDay set must see days reduced by 0.5.
+    it('threads endHalfDay through update() and reduces days by 0.5 (COR-006)', async () => {
+      // mockLeave: Mon 2025-06-02 → Fri 2025-06-06, 5 work-days, halfDay: null
+      const pendingLeave = { ...mockLeave, status: LeaveStatus.PENDING };
+      // After fix: workDays=5, endHalfDay deducts 0.5 → days=4.5
+      const updatedLeave = { ...pendingLeave, days: 4.5 };
+
+      mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
+      mockPrismaService.leave.findMany
+        .mockResolvedValueOnce([]) // No overlap
+        .mockResolvedValueOnce([]) // Approved leaves (balance gate)
+        .mockResolvedValueOnce([]); // Pending leaves (balance gate)
+      mockPrismaService.leave.update.mockResolvedValue(updatedLeave);
+
+      await service.update(
+        'leave-1',
+        { endHalfDay: 'AFTERNOON' },
+        'admin-user-id',
+        'ADMIN',
+      );
+
+      const updateCall = mockPrismaService.leave.update.mock.calls[0][0];
+      expect(updateCall.data.days).toBe(4.5);
+    });
   });
 
   // ============================================
