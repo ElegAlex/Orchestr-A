@@ -8838,7 +8838,7 @@ Add a CI step after setup that lists playwright/.auth/ and fails fast if any rol
 TBD — manual verification (config change, no automated test)
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 1ff2ec17
 **Learnings:**
 Added a Verify auth storage states CI step to both e2e-smoke and e2e-tests jobs in .github/workflows/ci.yml, placed immediately after each playwright run.
 
