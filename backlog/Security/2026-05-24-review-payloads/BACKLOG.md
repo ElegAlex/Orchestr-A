@@ -8313,7 +8313,7 @@ pnpm test apps/api/src/tasks/tasks.service.spec.ts  # may need creation if missi
 ---
 ### PER-024 — Recurring events: createMany then immediate findMany to wire participants
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8351,7 +8351,12 @@ pnpm test apps/api/src/events/events.service.spec.ts  # may need creation if mis
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Replaced createMany+findMany(parentEventId)+eventParticipant.createMany with a for-of loop of prisma.event.create({data:{...occ, participants:{create:...}}}) per occurrence (PER-024 design: option a, nested write).
+No transaction needed — original code was non-transactional; keeping same style per Acceptance #6.
+Fail-pre: test was RED because event.findMany was called with {where:{parentEventId}} (the N+1 round-trip); post-fix the assertion not.toHaveBeenCalledWith passes.
+Mock update required: added event.createMany to mockPrismaService since unfixed code called it.
+Scope: lines 230-246 of events.service.ts only; no other paths touched.
 
 ---
 ### PER-027 — Analytics /reports payload is unbounded — confirms documented regression

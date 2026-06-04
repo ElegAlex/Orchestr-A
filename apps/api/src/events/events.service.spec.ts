@@ -23,6 +23,7 @@ describe('EventsService', () => {
   const mockPrismaService = {
     event: {
       create: vi.fn(),
+      createMany: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -200,6 +201,51 @@ describe('EventsService', () => {
       await expect(service.create(dto, 'user-1')).rejects.toThrow(
         ConflictException,
       );
+    });
+
+    // PER-024 — recurring event must wire participants via nested create, NOT
+    // via createMany+findMany(parentEventId). The unfixed code calls
+    // event.createMany then event.findMany({parentEventId}) to get IDs back.
+    // Post-fix: event.create called once per occurrence (nested participants),
+    // event.findMany with parentEventId filter NEVER called.
+    it('PER-024: recurring event wires participants with nested create, no findMany round-trip', async () => {
+      const parentEvent = {
+        ...mockEvent,
+        id: 'parent-1',
+        isRecurring: true,
+        recurrenceWeekInterval: 1,
+      };
+
+      // First call = parent event; subsequent calls = child occurrences
+      let callCount = 0;
+      mockPrismaService.event.create.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) return Promise.resolve(parentEvent);
+        return Promise.resolve({ ...parentEvent, id: `child-${callCount}` });
+      });
+
+      // findMany should NOT be called with parentEventId (anti-pattern)
+      mockPrismaService.event.findMany.mockResolvedValue([]);
+
+      const dto: CreateEventDto = {
+        title: 'Réunion hebdo',
+        date: '2025-11-10',
+        isRecurring: true,
+        recurrenceWeekInterval: 1,
+        recurrenceEndDate: '2025-11-24', // 2 occurrences
+        participantIds: ['user-2'],
+      };
+
+      mockPrismaService.user.findMany.mockResolvedValue([{ id: 'user-2' }]);
+
+      await service.create(dto, 'user-1');
+
+      // POST-FIX assertion: findMany must NOT have been called with parentEventId
+      expect(prisma.event.findMany).not.toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ parentEventId: 'parent-1' }) }),
+      );
+      // POST-FIX assertion: event.create called more than once (parent + children)
+      expect(prisma.event.create).toHaveBeenCalledTimes(3); // parent + 2 occurrences
     });
   });
 

@@ -227,22 +227,21 @@ export class EventsService {
         currentDate.setDate(currentDate.getDate() + weekInterval * 7);
       }
 
-      if (occurrences.length > 0) {
-        await this.prisma.event.createMany({ data: occurrences });
-        if (participantIds && participantIds.length > 0) {
-          const childEvents = await this.prisma.event.findMany({
-            where: { parentEventId: event.id },
-            select: { id: true },
-          });
-          const participantData = childEvents.flatMap((child) =>
-            participantIds.map((userId) => ({ eventId: child.id, userId })),
-          );
-          if (participantData.length > 0) {
-            await this.prisma.eventParticipant.createMany({
-              data: participantData,
-            });
-          }
-        }
+      // PER-024: use per-occurrence event.create with nested participants to
+      // avoid the createMany→findMany(parentEventId) round-trip that was
+      // needed only to recover auto-generated child IDs.
+      for (const occ of occurrences) {
+        await this.prisma.event.create({
+          data: {
+            ...occ,
+            ...(participantIds &&
+              participantIds.length > 0 && {
+                participants: {
+                  create: participantIds.map((userId) => ({ userId })),
+                },
+              }),
+          },
+        });
       }
     }
 
