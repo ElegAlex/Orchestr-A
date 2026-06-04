@@ -8801,7 +8801,7 @@ TBD — derive test from finding description for e2e/tests/workflows
 ---
 ### TST-022 — E2E job seeds DB with E2E_SEED=true but no follow-up verification that all 6 role storage states exist
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -8839,7 +8839,14 @@ TBD — manual verification (config change, no automated test)
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Added a Verify auth storage states CI step to both e2e-smoke and e2e-tests jobs in .github/workflows/ci.yml, placed immediately after each playwright run.
+
+Design rationale: auth.setup.ts already hard-fails on non-OK HTTP login (L47-52), but a zero-byte or missing storage state file after the setup project completes is not caught. A post-run shell gate with [ -s file ] (exists AND non-empty) covers the residual gap without splitting the playwright invocation (which would double the login sequence and hit the 5/min rate-limiter).
+
+Fail-pre witness: grep showed the step absent before fix; check logic exited 1 with manager.json missing. Pass-post: check logic exited 0 against all 6 present non-empty files. YAML validates via python3 yaml.safe_load before and after.
+
+Scope: CI config only (.github/workflows/ci.yml). auth.setup.ts not modified. No app code touched.
 
 ---
 ### TST-023 — Critical Frontend pages have no test — projects/[id], leaves, settings, telework

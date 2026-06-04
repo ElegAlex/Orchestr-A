@@ -286,6 +286,22 @@ jobs:
         env:
           CI: true
 
+      # TST-022: gate on all 6 role storage states existing and non-empty.
+      # auth.setup.ts hard-fails on non-OK login, but a partially-written or
+      # zero-byte state file is not caught by the setup project alone.
+      - name: Verify auth storage states
+        run: |
+          FAILED=0
+          for role in admin responsable manager referent contributeur observateur; do
+            f="playwright/.auth/${role}.json"
+            if [ ! -s "$f" ]; then
+              echo "MISSING or EMPTY: $f"
+              FAILED=1
+            fi
+          done
+          if [ $FAILED -eq 0 ]; then echo "All 6 role storage states present and non-empty."; fi
+          exit $FAILED
+
       - name: Upload Smoke Test Report
         uses: actions/upload-artifact@v4
         if: always()
@@ -417,6 +433,22 @@ jobs:
         run: pnpm --filter web exec playwright test --config ../../playwright.config.ts
         env:
           CI: true
+
+      # TST-022: gate on all 6 role storage states existing and non-empty.
+      # auth.setup.ts hard-fails on non-OK login, but a partially-written or
+      # zero-byte state file is not caught by the setup project alone.
+      - name: Verify auth storage states
+        run: |
+          FAILED=0
+          for role in admin responsable manager referent contributeur observateur; do
+            f="playwright/.auth/${role}.json"
+            if [ ! -s "$f" ]; then
+              echo "MISSING or EMPTY: $f"
+              FAILED=1
+            fi
+          done
+          if [ $FAILED -eq 0 ]; then echo "All 6 role storage states present and non-empty."; fi
+          exit $FAILED
 
       - name: Upload E2E Test Report
         uses: actions/upload-artifact@v4
