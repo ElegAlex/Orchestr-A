@@ -9729,7 +9729,7 @@ pnpm test apps/api/src/auth/jwt-blacklist.service.spec.ts  # may need creation i
 ---
 ### PER-029 — Daily snapshot cron runs in-process on the API — risk of blocking event loop
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 13
 - **Cluster:** —
 - **Confidence:** claude-only
@@ -9767,7 +9767,11 @@ pnpm test apps/api/src/analytics/advanced/snapshot-scheduler.service.spec.ts  # 
 ```
 
 **Closed_by:** (empty — fill with commit SHA when status moves to DONE)
-**Learnings:** (empty — Claude Code fills if surprises encountered)
+**Learnings:**
+Redis SET NX EX distributed leader-lock around captureDailySnapshots so only the first replica to acquire the lock runs captureSnapshots per tick; others skip silently.
+Design: EX TTL = 600s (no lock release in finally — avoids slightly-slower replica re-acquiring and double-running); fail-open on Redis error so a Redis outage does not silently skip the nightly snapshot.
+Arg order: ioredis v5 set(key, val, EX, ttl, NX) — not (key, val, NX, EX, ttl).
+Fail-pre witness: expected captureSnapshots called 1 time, got 2 — AssertionError at snapshot-scheduler.service.spec.ts:151.
 
 ---
 ### DAT-031 — Add durable holidays seeding mechanism
