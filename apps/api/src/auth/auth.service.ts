@@ -178,6 +178,13 @@ export class AuthService {
     // (account, IP) pair: failure counter, any active lock, escalation level.
     await this.loginLockout.clear(loginDto.login, ip);
 
+    // OBS-019 — stamp the actual last-login timestamp so the profile Security
+    // tab can show it (was a misleading client-side `new Date()`).
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
+    });
+
     // Récupérer les informations complètes de l'utilisateur avec ses services
     const fullUser = await this.prisma.user.findUnique({
       where: { id: user.id },
@@ -187,6 +194,7 @@ export class AuthService {
         login: true,
         firstName: true,
         lastName: true,
+        lastLoginAt: true,
         roleId: true,
         role: {
           select: {
@@ -429,6 +437,7 @@ export class AuthService {
         avatarUrl: true,
         avatarPreset: true,
         isActive: true,
+        lastLoginAt: true, // OBS-019
         createdAt: true,
         updatedAt: true,
         department: {

@@ -243,7 +243,12 @@ export class LeavesService {
     currentUserRole?: string,
   ) {
     if (!currentUserId || !currentUserRole) {
-      return leaves.map((l) => ({ ...l, canEdit: false, canDelete: false }));
+      return leaves.map((l) => ({
+        ...l,
+        canEdit: false,
+        canDelete: false,
+        canRequestCancel: false,
+      }));
     }
 
     // Permissions dynamiques depuis le RBAC
@@ -263,6 +268,9 @@ export class LeavesService {
             isOwner &&
             (leave.status === LeaveStatus.PENDING ||
               leave.status === LeaveStatus.REJECTED),
+          // SEC-029 — API-computed: only the owner may request cancellation of
+          // their own APPROVED leave (was a client-side userId comparison).
+          canRequestCancel: isOwner && leave.status === LeaveStatus.APPROVED,
         };
       });
     }
@@ -293,7 +301,10 @@ export class LeavesService {
             leave.status === LeaveStatus.APPROVED ||
             leave.status === LeaveStatus.CANCELLATION_REQUESTED));
 
-      return { ...leave, canEdit, canDelete };
+      // SEC-029 — owner-only cancellation request on an APPROVED leave.
+      const canRequestCancel = isOwner && leave.status === LeaveStatus.APPROVED;
+
+      return { ...leave, canEdit, canDelete, canRequestCancel };
     });
   }
 
@@ -1152,6 +1163,9 @@ export class LeavesService {
       canDelete:
         leave.status === LeaveStatus.PENDING ||
         leave.status === LeaveStatus.REJECTED,
+      // SEC-029 — these are all the caller's own leaves; APPROVED ones can have
+      // a cancellation requested.
+      canRequestCancel: leave.status === LeaveStatus.APPROVED,
     }));
   }
 

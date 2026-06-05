@@ -1922,6 +1922,11 @@ describe('LeavesService', () => {
       // REJECTED: deletable but not editable
       expect(byId['leave-rejected'].canEdit).toBe(false);
       expect(byId['leave-rejected'].canDelete).toBe(true);
+      // SEC-029 — only an APPROVED own-leave can request cancellation (the flag
+      // is now API-computed, not a client-side userId comparison).
+      expect(byId['leave-approved'].canRequestCancel).toBe(true);
+      expect(byId['leave-pending'].canRequestCancel).toBe(false);
+      expect(byId['leave-rejected'].canRequestCancel).toBe(false);
     });
 
     it('should throw NotFoundException when user not found', async () => {

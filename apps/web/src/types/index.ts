@@ -131,6 +131,7 @@ export interface User {
   isActive: boolean;
   avatarUrl?: string | null;
   avatarPreset?: string | null;
+  lastLoginAt?: string | null; // OBS-019 — actual last-login timestamp
   createdAt: string;
   updatedAt: string;
   department?: Department;

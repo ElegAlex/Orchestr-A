@@ -41,6 +41,7 @@ model User {
   avatarUrl           String?
   avatarPreset        String?
   forcePasswordChange Boolean  @default(false)
+  lastLoginAt         DateTime? // OBS-019 — actual last successful-login timestamp
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   // DAT-026 — soft-delete marker for the anonymised-shell deletion path. Set
