@@ -6296,7 +6296,7 @@ psql -c "\d project_snapshots" | grep projectId
 
 ### DAT-008 — project_third_party_members.allocation INTEGER has no CHECK constraint for 0-100 range — unlike project_members.allocation which was fixed in DAT-004
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -6493,7 +6493,7 @@ SELECT COUNT(*) FROM predefined_task_recurring_rules WHERE ("monthlyOrdinal" IS 
 
 ### DAT-015 — project_snapshots.progress lacks CHECK (BETWEEN 0 AND 100) — DAT-003/004 coverage gap
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only
