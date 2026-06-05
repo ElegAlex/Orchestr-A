@@ -5185,7 +5185,7 @@ N/A — manual verification: grep -n 'getRequestId' apps/api/src/audit/audit.ser
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ADVERSARIAL REVIEW: Fully confirmed. (1) Code evidence at lines 184-200 is verbatim correct. (2) grep getRequestId audit.service.ts returns ZERO hits — the function is never imported or called. (3) payload-schemas.ts line 70 confirms `requestId: optStr` is declared in the Zod schema. (4) No other code path in audit.service.ts or audit-persistence.service.ts injects requestId. The schema field is permanently vacant. Finding stands at severity=important.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** c9a1e7e5
 
 ---
 
@@ -5948,7 +5948,7 @@ pnpm test:integration -- --testPathPattern audit-persistence; also: insert a row
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Confirmed via empirical test: node -e proves JSON.stringify drops undefined-valued keys while stableStringify maps them to 'null'. Prisma uses JSON.stringify semantics for JSONB. Therefore hash-at-write-time ≠ hash-recomputed-from-stored-JSONB. Upgraded from 'medium' to 'high' confidence — the critical unknown (Prisma JSONB behavior on undefined) is resolved by standard JS behavior: JSON.stringify({ip: undefined}) = '{}'. The validatePayloadForAction gate (payload-schemas.ts:262-273) returns void and does NOT normalize the payload; the raw object with undefined-valued keys goes directly to com … [truncated — full text in findings.json]
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** c9a1e7e5
 
 ---
 
