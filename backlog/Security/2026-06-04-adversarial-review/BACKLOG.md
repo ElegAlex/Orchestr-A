@@ -5781,7 +5781,7 @@ N/A — manual verification
 
 ### OBS-014 — third-parties: all mutating operations (create/update/hardDelete/assign/detach) emit no audit_log row
 
-- **Status:** DONE
+- **Status:** TODO
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -5829,7 +5829,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code at lines 180-187 matches verbatim. No AuditPersistenceService import or injection found. ThirdPartiesController.remove() does not read @CurrentUser, so actor identity is also absent from the hardDelete flow.
 
-**Closed_by:** d7a2bd76
+**Closed_by:** (empty — reopened: third-parties d7a2bd76 only threaded the actor id; audit emit needs the THIRD_PARTY_* enum batch)
 
 ---
 
