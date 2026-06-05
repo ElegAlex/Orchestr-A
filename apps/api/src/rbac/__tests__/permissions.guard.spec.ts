@@ -9,6 +9,7 @@ import {
   REQUIRE_ANY_PERMISSION_KEY,
 } from '../decorators/require-permissions.decorator';
 import type { PermissionsService } from '../permissions.service';
+import { AuditAction } from '../../audit/audit.service';
 
 /**
  * Tests V3 F — PermissionsGuardV2 (zero-trust).
@@ -34,6 +35,7 @@ function buildCtx(user: unknown): ExecutionContext {
 describe('PermissionsGuardV2 — V3 F', () => {
   let reflector: Reflector;
   let permissions: { getPermissionsForUser: ReturnType<typeof vi.fn> };
+  let auditService: { log: ReturnType<typeof vi.fn> };
   let originalMode: string | undefined;
 
   beforeEach(() => {
@@ -42,6 +44,7 @@ describe('PermissionsGuardV2 — V3 F', () => {
     permissions = {
       getPermissionsForUser: vi.fn().mockResolvedValue([]),
     };
+    auditService = { log: vi.fn() };
   });
 
   afterEach(() => {
@@ -54,6 +57,7 @@ describe('PermissionsGuardV2 — V3 F', () => {
     return new PermissionsGuardV2(
       reflector,
       permissions as unknown as PermissionsService,
+      auditService as unknown as import('../../audit/audit.service').AuditService,
     );
   }
 
@@ -115,6 +119,7 @@ describe('PermissionsGuardV2 — V3 F', () => {
       const guard = new PermissionsGuardV2(
         reflector,
         permissions as unknown as PermissionsService,
+        auditService as unknown as import('../../audit/audit.service').AuditService,
       );
       await expect(
         guard.canActivate(buildCtx({ id: 'u-1', role: 'CONTRIBUTEUR' })),
@@ -127,6 +132,7 @@ describe('PermissionsGuardV2 — V3 F', () => {
       const guard = new PermissionsGuardV2(
         reflector,
         permissions as unknown as PermissionsService,
+        auditService as unknown as import('../../audit/audit.service').AuditService,
       );
       await expect(
         guard.canActivate(buildCtx({ id: 'u-1', role: 'CONTRIBUTEUR' })),
@@ -206,6 +212,62 @@ describe('PermissionsGuardV2 — V3 F', () => {
       await expect(
         guard.canActivate(buildCtx({ id: 'u-1', role: 'OBSERVATEUR' })),
       ).resolves.toBe(false);
+    });
+  });
+
+  describe('SA-OBS-003 — ACCESS_DENIED audit row on 403', () => {
+    it('SA-OBS-003 — no-decorator enforce path emits ACCESS_DENIED audit event', async () => {
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+      const guard = makeGuard('enforce');
+      const result = await guard.canActivate(
+        buildCtx({
+          id: 'u-42',
+          role: { code: 'CONTRIBUTEUR', templateKey: 'CONTRIBUTEUR' },
+        }),
+      );
+      expect(result).toBe(false);
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.ACCESS_DENIED,
+          userId: 'u-42',
+          success: false,
+        }),
+      );
+    });
+
+    it('SA-OBS-003 — missing-permission enforce path emits ACCESS_DENIED audit event', async () => {
+      vi.spyOn(reflector, 'getAllAndOverride').mockImplementation((key) =>
+        key === REQUIRE_PERMISSIONS_KEY ? ['tasks:delete'] : undefined,
+      );
+      permissions.getPermissionsForUser.mockResolvedValue(['tasks:read']);
+      const guard = makeGuard('enforce');
+      const result = await guard.canActivate(
+        buildCtx({
+          id: 'u-99',
+          role: { code: 'OBSERVATEUR', templateKey: 'OBSERVATEUR' },
+        }),
+      );
+      expect(result).toBe(false);
+      expect(auditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.ACCESS_DENIED,
+          userId: 'u-99',
+          success: false,
+        }),
+      );
+    });
+
+    it('SA-OBS-003 — permissive mode does NOT emit ACCESS_DENIED on no-decorator route', async () => {
+      vi.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
+      const guard = makeGuard('permissive');
+      const result = await guard.canActivate(
+        buildCtx({
+          id: 'u-1',
+          role: { code: 'CONTRIBUTEUR', templateKey: 'CONTRIBUTEUR' },
+        }),
+      );
+      expect(result).toBe(true);
+      expect(auditService.log).not.toHaveBeenCalled();
     });
   });
 

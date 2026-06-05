@@ -21,6 +21,7 @@ import { JwtNotBeforeService } from './jwt-not-before.service';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 vi.mock('bcrypt');
 
@@ -822,6 +823,38 @@ describe('AuthService', () => {
       });
       const errors = await validate(dto);
       expect(errors.some((e) => e.property === 'firstName')).toBe(false);
+    });
+  });
+
+  // SEC-003 — LoginDto.password must have @MaxLength to prevent bcrypt CPU-DoS
+  describe('LoginDto validators (SEC-003)', () => {
+    const validBase = {
+      login: 'admin',
+      password: 'admin123',
+    };
+
+    it('SEC-003 — should reject password longer than 1024 characters', async () => {
+      const dto = plainToInstance(LoginDto, {
+        ...validBase,
+        password: 'A'.repeat(1025),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'password')).toBe(true);
+    });
+
+    it('SEC-003 — should accept password exactly at the 1024-character limit', async () => {
+      const dto = plainToInstance(LoginDto, {
+        ...validBase,
+        password: 'A'.repeat(1024),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'password')).toBe(false);
+    });
+
+    it('SEC-003 — should accept a normal-length password', async () => {
+      const dto = plainToInstance(LoginDto, validBase);
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'password')).toBe(false);
     });
   });
 

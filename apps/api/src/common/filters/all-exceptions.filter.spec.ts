@@ -32,7 +32,7 @@ function buildHost(url = '/api/test', method = 'GET') {
 }
 
 // ---------------------------------------------------------------------------
-// Tests — OBS-017
+// Tests — OBS-017 + OBS-005
 // ---------------------------------------------------------------------------
 
 describe('AllExceptionsFilter', () => {
@@ -40,6 +40,66 @@ describe('AllExceptionsFilter', () => {
 
   beforeEach(() => {
     filter = new AllExceptionsFilter();
+  });
+
+  // -----------------------------------------------------------------------
+  // OBS-005 — captureException must be called on unhandled 500s
+  //
+  // RED before fix: AllExceptionsFilter constructor accepted no args and
+  // always delegated to the no-op SentryClient stub — the spy was never
+  // invoked regardless of what was passed.
+  // GREEN after fix: the constructor accepts an optional CaptureExceptionFn;
+  // when provided it replaces the DSN-derived function so tests can assert
+  // call-shape without requiring SENTRY_DSN or the @sentry/node package.
+  // -----------------------------------------------------------------------
+  describe('OBS-005 — error reporter wiring', () => {
+    it('OBS-005 — calls the injected captureException fn with the exception and requestId on non-HttpException', () => {
+      const captureException = vi.fn();
+      const filterWithSpy = new AllExceptionsFilter(captureException);
+      const { host } = buildHost('/api/test');
+
+      const boom = new Error('DB connection lost');
+      filterWithSpy.catch(boom, host as unknown as ArgumentsHost);
+
+      // captureException MUST have been called once …
+      expect(captureException).toHaveBeenCalledTimes(1);
+
+      // … with the original exception as the first argument …
+      expect(captureException).toHaveBeenCalledWith(
+        boom,
+        expect.objectContaining({ requestId: 'req-001' }),
+      );
+    });
+
+    it('OBS-005 — captureException is NOT called for HttpException (4xx/5xx from Nest)', () => {
+      const captureException = vi.fn();
+      const filterWithSpy = new AllExceptionsFilter(captureException);
+      const { host } = buildHost('/api/test');
+
+      const httpEx = new HttpException('Not Found', HttpStatus.NOT_FOUND);
+      filterWithSpy.catch(httpEx, host as unknown as ArgumentsHost);
+
+      // HttpExceptions are expected; they must not pollute the error reporter.
+      expect(captureException).not.toHaveBeenCalled();
+    });
+
+    it('OBS-005 — falls back to no-op when no SENTRY_DSN and no injected fn (no crash)', () => {
+      // process.env.SENTRY_DSN is not set in the test environment —
+      // AllExceptionsFilter() with no args must construct without throwing.
+      const filterDefault = new AllExceptionsFilter();
+      const { host, send } = buildHost('/api/safe');
+
+      // Must not throw even when there is no reporter configured.
+      expect(() =>
+        filterDefault.catch(
+          new Error('silent'),
+          host as unknown as ArgumentsHost,
+        ),
+      ).not.toThrow();
+
+      // Safe response still sent.
+      expect(send).toHaveBeenCalled();
+    });
   });
 
   // -----------------------------------------------------------------------

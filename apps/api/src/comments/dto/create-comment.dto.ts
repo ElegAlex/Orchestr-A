@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, MaxLength } from 'class-validator';
 
 export class CreateCommentDto {
   @ApiProperty({
@@ -8,6 +8,7 @@ export class CreateCommentDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(10000)
   content: string;
 
   @ApiProperty({ description: 'ID de la tâche', example: 'uuid-here' })

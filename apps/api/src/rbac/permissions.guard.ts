@@ -13,6 +13,7 @@ import {
   REQUIRE_ANY_PERMISSION_KEY,
 } from './decorators/require-permissions.decorator';
 import { PermissionsService } from './permissions.service';
+import { AuditAction, AuditService } from '../audit/audit.service';
 
 /**
  * Mode opératoire du PermissionsGuard zero-trust (arbitrage D2 PO).
@@ -65,6 +66,7 @@ export class PermissionsGuardV2 implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly permissionsService: PermissionsService,
+    private readonly auditService: AuditService,
   ) {
     const envMode = process.env.RBAC_GUARD_MODE;
     this.mode = envMode === 'permissive' ? 'permissive' : 'enforce';
@@ -108,6 +110,18 @@ export class PermissionsGuardV2 implements CanActivate {
         this.logger.warn(
           `[RBAC enforce] route refusée (sans @RequirePermissions ni @AllowSelfService) : ${routeId}`,
         );
+        // SA-OBS-003 — emit a durable ACCESS_DENIED audit row. Fire-and-forget:
+        // the guard must not delay the 403 response on a DB failure. userId is
+        // unknown at this branch (request not yet fetched); routeId goes to
+        // `details` which is within the securityEnvelope schema.
+        const noDecoratorRequest = context
+          .switchToHttp()
+          .getRequest<{ user?: RequestUser }>();
+        this.emitAccessDenied(
+          noDecoratorRequest?.user?.id,
+          routeId,
+          'no_rbac_decorator',
+        );
         return false;
       }
       this.logger.warn(
@@ -122,12 +136,18 @@ export class PermissionsGuardV2 implements CanActivate {
       return false;
     }
 
+    const routeId = `${klass?.name ?? '?'}.${(handler as unknown as { name: string })?.name ?? '?'}`;
+
     const perms = await this.permissionsService.getPermissionsForUser(user);
     const set = new Set<string>(perms);
 
     if (hasAll) {
       for (const p of requireAll) {
-        if (!set.has(p)) return false;
+        if (!set.has(p)) {
+          // SA-OBS-003 — persist the denial before returning false.
+          this.emitAccessDenied(user.id, routeId, `missing_permission:${p}`);
+          return false;
+        }
       }
     }
     if (hasAny) {
@@ -138,8 +158,43 @@ export class PermissionsGuardV2 implements CanActivate {
           break;
         }
       }
-      if (!matched) return false;
+      if (!matched) {
+        // SA-OBS-003 — persist the denial before returning false.
+        this.emitAccessDenied(user.id, routeId, 'no_matching_permission');
+        return false;
+      }
     }
     return true;
+  }
+
+  /**
+   * SA-OBS-003 — Fire-and-forget ACCESS_DENIED audit emission. Uses
+   * `AuditService.log` so the securityEnvelope payload is built correctly
+   * (ip/ua/details/success/timestamp) without reimplementing schema logic here.
+   * `AuditService.log` is synchronous (it internally fires a void promise for
+   * the DB write); errors from the inner persistence are already handled by
+   * AuditService. This call itself cannot throw.
+   */
+  private emitAccessDenied(
+    userId: string | undefined,
+    routeId: string,
+    reason: string,
+  ): void {
+    try {
+      this.auditService.log({
+        action: AuditAction.ACCESS_DENIED,
+        userId,
+        details: routeId,
+        reason,
+        success: false,
+      });
+    } catch (err) {
+      // Defensive: guard must never fail due to audit emission.
+      this.logger.error(
+        `Failed to emit ACCESS_DENIED audit event: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
   }
 }

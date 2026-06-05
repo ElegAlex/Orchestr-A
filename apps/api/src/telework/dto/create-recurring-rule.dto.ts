@@ -4,7 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsBoolean,
-  IsString,
+  IsUUID,
   IsInt,
   Min,
   Max,
@@ -17,7 +17,7 @@ export class CreateRecurringRuleDto {
     required: false,
   })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   userId?: string;
 
   @ApiProperty({

@@ -4,7 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsBoolean,
-  IsString,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateTeleworkDto {
@@ -21,7 +21,7 @@ export class CreateTeleworkDto {
     required: false,
   })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   userId?: string;
 
   @ApiProperty({

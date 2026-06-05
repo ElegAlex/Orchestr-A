@@ -24,25 +24,82 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
  * resolving request.user across all error paths. Structured server-side log is
  * sufficient observability at this layer.
  *
- * Sentry integration is stubbed (no external dependency added). Replace the
- * SentryClient.captureException call below with a real SDK import when the
- * dependency is introduced.
+ * Error reporter — OBS-005:
+ * When SENTRY_DSN is set, @sentry/node is loaded dynamically and Sentry.init()
+ * is called once. captureExceptionFn is then bound to Sentry.captureException
+ * so that every unhandled 500 is forwarded to the configured backend.
+ * If SENTRY_DSN is absent (or @sentry/node is not installed), the constructor
+ * falls back to a no-op — the application boots without error.
+ *
+ * PII policy: only stack trace + requestId are forwarded; email, names, and
+ * request bodies are never included in the Sentry context.
+ *
+ * For testing: pass a spy as the second constructor argument instead of
+ * relying on process.env.SENTRY_DSN.
  */
 
 // ---------------------------------------------------------------------------
-// Sentry no-op stub — replace with `import * as Sentry from '@sentry/node'`
-// when the dependency is added.
+// Capture-exception type — mirrors Sentry's captureException signature but
+// kept internal so no hard dep on @sentry/node types is required.
 // ---------------------------------------------------------------------------
-const SentryClient = {
-  captureException: (_err: unknown, _ctx?: Record<string, unknown>): void => {
-    // no-op until @sentry/node is introduced
-  },
-};
+type CaptureExceptionFn = (
+  err: unknown,
+  hint?: Record<string, unknown>,
+) => void;
+
+/**
+ * Build the capture function at construction time.
+ *
+ * - SENTRY_DSN absent → returns a no-op (zero egress, existing behaviour).
+ * - SENTRY_DSN present but @sentry/node not installed → logs a warning and
+ *   returns a no-op so the application keeps running.
+ * - SENTRY_DSN present and @sentry/node available → initialises Sentry and
+ *   returns a bound captureException.
+ */
+function buildCaptureException(
+  logger: import('@nestjs/common').Logger,
+): CaptureExceptionFn {
+  const dsn = process.env.SENTRY_DSN;
+  if (!dsn) {
+    return () => {};
+  }
+  try {
+    // Dynamic require keeps @sentry/node as an optional peer — the package
+    // need not be installed in environments where the DSN is not configured.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sentry = require('@sentry/node') as {
+      init: (opts: { dsn: string }) => void;
+      captureException: (
+        err: unknown,
+        hint?: { extra?: Record<string, unknown> },
+      ) => void;
+    };
+    Sentry.init({ dsn });
+    return (err, hint) =>
+      Sentry.captureException(err, hint ? { extra: hint } : undefined);
+  } catch {
+    logger.warn(
+      '[OBS-005] SENTRY_DSN is set but @sentry/node could not be loaded ' +
+        '— add it to package.json to enable remote error reporting.',
+    );
+    return () => {};
+  }
+}
 
 @Injectable()
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
+  private readonly captureException: CaptureExceptionFn;
+
+  constructor(captureExceptionFn?: CaptureExceptionFn) {
+    // Allow callers (e.g. tests) to inject a spy; otherwise derive from DSN.
+    if (captureExceptionFn !== undefined) {
+      this.captureException = captureExceptionFn;
+    } else {
+      this.captureException = buildCaptureException(this.logger);
+    }
+  }
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -86,9 +143,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     );
 
     // ------------------------------------------------------------------
-    // 3. Sentry (stub — no dep)
+    // 3. Error reporter — OBS-005 (real when SENTRY_DSN is set)
     // ------------------------------------------------------------------
-    SentryClient.captureException(exception, { requestId });
+    this.captureException(exception, { requestId });
 
     // ------------------------------------------------------------------
     // 4. Safe response — no stack, no raw message leak

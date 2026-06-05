@@ -1114,7 +1114,7 @@ N/A — manual verification
 
 ### SEC-003 — LoginDto.password has no @MaxLength — long password input allows DoS via bcrypt CPU exhaustion
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** cross-validated
@@ -1166,7 +1166,7 @@ grep -n 'MaxLength\|bodyLimit' apps/api/src/auth/dto/login.dto.ts apps/api/src/m
 
 ### SEC-005 — CreateCommentDto.content and UpdateCommentDto.content lack @MaxLength — unbounded free-text field
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** cross-validated
@@ -1552,7 +1552,7 @@ N/A — manual verification: mock Date to 2026-12-31T23:30:00Z and call getLeave
 
 ### OBS-005 — Sentry / GlitchTip / OpenTelemetry stubs are no-ops — unhandled exceptions and 500s are log-only with no alerting
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** K
 - **Confidence:** cross-validated
@@ -5015,7 +5015,7 @@ curl -s -X DELETE http://localhost:3000/api/tasks/<taskId>/raci/<userId>/INVALID
 
 ### SEC-023 — userId in CreateTeleworkDto and CreateRecurringRuleDto uses @IsString() instead of @IsUUID()
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -8947,7 +8947,7 @@ grep -n 'startDate && {\|endDate && {' apps/api/src/tasks/tasks.service.ts
 
 ### SA-OBS-003 — ACCESS_DENIED action is defined and schema'd but never emitted by any guard or filter
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** secondary-only
