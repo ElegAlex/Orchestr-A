@@ -6394,7 +6394,7 @@ SELECT tp.id, COUNT(te.id) as te_count FROM third_parties tp JOIN time_entries t
 
 ### DAT-011 — predefined_task_recurring_rules lacks a XOR constraint ensuring exactly one of dayOfWeek (WEEKLY) or monthly fields (MONTHLY_DAY/MONTHLY_ORDINAL) is populated per recurrenceType
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -6444,7 +6444,7 @@ SELECT COUNT(*) FROM predefined_task_recurring_rules WHERE ("recurrenceType" = '
 
 ### DAT-012 — predefined_task_recurring_rules.monthlyOrdinal and monthlyDayOfMonth have no range CHECK constraints despite documented semantics (1..5 and 1..31)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only

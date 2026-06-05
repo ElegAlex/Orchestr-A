@@ -41,6 +41,18 @@ const EXPECTED: ReadonlyArray<
     'project_snapshots',
     ['tasksDone', 'tasksTotal'],
   ],
+  // DAT-011 — per-recurrenceType required-field invariant.
+  [
+    'ptrr_recurrence_fields_ck',
+    'predefined_task_recurring_rules',
+    ['recurrenceType', 'WEEKLY', 'MONTHLY_DAY', 'MONTHLY_ORDINAL'],
+  ],
+  // DAT-012 — recurrence numeric ranges.
+  [
+    'ptrr_ranges_ck',
+    'predefined_task_recurring_rules',
+    ['dayOfWeek', 'monthlyOrdinal', 'weekInterval'],
+  ],
 ];
 
 describe('DAT-008/DAT-015 — CHECK constraints (real DB)', () => {

@@ -154,9 +154,13 @@ describe('DAT-012 — string→enum promotion (real DB)', () => {
       userId,
     );
     await db.$executeRawUnsafe(
+      // This is the prior-cycle DAT-012 (enum promotion) probe — unrelated to the
+      // new-cycle DAT-011/012 recurrence CHECK constraints. The row must now be a
+      // VALID MONTHLY_ORDINAL config (monthlyOrdinal + dayOfWeek) to satisfy
+      // ptrr_recurrence_fields_ck while still exercising the enum column.
       `INSERT INTO predefined_task_recurring_rules
-         (id, "predefinedTaskId", "userId", "period", "recurrenceType", "startDate", "createdById", "updatedAt")
-       VALUES (gen_random_uuid(), $1, $2, 'MORNING', 'MONTHLY_ORDINAL', now(), $2, now())`,
+         (id, "predefinedTaskId", "userId", "period", "recurrenceType", "dayOfWeek", "monthlyOrdinal", "startDate", "createdById", "updatedAt")
+       VALUES (gen_random_uuid(), $1, $2, 'MORNING', 'MONTHLY_ORDINAL', 1, 3, now(), $2, now())`,
       predefinedTaskId,
       userId,
     );
