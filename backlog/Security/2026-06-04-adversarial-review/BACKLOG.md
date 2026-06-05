@@ -3585,7 +3585,7 @@ curl -s -H 'Authorization: Bearer <token>' 'http://localhost:3000/api/projects' 
 
 ### PER-018 — findUsersBySkill() fetches ALL users with a skill then filters isActive in JavaScript — inactive users inflate DB result needlessly
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -3658,7 +3658,7 @@ N/A — manual verification
 
 ### PER-019 — Default page limit is 1000 on skills/departments/services list endpoints — 10× above recommended ceiling
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -4349,7 +4349,7 @@ N/A — manual verification
 
 ### PER-020 — importSkills() issues one INSERT per row in a serial for-loop with no upper bound on input array size — N sequential DB roundtrips
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -8781,7 +8781,7 @@ grep -n 'startDate && endDate' apps/api/src/projects/projects.service.ts
 
 ### COR-027 — skills.service.ts create() and update() missing P2002 catch — concurrent duplicate name causes unhandled 500
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** primary-only

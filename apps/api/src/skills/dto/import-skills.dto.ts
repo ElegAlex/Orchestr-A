@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsNumber,
   IsArray,
+  ArrayMaxSize,
   ValidateNested,
   Min,
 } from 'class-validator';
@@ -49,6 +50,7 @@ export class ImportSkillsDto {
     type: [ImportSkillDto],
   })
   @IsArray()
+  @ArrayMaxSize(500)
   @ValidateNested({ each: true })
   @Type(() => ImportSkillDto)
   skills: ImportSkillDto[];

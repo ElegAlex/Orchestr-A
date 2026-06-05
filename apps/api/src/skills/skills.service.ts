@@ -18,6 +18,15 @@ import {
 import { SkillCategory, SkillLevel } from 'database';
 import { Prisma } from 'database';
 
+// COR-027: collapses the TOCTOU race between findFirst pre-check and create/update.
+// The pre-check still catches the common case with a friendly message; this maps
+// the racing P2002 (skills_name_key unique constraint) to the same 409.
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+  );
+}
+
 @Injectable()
 export class SkillsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -37,30 +46,37 @@ export class SkillsService {
       throw new ConflictException('Une compétence avec ce nom existe déjà');
     }
 
-    const skill = await this.prisma.skill.create({
-      data: {
-        name,
-        description,
-        category,
-        requiredCount: requiredCount ?? 1,
-      },
-      include: {
-        _count: {
-          select: {
-            users: true,
+    try {
+      const skill = await this.prisma.skill.create({
+        data: {
+          name,
+          description,
+          category,
+          requiredCount: requiredCount ?? 1,
+        },
+        include: {
+          _count: {
+            select: {
+              users: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    return skill;
+      return skill;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException('Une compétence avec ce nom existe déjà');
+      }
+      throw err;
+    }
   }
 
   /**
    * Récupérer toutes les compétences avec pagination et filtres
    */
-  async findAll(page = 1, limit = 1000, category?: SkillCategory) {
-    const safeLimit = Math.min(limit || 1000, 1000);
+  async findAll(page = 1, limit = 50, category?: SkillCategory) {
+    const safeLimit = Math.min(limit || 50, 100);
     const skip = (page - 1) * safeLimit;
 
     const where = category ? { category } : {};
@@ -162,24 +178,31 @@ export class SkillsService {
       }
     }
 
-    const skill = await this.prisma.skill.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
-        ...(category && { category }),
-        ...(requiredCount !== undefined && { requiredCount }),
-      },
-      include: {
-        _count: {
-          select: {
-            users: true,
+    try {
+      const skill = await this.prisma.skill.update({
+        where: { id },
+        data: {
+          ...(name && { name }),
+          ...(description !== undefined && { description }),
+          ...(category && { category }),
+          ...(requiredCount !== undefined && { requiredCount }),
+        },
+        include: {
+          _count: {
+            select: {
+              users: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    return skill;
+      return skill;
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ConflictException('Une compétence avec ce nom existe déjà');
+      }
+      throw err;
+    }
   }
 
   /**
@@ -454,6 +477,7 @@ export class SkillsService {
 
     const where: Prisma.UserSkillWhereInput = {
       skillId,
+      user: { isActive: true },
     };
 
     if (minLevel) {
@@ -511,17 +535,14 @@ export class SkillsService {
       },
     });
 
-    // Filtrer seulement les utilisateurs actifs
-    const activeUsers = userSkills.filter((us) => us.user.isActive);
-
     return {
       skill: {
         id: skill.id,
         name: skill.name,
         category: skill.category,
       },
-      totalUsers: activeUsers.length,
-      users: activeUsers.map((us) => ({
+      totalUsers: userSkills.length,
+      users: userSkills.map((us) => ({
         ...us.user,
         skillLevel: us.level,
       })),
@@ -690,44 +711,48 @@ export class SkillsService {
       existingSkills.map((s) => s.name.toLowerCase()),
     );
 
+    // Pre-pass: classify each row as valid-to-insert or skip (dedup)
+    const toInsert: Array<{
+      name: string;
+      category: SkillCategory;
+      description: string | null;
+      requiredCount: number;
+    }> = [];
+
     for (let i = 0; i < skills.length; i++) {
       const skillData = skills[i];
       const lineNum = i + 2; // +2 car ligne 1 = header, index commence à 0
+      const nameLower = skillData.name.toLowerCase();
 
-      try {
-        // Vérifier que le nom n'existe pas déjà (case-insensitive)
-        const nameLower = skillData.name.toLowerCase();
-        if (existingNames.has(nameLower)) {
-          result.skipped++;
-          result.errorDetails.push(
-            `Ligne ${lineNum}: Compétence "${skillData.name}" existe déjà`,
-          );
-          continue;
-        }
-
-        // Créer la compétence
-        await this.prisma.skill.create({
-          data: {
-            name: skillData.name,
-            category: skillData.category,
-            description: skillData.description || null,
-            requiredCount:
-              skillData.requiredCount !== undefined &&
-              skillData.requiredCount >= 1
-                ? skillData.requiredCount
-                : 1,
-          },
-        });
-
-        // Ajouter le nom à l'ensemble pour éviter les doublons dans le même fichier
-        existingNames.add(nameLower);
-        result.created++;
-      } catch (err) {
-        result.errors++;
-        const errorMessage =
-          err instanceof Error ? err.message : 'Erreur inconnue';
-        result.errorDetails.push(`Ligne ${lineNum}: ${errorMessage}`);
+      if (existingNames.has(nameLower)) {
+        result.skipped++;
+        result.errorDetails.push(
+          `Ligne ${lineNum}: Compétence "${skillData.name}" existe déjà`,
+        );
+        continue;
       }
+
+      // Track within-file duplicates
+      existingNames.add(nameLower);
+
+      toInsert.push({
+        name: skillData.name,
+        category: skillData.category,
+        description: skillData.description || null,
+        requiredCount:
+          skillData.requiredCount !== undefined && skillData.requiredCount >= 1
+            ? skillData.requiredCount
+            : 1,
+      });
+    }
+
+    // Batch INSERT — single DB roundtrip for all valid rows
+    if (toInsert.length > 0) {
+      const { count } = await this.prisma.skill.createMany({
+        data: toInsert,
+        skipDuplicates: true,
+      });
+      result.created = count;
     }
 
     return result;

@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { SkillCategory, SkillLevel } from 'database';
+import { SkillCategory, SkillLevel, Prisma } from 'database';
 
 describe('SkillsService', () => {
   let service: SkillsService;
@@ -15,6 +15,7 @@ describe('SkillsService', () => {
   const mockPrismaService = {
     skill: {
       create: vi.fn(),
+      createMany: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
       findFirst: vi.fn(),
@@ -92,6 +93,23 @@ describe('SkillsService', () => {
         ConflictException,
       );
     });
+
+    // COR-027: TOCTOU race — findFirst saw nothing, but a concurrent peer
+    // wrote first; prisma.skill.create() then hits the unique constraint
+    // and surfaces P2002. The wrapper must collapse this to a 409, not a 500.
+    it('COR-027 — maps Prisma P2002 from create() to ConflictException', async () => {
+      mockPrismaService.skill.findFirst.mockResolvedValue(null);
+      mockPrismaService.skill.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`name`)',
+          { code: 'P2002', clientVersion: 'test', meta: { target: ['name'] } },
+        ),
+      );
+
+      await expect(
+        service.create({ name: 'Race', category: SkillCategory.TECHNICAL }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
   });
 
   describe('findAll', () => {
@@ -119,6 +137,25 @@ describe('SkillsService', () => {
           }) as object,
         }),
       );
+    });
+
+    // PER-019: default limit must be 50, hard cap at 100.
+    it('PER-019 — default limit is 50 when none provided', async () => {
+      mockPrismaService.skill.findMany.mockResolvedValue([]);
+      mockPrismaService.skill.count.mockResolvedValue(0);
+
+      const result = await service.findAll();
+
+      expect(result.meta.limit).toBe(50);
+    });
+
+    it('PER-019 — limit is capped at 100 when caller passes 9999', async () => {
+      mockPrismaService.skill.findMany.mockResolvedValue([]);
+      mockPrismaService.skill.count.mockResolvedValue(0);
+
+      const result = await service.findAll(1, 9999);
+
+      expect(result.meta.limit).toBe(100);
     });
   });
 
@@ -174,6 +211,23 @@ describe('SkillsService', () => {
       await expect(
         service.update('skill-1', { name: 'Existing' }),
       ).rejects.toThrow(ConflictException);
+    });
+
+    // COR-027: same TOCTOU race on update — rename collides with a concurrent
+    // peer that grabbed the new name first.
+    it('COR-027 — maps Prisma P2002 from update() to ConflictException', async () => {
+      mockPrismaService.skill.findUnique.mockResolvedValue(mockSkill);
+      mockPrismaService.skill.findFirst.mockResolvedValue(null);
+      mockPrismaService.skill.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`name`)',
+          { code: 'P2002', clientVersion: 'test', meta: { target: ['name'] } },
+        ),
+      );
+
+      await expect(
+        service.update('skill-1', { name: 'Race' }),
+      ).rejects.toBeInstanceOf(ConflictException);
     });
   });
 
@@ -470,36 +524,66 @@ describe('SkillsService', () => {
       expect(result.users).toHaveLength(1);
     });
 
-    it('should only return active users', async () => {
-      const mockUserSkills = [
-        {
-          userId: 'user-1',
-          level: 'EXPERT',
-          user: {
-            id: 'user-1',
-            isActive: true,
-            firstName: 'John',
-            lastName: 'Doe',
-          },
-        },
-        {
-          userId: 'user-2',
-          level: 'EXPERT',
-          user: {
-            id: 'user-2',
-            isActive: false,
-            firstName: 'Jane',
-            lastName: 'Doe',
-          },
-        },
+    // PER-018: isActive filtering must happen in the DB query (where clause),
+    // not in JavaScript after fetching all users.
+    it('PER-018 — userSkill.findMany is called with user: { isActive: true } in where clause', async () => {
+      mockPrismaService.skill.findUnique.mockResolvedValue(mockSkill);
+      mockPrismaService.userSkill.findMany.mockResolvedValue([]);
+
+      await service.findUsersBySkill('skill-1');
+
+      expect(mockPrismaService.userSkill.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            user: { isActive: true },
+          }) as object,
+        }),
+      );
+    });
+  });
+
+  describe('importSkills', () => {
+    // PER-020: importSkills must use createMany (batch INSERT) instead of
+    // one prisma.skill.create() call per row in a serial loop.
+    it('PER-020 — uses createMany for batch insert instead of serial create loop', async () => {
+      const skills = [
+        { name: 'React', category: SkillCategory.TECHNICAL },
+        { name: 'Vue', category: SkillCategory.TECHNICAL },
       ];
 
-      mockPrismaService.skill.findUnique.mockResolvedValue(mockSkill);
-      mockPrismaService.userSkill.findMany.mockResolvedValue(mockUserSkills);
+      // No existing skills in DB
+      mockPrismaService.skill.findMany.mockResolvedValue([]);
+      mockPrismaService.skill.createMany.mockResolvedValue({ count: 2 });
 
-      const result = await service.findUsersBySkill('skill-1');
+      const result = await service.importSkills(skills);
 
-      expect(result.totalUsers).toBe(1);
+      expect(mockPrismaService.skill.createMany).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.skill.create).not.toHaveBeenCalled();
+      expect(result.created).toBe(2);
+    });
+
+    it('PER-020 — skips DB-duplicate names (dedup preserved)', async () => {
+      const skills = [
+        { name: 'React', category: SkillCategory.TECHNICAL },
+        { name: 'Typescript', category: SkillCategory.TECHNICAL },
+      ];
+
+      // 'React' already in DB
+      mockPrismaService.skill.findMany.mockResolvedValue([{ name: 'React' }]);
+      mockPrismaService.skill.createMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.importSkills(skills);
+
+      expect(result.skipped).toBe(1);
+      expect(result.created).toBe(1);
+      // Only the non-duplicate is passed to createMany
+      expect(mockPrismaService.skill.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({ name: 'Typescript' }),
+          ]) as object,
+        }),
+      );
     });
   });
 });

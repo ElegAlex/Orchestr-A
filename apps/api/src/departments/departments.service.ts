@@ -77,8 +77,8 @@ export class DepartmentsService {
   /**
    * Récupérer tous les départements avec pagination
    */
-  async findAll(page = 1, limit = 1000) {
-    const safeLimit = Math.min(limit || 1000, 1000);
+  async findAll(page = 1, limit = 50) {
+    const safeLimit = Math.min(limit || 50, 100);
     const skip = (page - 1) * safeLimit;
 
     const [departments, total] = await Promise.all([
