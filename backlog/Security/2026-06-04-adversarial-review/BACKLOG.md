@@ -7337,7 +7337,7 @@ N/A — manual verification: inspect main.ts line 198-200
 
 ### SEC-012 — Prometheus metric labels built from unsanitized req.path — label injection possible
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** L
 - **Confidence:** primary-only

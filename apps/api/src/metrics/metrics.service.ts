@@ -34,7 +34,11 @@ export class MetricsService {
     status: number,
     durationMs: number,
   ): void {
-    const labels = `method="${method}",route="${route}",status="${status}"`;
+    // SEC-012 — escape label values per the Prometheus exposition format so a
+    // crafted route/method cannot break out of the quoting and inject series.
+    const esc = (v: string): string =>
+      v.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+    const labels = `method="${esc(method)}",route="${esc(route)}",status="${status}"`;
 
     // Counter
     const counterEntry = this.requestCounter.get(labels) ?? { value: 0 };

@@ -32,6 +32,22 @@ describe('MetricsService (OBS-011)', () => {
     service = module.get<MetricsService>(MetricsService);
   });
 
+  it('SEC-012 — escapes label values so a crafted route cannot inject metric lines', () => {
+    // A route that tries to break out of the label quoting and inject a fake series.
+    service.recordRequest(
+      'GET',
+      '/api/x"} 999\ninjected_total{evil="1',
+      200,
+      10,
+    );
+    const text = service.renderMetrics();
+    // The injected line must NOT appear as its own series.
+    expect(text).not.toMatch(/^injected_total\{/m);
+    // The route value must be escaped (backslash-escaped quote + \n), not raw.
+    expect(text).toContain('\\"');
+    expect(text).not.toContain('\ninjected_total{evil');
+  });
+
   it('recordRequest increments the http_requests_total counter', () => {
     service.recordRequest('GET', '/api/projects', 200, 42);
     const text = service.renderMetrics();
