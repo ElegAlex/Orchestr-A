@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApproveLeaveDto } from './dto/approve-leave.dto';
 import { RejectLeaveDto } from './dto/reject-leave.dto';
+import { ImportLeavesDto } from './dto/import-leaves.dto';
 
 describe('LeavesController', () => {
   let controller: LeavesController;
@@ -749,6 +750,40 @@ describe('LeavesController', () => {
       const dto = plainToInstance(RejectLeaveDto, {});
       const errors = await validate(dto);
       expect(errors.length).toBe(0);
+    });
+  });
+
+  // SEC-008 — ImportLeavesDto.leaves must have an upper-bound to prevent DoS
+  describe('ImportLeavesDto validators (SEC-008)', () => {
+    const makeLeaveItem = () => ({
+      userEmail: 'user@example.com',
+      leaveTypeName: 'Congé Payé',
+      startDate: '2026-03-01',
+      endDate: '2026-03-05',
+    });
+
+    it('SEC-008 — should reject leaves array with 501 items (exceeds max 500)', async () => {
+      const dto = plainToInstance(ImportLeavesDto, {
+        leaves: Array.from({ length: 501 }, makeLeaveItem),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'leaves')).toBe(true);
+    });
+
+    it('SEC-008 — should accept leaves array with exactly 500 items', async () => {
+      const dto = plainToInstance(ImportLeavesDto, {
+        leaves: Array.from({ length: 500 }, makeLeaveItem),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'leaves')).toBe(false);
+    });
+
+    it('SEC-008 — should accept leaves array with 1 item', async () => {
+      const dto = plainToInstance(ImportLeavesDto, {
+        leaves: [makeLeaveItem()],
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'leaves')).toBe(false);
     });
   });
 });
