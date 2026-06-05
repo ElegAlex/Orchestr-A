@@ -2095,7 +2095,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: EpicsModule has no AccessScopeService injected; EpicsService.findAll signature takes no userId parameter; controller passes no currentUser to findAll. Same confirmed for MilestonesService.findAll (lines 53-88). No membership filter anywhere in the list path.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 26308212
 
 ---
 
@@ -3976,7 +3976,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: milestones.service.ts line 150-158 has the identical issue: `include: { project: { include: { members: true } } }`. Both confirmed verbatim.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 26308212
 
 ---
 
