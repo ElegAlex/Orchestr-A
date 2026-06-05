@@ -176,9 +176,16 @@ export class TeleworkService {
       if (endDate) where.date.lte = new Date(endDate);
     }
 
-    // Auto-expand recurring rules into individual schedules for the requested range
+    // Auto-expand recurring rules into individual schedules for the requested range.
+    // COR-003 — expand with the ALREADY-SCOPE-NARROWED `where.userId`, not the raw
+    // query param: a non-privileged caller (no telework:readAll) who omits userId
+    // must only materialise their OWN rules, never every user's (write-side leak).
     if (startDate && endDate) {
-      await this.expandRecurringRulesForRange(startDate, endDate, userId);
+      await this.expandRecurringRulesForRange(
+        startDate,
+        endDate,
+        where.userId as string | undefined,
+      );
     }
 
     const [teleworks, total] = await Promise.all([

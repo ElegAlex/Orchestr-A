@@ -262,7 +262,7 @@ grep -n 'prisma.task.create\|prisma.subtask.create\|\$transaction' apps/api/src/
 
 ### COR-003 — findAll auto-expand writes telework rows for ALL users when a non-privileged caller supplies startDate+endDate without userId
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** C
 - **Confidence:** primary-only

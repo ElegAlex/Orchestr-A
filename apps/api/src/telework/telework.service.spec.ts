@@ -300,6 +300,37 @@ describe('TeleworkService', () => {
       );
     });
 
+    it('COR-003 — a non-privileged caller without userId expands only its own recurring rules', async () => {
+      // No telework:readAll → the read scope is narrowed to the caller.
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:read',
+      ]);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+      mockPrismaService.teleworkSchedule.count.mockResolvedValue(0);
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([]);
+
+      // The caller omits userId from the query.
+      await service.findAll(
+        'user-1',
+        'CONTRIBUTEUR',
+        1,
+        10,
+        undefined,
+        '2025-01-01',
+        '2025-01-31',
+      );
+
+      // The recurring-rule expansion MUST be scoped to the enforced user, not
+      // materialise schedules for every user (a write-side scope leak).
+      expect(
+        mockPrismaService.teleworkRecurringRule.findMany,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ userId: 'user-1' }),
+        }),
+      );
+    });
+
     it('should filter by startDate only', async () => {
       mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'telework:readAll',
