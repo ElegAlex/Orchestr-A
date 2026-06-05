@@ -1,11 +1,13 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ThirdPartyType } from 'database';
+import { Prisma, ThirdPartyType } from 'database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AccessScopeService } from '../common/services/access-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateThirdPartyDto } from './dto/create-third-party.dto';
 import { ThirdPartiesService } from './third-parties.service';
@@ -24,21 +26,25 @@ describe('ThirdPartiesService', () => {
     },
     task: {
       findUnique: vi.fn(),
+      count: vi.fn(),
     },
     project: {
       findUnique: vi.fn(),
+      count: vi.fn(),
     },
     taskThirdPartyAssignee: {
       findUnique: vi.fn(),
       create: vi.fn(),
       delete: vi.fn(),
       count: vi.fn(),
+      findMany: vi.fn(),
     },
     projectThirdPartyMember: {
       findUnique: vi.fn(),
       create: vi.fn(),
       delete: vi.fn(),
       count: vi.fn(),
+      findMany: vi.fn(),
     },
     timeEntry: {
       count: vi.fn(),
@@ -51,12 +57,18 @@ describe('ThirdPartiesService', () => {
     }),
   };
 
+  const mockAccessScope = {
+    assertCanReadTask: vi.fn().mockResolvedValue(undefined),
+    assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ThirdPartiesService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: AccessScopeService, useValue: mockAccessScope },
       ],
     }).compile();
     service = module.get<ThirdPartiesService>(ThirdPartiesService);
@@ -535,6 +547,95 @@ describe('ThirdPartiesService', () => {
       await expect(service.unassignFromTask('task-1', 'tp-1')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('SEC-025 — listTaskAssignees enforces task-scope access check (IDOR)', () => {
+    it('SEC-025 — calls assertCanReadTask before returning assignees', async () => {
+      mockPrismaService.taskThirdPartyAssignee.findMany.mockResolvedValue([
+        { id: 'a-1', thirdParty: { id: 'tp-1' }, assignedBy: { id: 'u-1' } },
+      ]);
+      const user = { id: 'user-1', role: 'CONTRIBUTEUR' };
+      await service.listTaskAssignees('task-1', user);
+      expect(mockAccessScope.assertCanReadTask).toHaveBeenCalledWith(
+        'task-1',
+        user,
+      );
+    });
+
+    it('SEC-025 — propagates ForbiddenException from assertCanReadTask', async () => {
+      mockAccessScope.assertCanReadTask.mockRejectedValueOnce(
+        new ForbiddenException('Accès tâche non autorisé'),
+      );
+      await expect(
+        service.listTaskAssignees('task-1', { id: 'non-member', role: null }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(
+        mockPrismaService.taskThirdPartyAssignee.findMany,
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('SEC-026 — listProjectMembers enforces project-scope access check (IDOR)', () => {
+    it('SEC-026 — calls assertCanAccessProject before returning members', async () => {
+      mockPrismaService.projectThirdPartyMember.findMany.mockResolvedValue([]);
+      const user = { id: 'user-1', role: 'CONTRIBUTEUR' };
+      await service.listProjectMembers('proj-1', user);
+      expect(mockAccessScope.assertCanAccessProject).toHaveBeenCalledWith(
+        'proj-1',
+        user,
+      );
+    });
+
+    it('SEC-026 — propagates ForbiddenException from assertCanAccessProject', async () => {
+      mockAccessScope.assertCanAccessProject.mockRejectedValueOnce(
+        new ForbiddenException('Accès projet non autorisé'),
+      );
+      await expect(
+        service.listProjectMembers('proj-1', {
+          id: 'non-member',
+          role: null,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(
+        mockPrismaService.projectThirdPartyMember.findMany,
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('COR-036 — update wraps invariant check in a serializable transaction', () => {
+    it('COR-036 — wraps findUnique + invariant check + update inside $transaction', async () => {
+      // The mock $transaction passes the tx callback to the inner mock prisma.
+      // We assert that prisma.thirdParty.findUnique is called inside the tx.
+      mockPrismaService.thirdParty.findUnique.mockResolvedValue({
+        id: 'tp-1',
+        type: ThirdPartyType.LEGAL_ENTITY,
+        contactFirstName: null,
+        contactLastName: null,
+      });
+      mockPrismaService.thirdParty.update.mockResolvedValue({
+        id: 'tp-1',
+        isActive: false,
+      });
+
+      await service.update('tp-1', { isActive: false });
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({ isolationLevel: 'Serializable' }),
+      );
+    });
+
+    it('COR-036 — throws ConflictException when Prisma P2034 (serialization failure) occurs', async () => {
+      const serializationError = new Prisma.PrismaClientKnownRequestError(
+        'Transaction failed due to a write conflict or a deadlock',
+        { code: 'P2034', clientVersion: '6.0.0', meta: {} },
+      );
+      mockPrismaService.$transaction.mockRejectedValueOnce(serializationError);
+
+      await expect(
+        service.update('tp-1', { organizationName: 'X' }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 });

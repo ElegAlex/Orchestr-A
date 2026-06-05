@@ -78,8 +78,8 @@ describe('ThirdPartiesController', () => {
 
   it('DELETE /:id delegates to service.hardDelete and returns void', async () => {
     mockService.hardDelete.mockResolvedValue(undefined);
-    const result = await controller.remove('tp-1');
-    expect(mockService.hardDelete).toHaveBeenCalledWith('tp-1');
+    const result = await controller.remove('tp-1', { id: 'user-1' });
+    expect(mockService.hardDelete).toHaveBeenCalledWith('tp-1', 'user-1');
     expect(result).toBeUndefined();
   });
 });

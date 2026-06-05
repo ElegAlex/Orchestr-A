@@ -29,8 +29,15 @@ export class ProjectsThirdPartyMembersController {
   @Get()
   @RequirePermissions('third_parties:read')
   @ApiOperation({ summary: 'Lister les tiers rattachés à un projet' })
-  list(@Param('projectId', ParseUUIDPipe) projectId: string) {
-    return this.thirdPartiesService.listProjectMembers(projectId);
+  list(
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @CurrentUser() user: { id: string; role?: unknown },
+  ) {
+    // SEC-026 — thread currentUser so the service can enforce project-scope access.
+    return this.thirdPartiesService.listProjectMembers(
+      projectId,
+      user as { id: string },
+    );
   }
 
   @Post()

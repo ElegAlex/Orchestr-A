@@ -87,7 +87,11 @@ export class ThirdPartiesController {
   })
   @ApiResponse({ status: 204, description: 'Tiers supprimé' })
   @ApiResponse({ status: 404, description: 'Tiers introuvable' })
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    await this.thirdPartiesService.hardDelete(id);
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    // OBS-014 — pass actor identity so the audit row captures who deleted the tiers.
+    await this.thirdPartiesService.hardDelete(id, user.id);
   }
 }

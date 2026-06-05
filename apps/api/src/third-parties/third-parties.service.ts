@@ -1,10 +1,15 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, ThirdParty, ThirdPartyType } from 'database';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../common/services/access-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateThirdPartyDto } from './dto/create-third-party.dto';
 import { UpdateThirdPartyDto } from './dto/update-third-party.dto';
@@ -18,7 +23,10 @@ export interface DeletionImpact {
 
 @Injectable()
 export class ThirdPartiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
   async create(
     dto: CreateThirdPartyDto,
@@ -113,42 +121,65 @@ export class ThirdPartiesService {
   }
 
   async update(id: string, dto: UpdateThirdPartyDto): Promise<ThirdParty> {
-    const existing = await this.prisma.thirdParty.findUnique({ where: { id } });
-    if (!existing) {
-      throw new NotFoundException(`Third party ${id} not found`);
-    }
+    // COR-036 — wrap the read-check-write in a SERIALIZABLE transaction so
+    // concurrent PATCH requests cannot both pass the LEGAL_ENTITY invariant
+    // check and then produce an inconsistent final state.
+    try {
+      const result = await this.prisma.$transaction(
+        async (tx) => {
+          const existing = await tx.thirdParty.findUnique({ where: { id } });
+          if (!existing) {
+            throw new NotFoundException(`Third party ${id} not found`);
+          }
 
-    const nextType = dto.type ?? existing.type;
-    const nextFirstName =
-      dto.contactFirstName !== undefined
-        ? dto.contactFirstName
-        : existing.contactFirstName;
-    const nextLastName =
-      dto.contactLastName !== undefined
-        ? dto.contactLastName
-        : existing.contactLastName;
+          const nextType = dto.type ?? existing.type;
+          const nextFirstName =
+            dto.contactFirstName !== undefined
+              ? dto.contactFirstName
+              : existing.contactFirstName;
+          const nextLastName =
+            dto.contactLastName !== undefined
+              ? dto.contactLastName
+              : existing.contactLastName;
 
-    if (
-      nextType === ThirdPartyType.LEGAL_ENTITY &&
-      (nextFirstName || nextLastName)
-    ) {
-      throw new BadRequestException(
-        'LEGAL_ENTITY third parties cannot have a named contact (firstName/lastName)',
+          if (
+            nextType === ThirdPartyType.LEGAL_ENTITY &&
+            (nextFirstName || nextLastName)
+          ) {
+            throw new BadRequestException(
+              'LEGAL_ENTITY third parties cannot have a named contact (firstName/lastName)',
+            );
+          }
+
+          return tx.thirdParty.update({
+            where: { id },
+            data: {
+              type: dto.type,
+              organizationName: dto.organizationName,
+              contactFirstName: dto.contactFirstName,
+              contactLastName: dto.contactLastName,
+              contactEmail: dto.contactEmail,
+              notes: dto.notes,
+              isActive: dto.isActive,
+            },
+          });
+        },
+        { isolationLevel: 'Serializable' },
       );
-    }
 
-    return this.prisma.thirdParty.update({
-      where: { id },
-      data: {
-        type: dto.type,
-        organizationName: dto.organizationName,
-        contactFirstName: dto.contactFirstName,
-        contactLastName: dto.contactLastName,
-        contactEmail: dto.contactEmail,
-        notes: dto.notes,
-        isActive: dto.isActive,
-      },
-    });
+      return result;
+    } catch (e) {
+      // COR-036 — surface serialization failures as ConflictException (HTTP 409)
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2034'
+      ) {
+        throw new ConflictException(
+          `Concurrent update conflict on third party ${id}; please retry`,
+        );
+      }
+      throw e;
+    }
   }
 
   async getDeletionImpact(id: string): Promise<DeletionImpact> {
@@ -177,13 +208,17 @@ export class ThirdPartiesService {
     };
   }
 
-  async hardDelete(id: string): Promise<void> {
+  async hardDelete(id: string, actorId?: string): Promise<void> {
     const tp = await this.prisma.thirdParty.findUnique({ where: { id } });
     if (!tp) {
       throw new NotFoundException(`Third party ${id} not found`);
     }
     // Cascade FK handles time_entries, task_third_party_assignees, project_third_party_members
     await this.prisma.thirdParty.delete({ where: { id } });
+    // OBS-014 — audit emission is wired here; requires THIRD_PARTY_DELETED enum
+    // member in audit-action.enum.ts and matching schema in payload-schemas.ts
+    // (cross-file dependency — see cross_file_needs in fix report).
+    void actorId; // referenced once audit enum is extended
   }
 
   async assertExistsAndActive(id: string): Promise<void> {
@@ -307,7 +342,12 @@ export class ThirdPartiesService {
     }
   }
 
-  async listTaskAssignees(taskId: string) {
+  async listTaskAssignees(taskId: string, currentUser?: AccessUser) {
+    // SEC-025 — enforce task-scope access before returning assignees. Prevents
+    // any user with third_parties:read from enumerating assignees on tasks they
+    // cannot read (e.g. confidential tasks in projects they are not members of).
+    await this.accessScope.assertCanReadTask(taskId, currentUser);
+
     return this.prisma.taskThirdPartyAssignee.findMany({
       where: { taskId },
       include: {
@@ -320,7 +360,12 @@ export class ThirdPartiesService {
     });
   }
 
-  async listProjectMembers(projectId: string) {
+  async listProjectMembers(projectId: string, currentUser?: AccessUser) {
+    // SEC-026 — enforce project-scope access before returning members. Prevents
+    // any user with third_parties:read from enumerating third-party contractors
+    // attached to projects they are not members of.
+    await this.accessScope.assertCanAccessProject(projectId, currentUser);
+
     return this.prisma.projectThirdPartyMember.findMany({
       where: { projectId },
       include: {

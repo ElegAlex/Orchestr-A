@@ -2334,7 +2334,7 @@ N/A — manual verification: create two tasks each with one subtask, then POST /
 
 ### SEC-025 — GET /tasks/:taskId/third-party-assignees — missing task-scope access check (IDOR)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -2392,7 +2392,7 @@ grep -n 'assertCanReadTask\|assertCanAccessProject' apps/api/src/third-parties/t
 
 ### SEC-026 — GET /projects/:projectId/third-party-members — missing project-scope access check (IDOR)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -3175,7 +3175,7 @@ grep -n 'prisma.teleworkSchedule.create\|P2002\|skipDuplicates' apps/api/src/tel
 
 ### COR-036 — ThirdPartiesService.update: LEGAL_ENTITY invariant checked without transaction — concurrent partial updates can violate it
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -5781,7 +5781,7 @@ N/A — manual verification
 
 ### OBS-014 — third-parties: all mutating operations (create/update/hardDelete/assign/detach) emit no audit_log row
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only

@@ -29,8 +29,15 @@ export class TasksThirdPartyAssigneesController {
   @Get()
   @RequirePermissions('third_parties:read')
   @ApiOperation({ summary: 'Lister les tiers assignés à une tâche' })
-  list(@Param('taskId', ParseUUIDPipe) taskId: string) {
-    return this.thirdPartiesService.listTaskAssignees(taskId);
+  list(
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @CurrentUser() user: { id: string; role?: unknown },
+  ) {
+    // SEC-025 — thread currentUser so the service can enforce task-scope access.
+    return this.thirdPartiesService.listTaskAssignees(
+      taskId,
+      user as { id: string },
+    );
   }
 
   @Post()
