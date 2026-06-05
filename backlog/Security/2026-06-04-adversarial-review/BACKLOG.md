@@ -125,7 +125,7 @@ npx jest --testPathPattern leaves.service.spec --no-coverage 2>&1 | grep -E 'PAS
 - Related (same run): SEC-009.
 - Audit note: The bug is in the else-branch after the service-scope check succeeds. The fix also aligns with the intent documented in `findValidatorForUser` (COR-005 comment at line 712-714). Adversarial check: both approve() and reject() gate solely on canValidate() with no additional delegation scoping. findValidatorForUser correctly scopes to department manager (delegatorId: managerId) but canValidate does not apply the same filter. Code verbatim confirmed at lines 1638-1650.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d599e2cb
 
 ---
 
