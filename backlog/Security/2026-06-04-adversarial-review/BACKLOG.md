@@ -2729,7 +2729,7 @@ grep -n 'prisma.event.create\|prisma.$transaction' apps/api/src/events/events.se
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: update() wraps participant rewrite in $transaction (line 480) — the asymmetry with create() strengthens this finding. Adversarial check: no outer $transaction exists in the create() method; the parent event.create at line 140 is inside a try/catch for cycle detection only, not a tx. The occurrence loop at lines 233-245 runs after the parent has already committed. No global transaction interceptor found. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f4809c29
 
 ---
 
@@ -3419,7 +3419,7 @@ grep -n 'take\|skip\|limit\|page' apps/api/src/events/events.service.ts apps/api
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The planning overview call (`findAll` with date bounds) is implicitly bounded by the date window. The direct event list endpoint is the primary exposure. Verified: all three methods (findAll line 297, getEventsByUser line 599, getEventsByRange line 692) use `findMany` with no `take`/`skip` parameter.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f4809c29
 
 ---
 
@@ -4035,7 +4035,7 @@ grep -n 'await this.prisma.event.create\|createMany' apps/api/src/events/events.
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The comment at line 230-232 ('PER-024: use per-occurrence event.create with nested participants to avoid the createMany→findMany round-trip') was a prior fix that introduced this new pattern. The rationale is valid for participant nesting but the batch insert path for events without participants was not preserved. Verified: CreateEventDto has @Max(52) on recurrenceWeekInterval but no constraint at all on recurrenceEndDate (line 149-151 of create-event.dto.ts).
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f4809c29
 
 ---
 
