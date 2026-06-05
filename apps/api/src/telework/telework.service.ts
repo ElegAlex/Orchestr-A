@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { formatInTimeZone } from 'date-fns-tz';
 import { PrismaService } from '../prisma/prisma.service';
@@ -181,6 +182,16 @@ export class TeleworkService {
     // query param: a non-privileged caller (no telework:readAll) who omits userId
     // must only materialise their OWN rules, never every user's (write-side leak).
     if (startDate && endDate) {
+      // SEC-024 — bound the range to 366 days to prevent an O(days × rules) DoS
+      // through unbounded auto-expansion.
+      const rangeDays =
+        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+        86_400_000;
+      if (rangeDays > 366) {
+        throw new BadRequestException(
+          'La plage de dates ne peut pas dépasser 366 jours',
+        );
+      }
       await this.expandRecurringRulesForRange(
         startDate,
         endDate,
@@ -250,7 +261,11 @@ export class TeleworkService {
       return [];
     }
 
-    await this.expandRecurringRulesForRange(startDate, endDate);
+    // COR-032: pass the scoped userIds so only rules for visible users are
+    // materialised, preventing cross-user schedule leakage.
+    await this.expandRecurringRulesForRange(startDate, endDate, [
+      ...new Set(userIds),
+    ]);
 
     return this.prisma.teleworkSchedule.findMany({
       where: {
@@ -295,11 +310,19 @@ export class TeleworkService {
    * Expand recurring rules into individual telework_schedule entries for a date range.
    * Called automatically by findAll when startDate/endDate are provided.
    * Creates missing entries only (skips existing).
+   *
+   * COR-032: filterUserIds accepts a single userId string, an array of userIds,
+   * or undefined (no filter = all active rules). This prevents cross-user
+   * schedule leakage when called from findForPlanningOverview with a scoped list.
+   *
+   * PER-028 / COR-033: Uses a single bulk findMany to pre-load existing rows
+   * and a single createMany({skipDuplicates:true}) for inserts, eliminating
+   * the O(days × rules) N+1 pattern and the TOCTOU P2002 race condition.
    */
   private async expandRecurringRulesForRange(
     startDate: string,
     endDate: string,
-    filterUserId?: string,
+    filterUserIds?: string | string[],
   ) {
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
@@ -312,17 +335,28 @@ export class TeleworkService {
       OR: [{ endDate: null }, { endDate: { gte: start } }],
     };
 
-    if (filterUserId) {
-      ruleWhere.userId = filterUserId;
+    if (filterUserIds !== undefined) {
+      if (Array.isArray(filterUserIds)) {
+        ruleWhere.userId = { in: filterUserIds };
+      } else {
+        ruleWhere.userId = filterUserIds;
+      }
     }
 
     const rules = await this.prisma.teleworkRecurringRule.findMany({
       where: ruleWhere,
     });
 
+    if (rules.length === 0) {
+      return;
+    }
+
     // COR-012: iterate in day-key space (Europe/Paris) to avoid DST skew.
     // Local getDay()/setDate() mix with UTC-anchored Dates causes off-by-one
     // on spring-forward days (23-hour day → cursor lands on wrong UTC date).
+
+    // Compute the full set of (userId, dateKey) pairs that rules require.
+    const expected = new Map<string, { userId: string; dateKey: string }>();
     for (const rule of rules) {
       const ruleStartKey = teleworkDayKey(new Date(rule.startDate));
       const ruleEndKey = rule.endDate
@@ -340,31 +374,50 @@ export class TeleworkService {
           cursorKey >= ruleStartKey &&
           (!ruleEndKey || cursorKey <= ruleEndKey)
         ) {
-          const dateOnly = dayKeyToUTCDate(cursorKey);
-
-          const existing = await this.prisma.teleworkSchedule.findUnique({
-            where: {
-              userId_date: {
-                userId: rule.userId,
-                date: dateOnly,
-              },
-            },
-          });
-
-          if (!existing) {
-            await this.prisma.teleworkSchedule.create({
-              data: {
-                userId: rule.userId,
-                date: dateOnly,
-                isTelework: true,
-                isException: false,
-              },
-            });
-          }
+          const key = `${rule.userId}|${cursorKey}`;
+          expected.set(key, { userId: rule.userId, dateKey: cursorKey });
         }
 
         cursorKey = nextTeleworkDayKey(cursorKey);
       }
+    }
+
+    if (expected.size === 0) {
+      return;
+    }
+
+    // Pre-load all existing rows for the affected users × date range in one query.
+    const affectedUserIds = [...new Set(rules.map((r) => r.userId))];
+    const existing = await this.prisma.teleworkSchedule.findMany({
+      where: {
+        userId: { in: affectedUserIds },
+        date: {
+          gte: dayKeyToUTCDate(teleworkDayKey(start)),
+          lte: dayKeyToUTCDate(teleworkDayKey(end)),
+        },
+      },
+      select: { userId: true, date: true },
+    });
+
+    const existingSet = new Set<string>(
+      existing.map((e) => `${e.userId}|${teleworkDayKey(e.date)}`),
+    );
+
+    // Create only the missing entries in a single bulk insert.
+    const toCreate = [...expected.values()].filter(
+      ({ userId, dateKey }) => !existingSet.has(`${userId}|${dateKey}`),
+    );
+
+    if (toCreate.length > 0) {
+      await this.prisma.teleworkSchedule.createMany({
+        data: toCreate.map(({ userId, dateKey }) => ({
+          userId,
+          date: dayKeyToUTCDate(dateKey),
+          isTelework: true,
+          isException: false,
+        })),
+        skipDuplicates: true,
+      });
     }
   }
 
@@ -423,17 +476,35 @@ export class TeleworkService {
 
     const referenceDate = date ? new Date(date) : new Date();
 
-    // Calculer le début et la fin de la semaine (lundi à dimanche)
-    const dayOfWeek = referenceDate.getDay();
-    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Lundi = début
+    // COR-034: use UTC-anchored day-key helpers to compute week boundaries —
+    // avoids local-TZ getDay()/setDate()/setHours() which break on non-UTC
+    // servers (e.g. Europe/Paris DST spring-forward days).
+    const refKey = teleworkDayKey(referenceDate);
+    const [ry, rm, rd] = refKey.split('-').map(Number);
+    const jsDay = new Date(Date.UTC(ry, rm - 1, rd)).getUTCDay(); // 0=Sun … 6=Sat
+    const diffToMonday = jsDay === 0 ? -6 : 1 - jsDay; // number of days to subtract
 
-    const start = new Date(referenceDate);
-    start.setDate(referenceDate.getDate() + diff);
-    start.setHours(0, 0, 0, 0);
+    let startKey = refKey;
+    // Walk backwards to Monday
+    for (let i = 0; i < Math.abs(diffToMonday); i++) {
+      // Advance by -1 using UTC: subtract one day
+      const [y, m, d] = startKey.split('-').map(Number);
+      const prev = new Date(Date.UTC(y, m - 1, d - 1));
+      const yy = prev.getUTCFullYear();
+      const mm = String(prev.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(prev.getUTCDate()).padStart(2, '0');
+      startKey = `${yy}-${mm}-${dd}`;
+    }
 
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6); // Dimanche
-    end.setHours(23, 59, 59, 999);
+    // Walk forward 6 days to Sunday
+    let endKey = startKey;
+    for (let i = 0; i < 6; i++) {
+      endKey = nextTeleworkDayKey(endKey);
+    }
+
+    const start = dayKeyToUTCDate(startKey);
+    const [ey, em, ed] = endKey.split('-').map(Number);
+    const end = new Date(Date.UTC(ey, em - 1, ed, 23, 59, 59, 999));
 
     const teleworks = await this.prisma.teleworkSchedule.findMany({
       where: {
@@ -469,8 +540,10 @@ export class TeleworkService {
 
     const currentYear = year ?? new Date().getFullYear();
 
-    const startDate = new Date(currentYear, 0, 1);
-    const endDate = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+    // COR-035: use UTC constructors so year boundaries are 2026-01-01T00:00:00Z
+    // (not 2025-12-31T23:00:00Z under Europe/Paris UTC+1 in winter).
+    const startDate = new Date(Date.UTC(currentYear, 0, 1));
+    const endDate = new Date(Date.UTC(currentYear, 11, 31, 23, 59, 59, 999));
 
     const teleworks = await this.prisma.teleworkSchedule.findMany({
       where: {
@@ -887,11 +960,15 @@ export class TeleworkService {
 
     const rules = await this.prisma.teleworkRecurringRule.findMany({ where });
 
-    let created = 0;
-    let skipped = 0;
+    // PER-029 / COR-033: Replace N+1 findUnique+create loop with a bulk approach:
+    // 1) compute the full expected set in memory (COR-012: day-key space, DST-safe)
+    // 2) pre-load existing rows in one findMany
+    // 3) insert missing rows via createMany({skipDuplicates:true})
+    // This reduces O(R×D) DB round-trips to O(2) and eliminates the TOCTOU P2002 race.
 
     // COR-012: iterate in day-key space (Europe/Paris) to avoid DST skew.
     // See expandRecurringRulesForRange for the same fix and rationale.
+    const expected = new Map<string, { userId: string; dateKey: string }>();
     for (const rule of rules) {
       const ruleStartKey = teleworkDayKey(new Date(rule.startDate));
       const ruleEndKey = rule.endDate
@@ -909,36 +986,58 @@ export class TeleworkService {
           cursorKey >= ruleStartKey &&
           (!ruleEndKey || cursorKey <= ruleEndKey)
         ) {
-          const dateOnly = dayKeyToUTCDate(cursorKey);
-
-          // Skip si déjà existant
-          const existing = await this.prisma.teleworkSchedule.findUnique({
-            where: {
-              userId_date: {
-                userId: rule.userId,
-                date: dateOnly,
-              },
-            },
-          });
-
-          if (!existing) {
-            await this.prisma.teleworkSchedule.create({
-              data: {
-                userId: rule.userId,
-                date: dateOnly,
-                isTelework: true,
-                isException: false,
-              },
-            });
-            created++;
-          } else {
-            skipped++;
-          }
+          const key = `${rule.userId}|${cursorKey}`;
+          expected.set(key, { userId: rule.userId, dateKey: cursorKey });
         }
 
         cursorKey = nextTeleworkDayKey(cursorKey);
       }
     }
+
+    if (expected.size === 0) {
+      return {
+        message: `Génération terminée : 0 créé(s), 0 ignoré(s) (déjà existant)`,
+        created: 0,
+        skipped: 0,
+        rulesProcessed: rules.length,
+      };
+    }
+
+    // Pre-load all existing rows for the affected users × date range in one query.
+    const affectedUserIds = [...new Set(rules.map((r) => r.userId))];
+    const existingRows = await this.prisma.teleworkSchedule.findMany({
+      where: {
+        userId: { in: affectedUserIds },
+        date: {
+          gte: dayKeyToUTCDate(teleworkDayKey(start)),
+          lte: dayKeyToUTCDate(teleworkDayKey(end)),
+        },
+      },
+      select: { userId: true, date: true },
+    });
+
+    const existingSet = new Set<string>(
+      existingRows.map((e) => `${e.userId}|${teleworkDayKey(e.date)}`),
+    );
+
+    const toCreate = [...expected.values()].filter(
+      ({ userId, dateKey }) => !existingSet.has(`${userId}|${dateKey}`),
+    );
+
+    if (toCreate.length > 0) {
+      await this.prisma.teleworkSchedule.createMany({
+        data: toCreate.map(({ userId, dateKey }) => ({
+          userId,
+          date: dayKeyToUTCDate(dateKey),
+          isTelework: true,
+          isException: false,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    const created = toCreate.length;
+    const skipped = expected.size - created;
 
     return {
       message: `Génération terminée : ${created} créé(s), ${skipped} ignoré(s) (déjà existant)`,
@@ -952,8 +1051,11 @@ export class TeleworkService {
    * Vue équipe : qui est en télétravail aujourd'hui/une date donnée
    */
   async getTeamSchedule(date?: string, departmentId?: string) {
-    const targetDate = date ? new Date(date) : new Date();
-    targetDate.setHours(0, 0, 0, 0);
+    // COR-035: use dayKeyToUTCDate via teleworkDayKey to get UTC-midnight for the
+    // target date, instead of local setHours(0,0,0,0) which produces wrong UTC
+    // instant under non-UTC servers (e.g. Europe/Paris UTC+1/+2).
+    const rawDate = date ? new Date(date) : new Date();
+    const targetDate = dayKeyToUTCDate(teleworkDayKey(rawDate));
 
     const where: Prisma.TeleworkScheduleWhereInput = {
       date: targetDate,

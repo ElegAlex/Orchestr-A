@@ -1938,7 +1938,7 @@ grep -n 'reorderSubtasks\|subtask.update' apps/api/src/tasks/tasks.service.ts
 
 ### COR-032 — findForPlanningOverview calls expandRecurringRulesForRange with no userId filter, materialising rows for all users
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -3102,7 +3102,7 @@ grep -n 'checkCircularDependency\|taskDependency.create\|taskDependency.findUniq
 
 ### COR-033 — expandRecurringRulesForRange and generateSchedulesFromRules do non-atomic findUnique→create, causing unhandled P2002 on concurrent requests
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -3753,7 +3753,7 @@ curl -s 'http://localhost:3001/tasks?limit=1000' | jq '.meta.limit'
 
 ### SEC-024 — Unbounded date range in GET /telework triggers O(days × rules) sequential DB queries with no upper bound
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -4462,7 +4462,7 @@ N/A — manual verification
 
 ### PER-028 — expandRecurringRulesForRange: N+1 findUnique+create inside nested loop over days × rules
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -4522,7 +4522,7 @@ N/A — manual verification
 
 ### PER-029 — generateSchedulesFromRules: same N+1 findUnique+create loop as expandRecurringRulesForRange
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -6989,7 +6989,7 @@ grep -n 'new Date(date)\|new Date(dateStr)\|Date.UTC' apps/api/src/predefined-ta
 
 ### COR-034 — getWeeklySchedule uses local-TZ getDay()/setDate()/setHours() for week boundary calculation, breaking on non-UTC servers
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** J
 - **Confidence:** primary-only
@@ -7057,7 +7057,7 @@ TZ=Europe/Paris node -e "const d=new Date('2025-03-30');d.setHours(0,0,0,0);cons
 
 ### COR-035 — getUserStats builds year boundaries with local-TZ new Date(year,0,1) and getTeamSchedule uses local-midnight setHours(0,0,0,0) for exact-match against UTC-midnight DB dates
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** J
 - **Confidence:** primary-only

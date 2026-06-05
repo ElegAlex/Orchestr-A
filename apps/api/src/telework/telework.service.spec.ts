@@ -6,8 +6,18 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  beforeAll,
+  afterAll,
+  vi,
+  afterEach,
+} from 'vitest';
 
 describe('TeleworkService', () => {
   let service: TeleworkService;
@@ -15,6 +25,7 @@ describe('TeleworkService', () => {
   const mockPrismaService = {
     teleworkSchedule: {
       create: vi.fn(),
+      createMany: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -1071,8 +1082,11 @@ describe('TeleworkService', () => {
         mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
           sundayRule,
         ]);
-        mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
-        mockPrismaService.teleworkSchedule.create.mockResolvedValue({});
+        // Bulk findMany pre-load returns no existing rows
+        mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+        mockPrismaService.teleworkSchedule.createMany.mockResolvedValue({
+          count: 1,
+        });
 
         const result = await service.generateSchedulesFromRules(
           'admin-1',
@@ -1086,11 +1100,11 @@ describe('TeleworkService', () => {
         // Must create exactly one schedule (the Sunday)
         expect(result.created).toBe(1);
 
-        // The date passed to Prisma create must have UTC parts 2025-03-30,
+        // The date in createMany data must have UTC parts 2025-03-30,
         // NOT 2025-03-29 (which is what local-midnight produces under Paris TZ).
-        const createCall =
-          mockPrismaService.teleworkSchedule.create.mock.calls[0][0];
-        const storedDate: Date = createCall.data.date;
+        const createManyCall =
+          mockPrismaService.teleworkSchedule.createMany.mock.calls[0][0];
+        const storedDate: Date = createManyCall.data[0].date;
         expect(storedDate.getUTCFullYear()).toBe(2025);
         expect(storedDate.getUTCMonth()).toBe(2); // March = 2 (0-indexed)
         expect(storedDate.getUTCDate()).toBe(30); // Must be 30, not 29
@@ -1114,9 +1128,11 @@ describe('TeleworkService', () => {
       mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
         tuesdayRule,
       ]);
-      // No existing schedule for any Tuesday
-      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
-      mockPrismaService.teleworkSchedule.create.mockResolvedValue({});
+      // Bulk pre-load: no existing rows
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+      mockPrismaService.teleworkSchedule.createMany.mockResolvedValue({
+        count: 1,
+      });
 
       const result = await service.generateSchedulesFromRules(
         'admin-1',
@@ -1130,9 +1146,13 @@ describe('TeleworkService', () => {
       expect(result.created).toBe(1);
       expect(result.skipped).toBe(0);
       expect(result.rulesProcessed).toBe(1);
-      expect(mockPrismaService.teleworkSchedule.create).toHaveBeenCalledTimes(
-        1,
-      );
+      expect(
+        mockPrismaService.teleworkSchedule.createMany,
+      ).toHaveBeenCalledTimes(1);
+      // Individual findUnique must NOT have been called (N+1 eliminated)
+      expect(
+        mockPrismaService.teleworkSchedule.findUnique,
+      ).not.toHaveBeenCalled();
     });
 
     it('should skip days that already have a telework schedule', async () => {
@@ -1150,14 +1170,13 @@ describe('TeleworkService', () => {
       mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
         tuesdayRule,
       ]);
-      // Existing schedule for Tuesday
-      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue({
-        id: 'existing',
-        userId: 'user-1',
-        date: new Date('2026-04-07'),
-        isTelework: true,
-        isException: false,
-      });
+      // Bulk pre-load returns the existing row for 2026-04-07 (Tuesday)
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
+        {
+          userId: 'user-1',
+          date: new Date('2026-04-07T00:00:00.000Z'),
+        },
+      ]);
 
       const result = await service.generateSchedulesFromRules(
         'admin-1',
@@ -1170,7 +1189,13 @@ describe('TeleworkService', () => {
 
       expect(result.created).toBe(0);
       expect(result.skipped).toBe(1);
-      expect(mockPrismaService.teleworkSchedule.create).not.toHaveBeenCalled();
+      expect(
+        mockPrismaService.teleworkSchedule.createMany,
+      ).not.toHaveBeenCalled();
+      // Individual findUnique must NOT have been called (N+1 eliminated)
+      expect(
+        mockPrismaService.teleworkSchedule.findUnique,
+      ).not.toHaveBeenCalled();
     });
 
     it('should not process rules that end before the start of the range', async () => {
@@ -1218,6 +1243,280 @@ describe('TeleworkService', () => {
           }) as object,
         }),
       );
+    });
+
+    // PER-029 — bulk approach: findUnique must not be called, createMany called once
+    it('PER-029 — generateSchedulesFromRules uses bulk findMany+createMany, not N+1 findUnique+create', async () => {
+      const rules = [
+        {
+          ...mockRule,
+          dayOfWeek: 0,
+          startDate: new Date('2026-04-01'),
+          endDate: null,
+        },
+        {
+          ...mockRule,
+          id: 'rule-2',
+          userId: 'user-2',
+          dayOfWeek: 0,
+          startDate: new Date('2026-04-01'),
+          endDate: null,
+        },
+        {
+          ...mockRule,
+          id: 'rule-3',
+          userId: 'user-3',
+          dayOfWeek: 0,
+          startDate: new Date('2026-04-01'),
+          endDate: null,
+        },
+      ];
+
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:manage_any',
+      ]);
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue(rules);
+      // Bulk pre-load: no existing rows
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+      mockPrismaService.teleworkSchedule.createMany.mockResolvedValue({
+        count: 3,
+      });
+
+      await service.generateSchedulesFromRules('admin-1', 'ADMIN', {
+        startDate: '2026-04-01',
+        endDate: '2026-04-30',
+      });
+
+      // No individual findUnique must have been called
+      expect(
+        mockPrismaService.teleworkSchedule.findUnique,
+      ).not.toHaveBeenCalled();
+      // createMany called exactly once (bulk insert)
+      expect(
+        mockPrismaService.teleworkSchedule.createMany,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockPrismaService.teleworkSchedule.createMany,
+      ).toHaveBeenCalledWith(expect.objectContaining({ skipDuplicates: true }));
+    });
+  });
+
+  // ─────────────────────────────────────────────
+  // Finding witnesses
+  // ─────────────────────────────────────────────
+
+  describe('SEC-024 — unbounded date range guard', () => {
+    it('SEC-024 — findAll throws BadRequestException when date range exceeds 366 days', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:readAll',
+      ]);
+
+      await expect(
+        service.findAll(
+          'user-1',
+          'ADMIN',
+          1,
+          10,
+          undefined,
+          '1970-01-01',
+          '2099-12-31',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('SEC-024 — findAll accepts a 366-day range without throwing', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:readAll',
+      ]);
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([]);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+      mockPrismaService.teleworkSchedule.count.mockResolvedValue(0);
+
+      await expect(
+        service.findAll(
+          'user-1',
+          'ADMIN',
+          1,
+          10,
+          undefined,
+          '2026-01-01',
+          '2026-12-31',
+        ),
+      ).resolves.toBeDefined();
+    });
+  });
+
+  describe('COR-032 — findForPlanningOverview scopes expansion to visible userIds', () => {
+    it('COR-032 — expandRecurringRulesForRange is called with userId:in filter matching only visible users', async () => {
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([]);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+
+      await service.findForPlanningOverview(
+        ['user-A', 'user-B'],
+        '2026-06-01',
+        '2026-06-30',
+      );
+
+      // The recurring-rule query must restrict to the visible userIds
+      expect(
+        mockPrismaService.teleworkRecurringRule.findMany,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: {
+              in: expect.arrayContaining(['user-A', 'user-B']) as unknown[],
+            },
+          }) as object,
+        }),
+      );
+    });
+  });
+
+  describe('COR-033 — P2002 concurrency handled via skipDuplicates', () => {
+    it('COR-033 — createMany is called with skipDuplicates:true (no TOCTOU P2002 risk)', async () => {
+      const rule = {
+        ...mockRule,
+        dayOfWeek: 1,
+        startDate: new Date('2026-04-01'),
+        endDate: null,
+      };
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:create',
+        'telework:manage_any',
+      ]);
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
+        rule,
+      ]);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+      mockPrismaService.teleworkSchedule.createMany.mockResolvedValue({
+        count: 1,
+      });
+
+      await service.generateSchedulesFromRules('admin-1', 'ADMIN', {
+        startDate: '2026-04-06',
+        endDate: '2026-04-12',
+      });
+
+      expect(
+        mockPrismaService.teleworkSchedule.createMany,
+      ).toHaveBeenCalledWith(expect.objectContaining({ skipDuplicates: true }));
+    });
+  });
+
+  describe('COR-034 — getWeeklySchedule uses UTC week boundaries', () => {
+    describe('TZ=Europe/Paris DST spring-forward 2026-03-29', () => {
+      const origTZ = process.env.TZ;
+
+      beforeAll(() => {
+        process.env.TZ = 'Europe/Paris';
+      });
+
+      afterAll(() => {
+        if (origTZ === undefined) {
+          delete process.env.TZ;
+        } else {
+          process.env.TZ = origTZ;
+        }
+      });
+
+      it('COR-034 — weekStart is 2026-03-23T00:00:00Z and weekEnd ends at 23:59:59 UTC on 2026-03-29', async () => {
+        mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+        mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+
+        const result = await service.getWeeklySchedule('user-1', '2026-03-29');
+
+        // 2026-03-29 is a Sunday (DST spring-forward day in Europe/Paris).
+        // The week containing it runs Mon 2026-03-23 → Sun 2026-03-29.
+        expect(result.weekStart).toEqual(new Date('2026-03-23T00:00:00.000Z'));
+        expect(result.weekEnd.getUTCFullYear()).toBe(2026);
+        expect(result.weekEnd.getUTCMonth()).toBe(2); // March
+        expect(result.weekEnd.getUTCDate()).toBe(29);
+        expect(result.weekEnd.getUTCHours()).toBe(23);
+      });
+    });
+  });
+
+  describe('COR-035 — UTC year/day boundaries', () => {
+    describe('TZ=Europe/Paris', () => {
+      const origTZ = process.env.TZ;
+
+      beforeAll(() => {
+        process.env.TZ = 'Europe/Paris';
+      });
+
+      afterAll(() => {
+        if (origTZ === undefined) {
+          delete process.env.TZ;
+        } else {
+          process.env.TZ = origTZ;
+        }
+      });
+
+      it('COR-035 — getUserStats year filter gte is 2026-01-01T00:00:00.000Z (not 2025-12-31T23:00:00Z)', async () => {
+        mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+        mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+
+        await service.getUserStats('user-1', 2026);
+
+        const findManyCall =
+          mockPrismaService.teleworkSchedule.findMany.mock.calls[0][0];
+        const gteDate: Date = findManyCall.where.date.gte;
+        expect(gteDate).toEqual(new Date('2026-01-01T00:00:00.000Z'));
+      });
+
+      it('COR-035 — getTeamSchedule passes UTC-midnight date to Prisma (not local-midnight)', async () => {
+        mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+
+        await service.getTeamSchedule('2026-01-15');
+
+        const findManyCall =
+          mockPrismaService.teleworkSchedule.findMany.mock.calls[0][0];
+        const whereDate: Date = findManyCall.where.date;
+        expect(whereDate).toEqual(new Date('2026-01-15T00:00:00.000Z'));
+      });
+    });
+  });
+
+  describe('PER-028 — expandRecurringRulesForRange uses bulk findMany+createMany', () => {
+    it('PER-028 — findUnique not called; createMany called once with skipDuplicates after findForPlanningOverview', async () => {
+      const rule = {
+        ...mockRule,
+        userId: 'user-A',
+        dayOfWeek: 0, // Monday
+        startDate: new Date('2026-04-01'),
+        endDate: null,
+      };
+
+      // findForPlanningOverview with 3 rules over a 30-day range
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
+        rule,
+        { ...rule, id: 'rule-2', userId: 'user-B' },
+        { ...rule, id: 'rule-3', userId: 'user-C' },
+      ]);
+      // Bulk pre-load: no existing rows
+      // First findMany is the bulk existence check; second is the schedule list
+      mockPrismaService.teleworkSchedule.findMany
+        .mockResolvedValueOnce([]) // bulk existence check
+        .mockResolvedValueOnce([]); // listing call in findForPlanningOverview
+      mockPrismaService.teleworkSchedule.createMany.mockResolvedValue({
+        count: 4,
+      });
+
+      await service.findForPlanningOverview(
+        ['user-A', 'user-B', 'user-C'],
+        '2026-04-01',
+        '2026-04-30',
+      );
+
+      // N+1 individual findUnique must NOT have been called
+      expect(
+        mockPrismaService.teleworkSchedule.findUnique,
+      ).not.toHaveBeenCalled();
+      // Bulk createMany must have been called once
+      expect(
+        mockPrismaService.teleworkSchedule.createMany,
+      ).toHaveBeenCalledTimes(1);
     });
   });
 });
