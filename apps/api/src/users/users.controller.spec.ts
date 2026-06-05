@@ -8,6 +8,7 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
+import { REQUIRE_PERMISSIONS_KEY } from '../rbac/decorators/require-permissions.decorator';
 
 // Caller passé au controller.update() — forme RBAC V4 (objet role avec code).
 // SEC-002 : le scope horizontal exige aussi `id` (passé à AccessScopeService).
@@ -667,6 +668,20 @@ describe('UsersController', () => {
         'user-id-1',
       );
       expect(result.canDelete).toBe(true);
+    });
+  });
+
+  describe('SEC-027 — reset-password permission metadata', () => {
+    it("SEC-027 — resetPassword must require 'users:reset_password', not 'users:manage_roles'", () => {
+      // The direct admin password-reset endpoint must be gated by the
+      // purpose-built 'users:reset_password' permission, not the role-management
+      // permission 'users:manage_roles'. Mixing the two grants role managers
+      // implicit password-reset authority that the RBAC design does not intend.
+      const metadata = Reflect.getMetadata(
+        REQUIRE_PERMISSIONS_KEY,
+        UsersController.prototype.resetPassword,
+      );
+      expect(metadata).toEqual(['users:reset_password']);
     });
   });
 

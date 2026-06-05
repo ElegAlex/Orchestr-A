@@ -16,6 +16,7 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
   IsArray,
+  ArrayMaxSize,
   Matches,
 } from 'class-validator';
 import { TaskStatus, Priority } from 'database';
@@ -221,6 +222,10 @@ export class CreateTaskDto {
     type: [String],
   })
   @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(50, { each: true })
   tags?: string[];
 
   @ApiProperty({

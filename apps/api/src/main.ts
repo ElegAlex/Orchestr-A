@@ -24,6 +24,7 @@ import { assertJwtSecretStrength } from './common/config/jwt-secret';
 import { assertAuditHashKey } from './common/config/audit-hash-key';
 import { JwtService } from '@nestjs/jwt';
 import { createUploadsAuthHook } from './common/fastify/uploads-auth.hook';
+import { parseBasicCredentials } from './swagger-basic-auth';
 
 // OBS-010: install process-level error handlers before the app boots so that
 // unhandledRejection and uncaughtException are captured from the very first tick.
@@ -195,9 +196,11 @@ async function bootstrap() {
               reply.code(401).send('Unauthorized');
               return;
             }
-            const [user, pass] = Buffer.from(auth.slice(6), 'base64')
-              .toString()
-              .split(':');
+            // SEC-010: split on first colon only (RFC 7617 §2) so passwords
+            // containing colons are not silently truncated.
+            const { user, pass } = parseBasicCredentials(
+              Buffer.from(auth.slice(6), 'base64').toString(),
+            );
             if (
               !safeEqual(user, swaggerUser) ||
               !safeEqual(pass, swaggerPass)

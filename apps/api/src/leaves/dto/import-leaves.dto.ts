@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsEnum,
   IsArray,
+  ArrayMaxSize,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -62,8 +63,10 @@ export class ImportLeavesDto {
   @ApiProperty({
     description: 'Liste des congés à importer',
     type: [ImportLeaveDto],
+    maxItems: 500,
   })
   @IsArray()
+  @ArrayMaxSize(500)
   @ValidateNested({ each: true })
   @Type(() => ImportLeaveDto)
   leaves: ImportLeaveDto[];

@@ -435,7 +435,9 @@ export class UsersController {
   }
 
   @Post(':id/reset-password')
-  @RequirePermissions('users:manage_roles')
+  // SEC-027: use the purpose-built password-reset permission, not the role-management one.
+  // 'users:manage_roles' would grant role managers implicit password-reset authority.
+  @RequirePermissions('users:reset_password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:

@@ -1214,7 +1214,7 @@ curl -s -X POST http://localhost:3000/api/comments -H 'Authorization: Bearer <to
 
 ### SEC-019 — CreateTaskDto.tags field has no @IsArray / @IsString({ each }) / @MaxLength validators — arbitrary data injection
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** cross-validated
@@ -2450,7 +2450,7 @@ grep -n 'assertCanAccessProject' apps/api/src/third-parties/third-parties.servic
 
 ### SEC-027 — POST /users/:id/reset-password uses 'users:manage_roles' permission — semantically wrong and may grant unintended reset capability to role managers
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -4632,7 +4632,7 @@ grep -n 'IsInt\|IsNumber\|Min\|size' apps/api/src/documents/dto/create-document.
 
 ### SEC-008 — ImportLeavesDto.leaves array has no upper-bound limit, enabling memory-exhaustion via large payloads
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -7276,7 +7276,7 @@ grep -n 'routeOptions\|routerPath\|req.path' apps/api/src/metrics/metrics.interc
 
 ### SEC-010 — Swagger Basic Auth: passwords containing ':' are silently truncated, enabling credential bypass with a shorter guessable suffix
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** L
 - **Confidence:** primary-only

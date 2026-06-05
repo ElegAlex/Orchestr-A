@@ -93,6 +93,67 @@ describe('CreateTaskDto — COR-035 orphan-task cross-field guard', () => {
   });
 });
 
+describe('CreateTaskDto — SEC-019 tags field array-of-strings validation', () => {
+  it('SEC-019 — rejects tags containing non-string elements (numbers)', async () => {
+    const dto = plainToInstance(CreateTaskDto, {
+      title: VALID_TITLE,
+      tags: [1, 2, 3],
+    });
+    const errors = await validate(dto);
+    expect(errors.length).toBeGreaterThan(0);
+    const flat = JSON.stringify(errors);
+    expect(flat).toContain('tags');
+  });
+
+  it('SEC-019 — rejects tags containing object elements', async () => {
+    const dto = plainToInstance(CreateTaskDto, {
+      title: VALID_TITLE,
+      tags: [{ evil: true }],
+    });
+    const errors = await validate(dto);
+    expect(errors.length).toBeGreaterThan(0);
+    const flat = JSON.stringify(errors);
+    expect(flat).toContain('tags');
+  });
+
+  it('SEC-019 — rejects tags array exceeding 20 elements', async () => {
+    const dto = plainToInstance(CreateTaskDto, {
+      title: VALID_TITLE,
+      tags: Array.from({ length: 21 }, (_, i) => `tag-${i}`),
+    });
+    const errors = await validate(dto);
+    expect(errors.length).toBeGreaterThan(0);
+    const flat = JSON.stringify(errors);
+    expect(flat).toContain('tags');
+  });
+
+  it('SEC-019 — rejects tags with a string exceeding 50 characters', async () => {
+    const dto = plainToInstance(CreateTaskDto, {
+      title: VALID_TITLE,
+      tags: ['a'.repeat(51)],
+    });
+    const errors = await validate(dto);
+    expect(errors.length).toBeGreaterThan(0);
+    const flat = JSON.stringify(errors);
+    expect(flat).toContain('tags');
+  });
+
+  it('SEC-019 — accepts valid tags (array of short strings within limit)', async () => {
+    const dto = plainToInstance(CreateTaskDto, {
+      title: VALID_TITLE,
+      tags: ['backend', 'auth', 'critical'],
+    });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('SEC-019 — accepts omitted tags (optional field)', async () => {
+    const dto = plainToInstance(CreateTaskDto, { title: VALID_TITLE });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+});
+
 describe('UpdateTaskDto — COR-035 cross-field guard is intentionally NOT inherited', () => {
   // Partial update with only epicId in the payload must NOT 400 — the DB row
   // may already hold projectId. UpdateTaskDto OmitType-removes the three
