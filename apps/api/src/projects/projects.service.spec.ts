@@ -49,6 +49,7 @@ describe('ProjectsService', () => {
     timeEntry: {
       findMany: vi.fn(),
       count: vi.fn(),
+      aggregate: vi.fn(),
     },
     projectSnapshot: {
       create: vi.fn(),
@@ -712,6 +713,33 @@ describe('ProjectsService', () => {
         expect(result.data[0].progress).toBe(0);
       });
     });
+
+    // ------------------------------------------
+    // PER-017 / SA-PERF-001 — default limit and cap
+    // ------------------------------------------
+    describe('PER-017 / SA-PERF-001 — page size cap', () => {
+      it('PER-017 — default limit is 20 (not 1000)', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([]);
+        mockPrismaService.project.count.mockResolvedValue(0);
+
+        await service.findAll(); // no limit arg
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({ take: 20 }),
+        );
+      });
+
+      it('PER-017 — limit=9999 is capped at 100', async () => {
+        mockPrismaService.project.findMany.mockResolvedValue([]);
+        mockPrismaService.project.count.mockResolvedValue(0);
+
+        await service.findAll(1, 9999);
+
+        expect(mockPrismaService.project.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({ take: 100 }),
+        );
+      });
+    });
   });
 
   // ============================================
@@ -916,6 +944,55 @@ describe('ProjectsService', () => {
       expect(mockPrismaService.project.update).not.toHaveBeenCalled();
     });
 
+    // COR-024 — partial date updates must be validated against existing project dates
+    it('COR-024 — throws BadRequestException when only endDate is provided and it precedes existing startDate', async () => {
+      const existingProject = {
+        ...mockProject,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+      };
+      mockPrismaService.project.findUnique.mockResolvedValue(existingProject);
+
+      await expect(
+        service.update('project-1', { endDate: '2020-01-01' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrismaService.project.update).not.toHaveBeenCalled();
+    });
+
+    it('COR-024 — throws BadRequestException when only startDate is provided and it follows existing endDate', async () => {
+      const existingProject = {
+        ...mockProject,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-06-30'),
+      };
+      mockPrismaService.project.findUnique.mockResolvedValue(existingProject);
+
+      await expect(
+        service.update('project-1', { startDate: '2030-01-01' }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrismaService.project.update).not.toHaveBeenCalled();
+    });
+
+    it('COR-024 — allows partial startDate update that stays before existing endDate', async () => {
+      const existingProject = {
+        ...mockProject,
+        startDate: new Date('2025-03-01'),
+        endDate: new Date('2025-12-31'),
+      };
+      mockPrismaService.project.findUnique.mockResolvedValue(existingProject);
+      mockPrismaService.project.update.mockResolvedValue({
+        ...existingProject,
+        startDate: new Date('2025-01-01'),
+      });
+
+      const result = await service.update('project-1', {
+        startDate: '2025-01-01',
+      });
+      expect(result).toBeDefined();
+    });
+
     // COR-018 — update() clientIds sync must be wrapped in $transaction
     it('COR-018: project update + client sync (deleteMany+createMany) run inside $transaction when clientIds is provided', async () => {
       const updatedProject = { ...mockProject, name: 'Updated' };
@@ -1096,6 +1173,12 @@ describe('ProjectsService', () => {
       mockPrismaService.timeEntry.count.mockResolvedValue(0);
     };
 
+    beforeEach(() => {
+      // SEC-017: hardDelete now calls assertProjectOwnershipOrBypass.
+      // Default: caller is an owner so other tests stay green.
+      mockOwnershipService.isOwner.mockResolvedValue(true);
+    });
+
     it('should permanently delete a project with no blocking dependents', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       noDependents();
@@ -1175,11 +1258,40 @@ describe('ProjectsService', () => {
       expect(mockPrismaService.project.delete).not.toHaveBeenCalled();
     });
 
+    // SEC-017 — hardDelete must check ownership before proceeding
+    it('SEC-017 — throws ForbiddenException for non-owner without projects:manage_any', async () => {
+      mockOwnershipService.isOwner.mockResolvedValue(false);
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+
+      const caller = { id: 'contrib-1', role: 'CONTRIBUTEUR' };
+      await expect(service.hardDelete('project-1', caller)).rejects.toThrow(
+        ForbiddenException,
+      );
+
+      // Must not reach the delete call
+      expect(mockPrismaService.project.delete).not.toHaveBeenCalled();
+    });
+
+    // COR-025 — no audit row should be emitted if delete throws
+    it('COR-025 — does not write audit row when project.delete throws', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      noDependents();
+      mockPrismaService.project.delete.mockRejectedValue(
+        new Error('DB failure'),
+      );
+
+      await expect(
+        service.hardDelete('project-1', { id: 'actor-1' }),
+      ).rejects.toThrow('DB failure');
+
+      // No spurious PROJECT_DELETED audit row written
+      expect(mockAuditPersistenceService.log).not.toHaveBeenCalled();
+    });
+
     // W-3: a permitted hard-delete must persist a final PROJECT_DELETED audit
-    // row carrying a column snapshot of the project before the row is erased,
-    // so the lifecycle event survives in the immutable audit trail.
-    // FAILS on master (hardDelete emits nothing to AuditPersistenceService).
-    it('W-3: emits PROJECT_DELETED with a column snapshot before deleting', async () => {
+    // row carrying a column snapshot of the project, so the lifecycle event
+    // survives in the immutable audit trail.
+    it('W-3: emits PROJECT_DELETED with a column snapshot after deleting', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       noDependents();
       mockPrismaService.project.delete.mockResolvedValue(mockProject);
@@ -1197,12 +1309,12 @@ describe('ProjectsService', () => {
         name: 'Test Project',
         status: ProjectStatus.ACTIVE,
       });
-      // snapshot is captured before the row is destroyed
+      // COR-025: audit emitted AFTER successful delete — no false audit row if delete fails
       const logOrder =
         mockAuditPersistenceService.log.mock.invocationCallOrder[0];
       const deleteOrder =
         mockPrismaService.project.delete.mock.invocationCallOrder[0];
-      expect(logOrder).toBeLessThan(deleteOrder);
+      expect(logOrder).toBeGreaterThan(deleteOrder);
     });
   });
 
@@ -1351,6 +1463,12 @@ describe('ProjectsService', () => {
   // GET PROJECTS BY USER
   // ============================================
   describe('getProjectsByUser', () => {
+    beforeEach(() => {
+      // PER-015: service now uses task.groupBy fan-out; default empty so tests
+      // that don't set a specific groupBy result get progress=0.
+      mockPrismaService.task.groupBy.mockResolvedValue([]);
+    });
+
     it('should return projects for a user', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
@@ -1387,6 +1505,48 @@ describe('ProjectsService', () => {
       const callArgs = mockPrismaService.project.findMany.mock.calls[0][0];
       expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":null');
     });
+
+    // PER-015 — tasks must NOT be included in findMany; progress via groupBy
+    it('PER-015 — findMany include must NOT contain tasks', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+
+      await service.getProjectsByUser('user-1');
+
+      const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+        include: Record<string, unknown>;
+      };
+      expect(callArgs.include).not.toHaveProperty('tasks');
+    });
+
+    it('PER-015 — task.groupBy is called with all project IDs (single fan-out)', async () => {
+      const project1 = { ...mockProject, id: 'proj-1' };
+      const project2 = { ...mockProject, id: 'proj-2' };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.project.findMany.mockResolvedValue([
+        project1,
+        project2,
+      ]);
+      mockPrismaService.task.groupBy.mockResolvedValue([
+        { projectId: 'proj-1', status: 'DONE', _count: { _all: 2 } },
+        { projectId: 'proj-1', status: 'TODO', _count: { _all: 2 } },
+      ]);
+
+      const result = await service.getProjectsByUser('user-1');
+
+      expect(mockPrismaService.task.groupBy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          by: expect.arrayContaining(['projectId', 'status']),
+          where: { projectId: { in: ['proj-1', 'proj-2'] } },
+        }),
+      );
+      // proj-1: 2 DONE / 4 total = 50%
+      const p1 = result.find((p) => p.id === 'proj-1');
+      expect(p1?.progress).toBe(50);
+      // proj-2: no tasks → 0%
+      const p2 = result.find((p) => p.id === 'proj-2');
+      expect(p2?.progress).toBe(0);
+    });
   });
 
   // ============================================
@@ -1405,7 +1565,8 @@ describe('ProjectsService', () => {
         },
         { id: 'task-3', status: 'TODO', estimatedHours: 5, priority: 'LOW' },
       ],
-      members: [{ id: 'member-1' }, { id: 'member-2' }],
+      // PER-016: members full rows removed; totalMembers read from _count.members
+      _count: { members: 2, tasks: 3, epics: 0, milestones: 0 },
       epics: [{ progress: 100 }, { progress: 50 }],
       milestones: [
         { status: 'COMPLETED', dueDate: new Date('2025-01-15') },
@@ -1419,10 +1580,10 @@ describe('ProjectsService', () => {
 
     it('should return project statistics', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(projectWithData);
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([
-        { hours: 5 },
-        { hours: 3 },
-      ]);
+      // SA-PERF-018: service now uses aggregate(_sum) instead of findMany
+      mockPrismaService.timeEntry.aggregate
+        .mockResolvedValueOnce({ _sum: { hours: 8 } }) // user hours
+        .mockResolvedValueOnce({ _sum: { hours: 0 } }); // third-party hours
 
       const result = await service.getProjectStats('project-1');
 
@@ -1453,13 +1614,14 @@ describe('ProjectsService', () => {
       const emptyProject = {
         ...mockProject,
         tasks: [],
-        members: [],
         epics: [],
         milestones: [],
       };
 
       mockPrismaService.project.findUnique.mockResolvedValue(emptyProject);
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: null },
+      });
 
       const result = await service.getProjectStats('project-1');
 
@@ -1475,7 +1637,9 @@ describe('ProjectsService', () => {
       };
 
       mockPrismaService.project.findUnique.mockResolvedValue(projectNoBudget);
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: null },
+      });
 
       const result = await service.getProjectStats('project-1');
 
@@ -1484,7 +1648,9 @@ describe('ProjectsService', () => {
 
     it('should include budget info when budget hours exist', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(projectWithData);
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([{ hours: 100 }]);
+      mockPrismaService.timeEntry.aggregate
+        .mockResolvedValueOnce({ _sum: { hours: 100 } }) // user hours
+        .mockResolvedValueOnce({ _sum: { hours: 0 } }); // third-party hours
 
       const result = await service.getProjectStats('project-1');
 
@@ -1515,7 +1681,9 @@ describe('ProjectsService', () => {
             },
           ],
         });
-        mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+        mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+          _sum: { hours: null },
+        });
 
         const result = await service.getProjectStats('project-1');
 
@@ -1556,7 +1724,9 @@ describe('ProjectsService', () => {
       };
 
       mockPrismaService.project.findUnique.mockResolvedValue(projectHalfDone);
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: null },
+      });
 
       const result = await service.getProjectStats('project-1');
 
@@ -1581,7 +1751,9 @@ describe('ProjectsService', () => {
       };
 
       mockPrismaService.project.findUnique.mockResolvedValue(projectNullHours);
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: null },
+      });
 
       const result = await service.getProjectStats('project-1');
 
@@ -1605,29 +1777,71 @@ describe('ProjectsService', () => {
       };
 
       mockPrismaService.project.findUnique.mockResolvedValue(projectOverBudget);
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([{ hours: 20 }]);
+      mockPrismaService.timeEntry.aggregate
+        .mockResolvedValueOnce({ _sum: { hours: 20 } }) // user hours exceed budget
+        .mockResolvedValueOnce({ _sum: { hours: 0 } }); // third-party hours
 
       const result = await service.getProjectStats('project-1');
 
       expect(result.hours.remaining).toBe(0);
     });
 
-    it('should filter dismissed time entries from user and third-party findMany (D3)', async () => {
+    it('should filter dismissed time entries from user and third-party aggregate (D3)', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue(projectWithData);
-      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      // SA-PERF-018: service now uses aggregate, not findMany
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: null },
+      });
 
       await service.getProjectStats('project-1');
 
-      const findManyCalls = mockPrismaService.timeEntry.findMany.mock.calls;
+      const aggregateCalls = mockPrismaService.timeEntry.aggregate.mock.calls;
       // Two calls expected: user TE and third-party TE
-      expect(findManyCalls.length).toBeGreaterThanOrEqual(2);
-      for (const [args] of findManyCalls) {
+      expect(aggregateCalls.length).toBeGreaterThanOrEqual(2);
+      for (const [args] of aggregateCalls) {
         expect(args).toEqual(
           expect.objectContaining({
             where: expect.objectContaining({ isDismissal: false }),
           }),
         );
       }
+    });
+
+    // PER-016 — members include must be absent; totalMembers read from _count
+    it('PER-016 — findUnique include must NOT contain members:true; uses _count.members', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        _count: { members: 5 },
+      });
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: null },
+      });
+
+      const result = await service.getProjectStats('project-1');
+
+      // Verify the query never fetches full member rows
+      const callArgs = mockPrismaService.project.findUnique.mock
+        .calls[0][0] as {
+        include: Record<string, unknown>;
+      };
+      expect(callArgs.include).not.toHaveProperty('members');
+      // And totalMembers is served from _count
+      expect(result.team.totalMembers).toBe(5);
+    });
+
+    // SA-PERF-018 — aggregate replaces findMany; no full row fetches
+    it('SA-PERF-018 — never calls timeEntry.findMany; calls aggregate twice', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(projectWithData);
+      mockPrismaService.timeEntry.aggregate
+        .mockResolvedValueOnce({ _sum: { hours: 10 } })
+        .mockResolvedValueOnce({ _sum: { hours: 5 } });
+
+      const result = await service.getProjectStats('project-1');
+
+      expect(mockPrismaService.timeEntry.findMany).not.toHaveBeenCalled();
+      expect(mockPrismaService.timeEntry.aggregate).toHaveBeenCalledTimes(2);
+      expect(result.hours.actual).toBe(10);
+      expect(result.hours.thirdPartyActual).toBe(5);
     });
   });
 
@@ -1843,6 +2057,75 @@ describe('ProjectsService', () => {
         }),
         mockPrismaService,
       );
+    });
+  });
+
+  // ============================================
+  // GET SNAPSHOTS
+  // ============================================
+  describe('getSnapshots', () => {
+    it('SEC-016 — throws BadRequestException when from is not a valid date', async () => {
+      await expect(
+        service.getSnapshots('project-1', 'not-a-date', undefined),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrismaService.projectSnapshot.findMany).not.toHaveBeenCalled();
+    });
+
+    it('SEC-016 — throws BadRequestException when to is not a valid date', async () => {
+      await expect(
+        service.getSnapshots('project-1', undefined, 'invalid-date'),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockPrismaService.projectSnapshot.findMany).not.toHaveBeenCalled();
+    });
+
+    it('SEC-016 — valid ISO date string passes validation and queries DB', async () => {
+      mockPrismaService.projectSnapshot.findMany.mockResolvedValue([]);
+
+      await expect(
+        service.getSnapshots('project-1', '2025-01-01', '2025-12-31'),
+      ).resolves.not.toThrow();
+
+      expect(mockPrismaService.projectSnapshot.findMany).toHaveBeenCalled();
+    });
+
+    it('SA-PERF-017 — no from/to: findMany called with take≤365 and a default gte filter', async () => {
+      mockPrismaService.projectSnapshot.findMany.mockResolvedValue([]);
+
+      await service.getSnapshots('project-1');
+
+      const callArgs = mockPrismaService.projectSnapshot.findMany.mock
+        .calls[0][0] as {
+        where: Record<string, unknown>;
+        take: number;
+      };
+      // take is bounded
+      expect(callArgs.take).toBeLessThanOrEqual(365);
+      // a default date window is applied (gte approximately 90 days ago)
+      expect(callArgs.where).toHaveProperty('date');
+      const dateFilter = callArgs.where.date as Record<string, unknown>;
+      expect(dateFilter).toHaveProperty('gte');
+      const gteDate = dateFilter.gte as Date;
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 91); // tolerance
+      expect(gteDate.getTime()).toBeGreaterThan(ninetyDaysAgo.getTime());
+    });
+
+    it('SA-PERF-017 — with from/to: findMany called with take≤365 and user date range', async () => {
+      mockPrismaService.projectSnapshot.findMany.mockResolvedValue([]);
+
+      await service.getSnapshots('project-1', '2024-01-01', '2025-01-01');
+
+      const callArgs = mockPrismaService.projectSnapshot.findMany.mock
+        .calls[0][0] as {
+        where: Record<string, unknown>;
+        take: number;
+      };
+      expect(callArgs.take).toBeLessThanOrEqual(365);
+      const dateFilter = callArgs.where.date as Record<string, unknown>;
+      expect(dateFilter).toHaveProperty('gte');
+      expect(dateFilter).toHaveProperty('lte');
     });
   });
 

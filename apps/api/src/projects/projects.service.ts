@@ -228,14 +228,15 @@ export class ProjectsService {
    */
   async findAll(
     page = 1,
-    limit = 1000,
+    limit = 20,
     status?: ProjectStatus,
     userId?: string,
     userRole?: string,
     clients?: string,
     archived: ArchivedFilter = ArchivedFilter.ACTIVE,
   ) {
-    const safeLimit = Math.min(limit || 1000, 1000);
+    // PER-017 / SA-PERF-001 — cap at 100 to prevent unbounded full-table scans
+    const safeLimit = Math.min(limit || 20, 100);
     const skip = (page - 1) * safeLimit;
 
     // Filtre de base sur le statut
@@ -580,8 +581,13 @@ export class ProjectsService {
       ...projectData
     } = updateProjectDto;
 
-    // Vérifier les dates si fournies
-    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+    // COR-024 — validate partial date changes against existing dates.
+    // When only one date is provided, compare against the persisted counterpart.
+    const effectiveStart = startDate
+      ? new Date(startDate)
+      : existingProject.startDate;
+    const effectiveEnd = endDate ? new Date(endDate) : existingProject.endDate;
+    if (effectiveStart && effectiveEnd && effectiveEnd < effectiveStart) {
       throw new BadRequestException(
         'La date de fin doit être postérieure ou égale à la date de début',
       );
@@ -831,6 +837,9 @@ export class ProjectsService {
    * lifecycle event survives in the immutable audit trail (d6299cc chain).
    */
   async hardDelete(id: string, user: ProjectMutationUser) {
+    // SEC-017 — defense-in-depth ownership enforcement, mirrors remove() / archive().
+    await this.assertProjectOwnershipOrBypass(id, user);
+
     const project = await this.prisma.project.findUnique({
       where: { id },
     });
@@ -848,38 +857,38 @@ export class ProjectsService {
       });
     }
 
-    // Final snapshot to the audit trail BEFORE the row is erased (audit
-    // suggested-fix b). Plain await — not transactional with the delete — to
-    // match the existing archive()/unarchive() emission pattern; the audit
-    // pipeline (AuditPersistenceService) is out of DAT-007 scope.
+    // COR-025 — capture snapshot BEFORE erasure but emit audit AFTER the delete
+    // succeeds, so a delete failure leaves no spurious PROJECT_DELETED audit row.
+    const snapshot = {
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      status: project.status,
+      priority: project.priority,
+      startDate: project.startDate,
+      endDate: project.endDate,
+      budgetHours: project.budgetHours,
+      createdById: project.createdById,
+      managerId: project.managerId,
+      sponsorId: project.sponsorId,
+      archivedAt: project.archivedAt,
+      archivedById: project.archivedById,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    };
+
+    await this.prisma.project.delete({
+      where: { id },
+    });
+
+    // Audit emitted AFTER successful delete — snapshot was captured above before
+    // the row was erased so the lifecycle event survives in the immutable trail.
     await this.auditPersistence.log({
       action: AuditAction.PROJECT_DELETED,
       entityType: 'Project',
       entityId: id,
       actorId: user.id,
-      payload: {
-        snapshot: {
-          id: project.id,
-          name: project.name,
-          description: project.description,
-          status: project.status,
-          priority: project.priority,
-          startDate: project.startDate,
-          endDate: project.endDate,
-          budgetHours: project.budgetHours,
-          createdById: project.createdById,
-          managerId: project.managerId,
-          sponsorId: project.sponsorId,
-          archivedAt: project.archivedAt,
-          archivedById: project.archivedById,
-          createdAt: project.createdAt,
-          updatedAt: project.updatedAt,
-        },
-      },
-    });
-
-    await this.prisma.project.delete({
-      where: { id },
+      payload: { snapshot },
     });
 
     return { message: 'Projet supprimé définitivement' };
@@ -1106,11 +1115,6 @@ export class ProjectsService {
             },
           },
         },
-        tasks: {
-          select: {
-            status: true,
-          },
-        },
         _count: {
           select: {
             members: true,
@@ -1123,16 +1127,38 @@ export class ProjectsService {
       },
     });
 
-    return projects.map(({ tasks, ...project }) => ({
-      ...project,
-      progress:
-        tasks.length > 0
-          ? Math.round(
-              (tasks.filter((t) => t.status === 'DONE').length / tasks.length) *
-                100,
-            )
-          : 0,
-    }));
+    // PER-015 — single groupBy fan-out, same pattern as findAll (PER-005).
+    // Avoids fetching all task rows for each project.
+    const projectIds = projects.map((p) => p.id);
+    const taskGroups =
+      projectIds.length > 0
+        ? await this.prisma.task.groupBy({
+            by: ['projectId', 'status'],
+            where: { projectId: { in: projectIds } },
+            _count: { _all: true },
+          })
+        : [];
+
+    const progressMap = new Map<string, { done: number; total: number }>();
+    for (const group of taskGroups) {
+      const pid = group.projectId;
+      if (!pid) continue;
+      const entry = progressMap.get(pid) ?? { done: 0, total: 0 };
+      entry.total += group._count._all;
+      if (group.status === 'DONE') {
+        entry.done += group._count._all;
+      }
+      progressMap.set(pid, entry);
+    }
+
+    return projects.map((project) => {
+      const counts = progressMap.get(project.id);
+      const progress =
+        counts && counts.total > 0
+          ? Math.round((counts.done / counts.total) * 100)
+          : 0;
+      return { ...project, progress };
+    });
   }
 
   /**
@@ -1241,16 +1267,37 @@ export class ProjectsService {
       ]);
     }
 
+    // SEC-016 — reject invalid date strings before passing to new Date().
+    if (from && isNaN(new Date(from).getTime())) {
+      throw new BadRequestException(
+        `Paramètre 'from' invalide : valeur de date attendue (ex: 2025-01-01)`,
+      );
+    }
+    if (to && isNaN(new Date(to).getTime())) {
+      throw new BadRequestException(
+        `Paramètre 'to' invalide : valeur de date attendue (ex: 2025-12-31)`,
+      );
+    }
+
     const where: any = { projectId };
+
+    // SA-PERF-017 — apply a default 90-day look-back window when no range is
+    // given to avoid returning the full snapshot history of long-lived projects.
+    // Also cap the result set to 365 rows.
     if (from || to) {
       where.date = {};
       if (from) where.date.gte = new Date(from);
       if (to) where.date.lte = new Date(to);
+    } else {
+      const defaultFrom = new Date();
+      defaultFrom.setDate(defaultFrom.getDate() - 90);
+      where.date = { gte: defaultFrom };
     }
 
     return this.prisma.projectSnapshot.findMany({
       where,
       orderBy: { date: 'asc' },
+      take: 365,
     });
   }
 
@@ -1273,7 +1320,8 @@ export class ProjectsService {
             priority: true,
           },
         },
-        members: true,
+        // PER-016 — use _count.members instead of fetching all member rows;
+        // totalMembers is read from _count.members below.
         epics: {
           select: {
             progress: true,
@@ -1284,6 +1332,9 @@ export class ProjectsService {
             status: true,
             dueDate: true,
           },
+        },
+        _count: {
+          select: { members: true },
         },
       },
     });
@@ -1314,37 +1365,30 @@ export class ProjectsService {
       0,
     );
 
-    // Calculer les heures réelles depuis les TimeEntry, en ségrégeant
-    // strictement les heures user et les heures tiers. totalActualHours
-    // = heures déclarées par des users (jamais mélangé avec des heures
-    // tiers), et totalThirdPartyHours est exposé en parallèle.
+    // SA-PERF-018 — replace 2×findMany with 2×aggregate: one DB round-trip each
+    // instead of fetching all hour rows into JS for a reduce. Semantics preserved:
+    // userTE = isDismissal:false + userId:not-null; thirdPartyTE = isDismissal:false + thirdPartyId:not-null.
     const taskIds = project.tasks.map((t) => t.id);
-    const [userTimeEntries, thirdPartyTimeEntries] = await Promise.all([
-      this.prisma.timeEntry.findMany({
+    const [userAgg, thirdPartyAgg] = await Promise.all([
+      this.prisma.timeEntry.aggregate({
         where: {
           taskId: { in: taskIds },
           userId: { not: null },
           isDismissal: false,
         },
-        select: { hours: true },
+        _sum: { hours: true },
       }),
-      this.prisma.timeEntry.findMany({
+      this.prisma.timeEntry.aggregate({
         where: {
           taskId: { in: taskIds },
           thirdPartyId: { not: null },
           isDismissal: false,
         },
-        select: { hours: true },
+        _sum: { hours: true },
       }),
     ]);
-    const totalActualHours = userTimeEntries.reduce(
-      (sum, entry) => sum + Number(entry.hours),
-      0,
-    );
-    const totalThirdPartyHours = thirdPartyTimeEntries.reduce(
-      (sum, entry) => sum + Number(entry.hours),
-      0,
-    );
+    const totalActualHours = Number(userAgg._sum.hours ?? 0);
+    const totalThirdPartyHours = Number(thirdPartyAgg._sum.hours ?? 0);
 
     const progress =
       totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -1368,7 +1412,7 @@ export class ProjectsService {
         remaining: Math.max(0, totalEstimatedHours - totalActualHours),
       },
       team: {
-        totalMembers: project.members.length,
+        totalMembers: project._count.members,
       },
       epics: {
         total: project.epics.length,

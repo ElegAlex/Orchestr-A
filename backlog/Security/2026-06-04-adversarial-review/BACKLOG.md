@@ -643,7 +643,7 @@ grep -n 'findMany\|select\|Task\[\]' apps/api/src/analytics/analytics.service.ts
 
 ### PER-016 — getProjectStats fetches all tasks and all members without select projection on members
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** cross-validated
@@ -2213,7 +2213,7 @@ N/A — manual verification
 
 ### SEC-017 — hardDelete lacks defense-in-depth ownership assertion present in all sibling mutation methods
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -2798,7 +2798,7 @@ N/A — manual verification
 
 ### COR-025 — hardDelete(): audit log written outside transaction — audit records 'deleted' even if delete fails
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** B
 - **Confidence:** primary-only
@@ -3479,7 +3479,7 @@ N/A — manual verification
 
 ### PER-015 — getProjectsByUser fetches ALL tasks for every project to compute progress (no take limit)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -3529,7 +3529,7 @@ N/A — manual verification
 
 ### PER-017 — Default and max page size of 1000 on list endpoints (projects, epics, milestones)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -4795,7 +4795,7 @@ grep -n 'getSnapshots\|ParseUUIDPipe' apps/api/src/projects/projects.controller.
 
 ### SEC-016 — Snapshot date filter params (from/to) are not validated and passed directly to new Date()
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -8730,7 +8730,7 @@ N/A — manual verification
 
 ### COR-024 — update() does not validate partial date changes against existing project dates
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** primary-only
@@ -9207,7 +9207,7 @@ grep -rn 'pg_advisory_xact_lock' apps/api/src/
 
 ### SA-PERF-001 — projects.findAll default limit is 1000 — effectively unbounded for admins
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** secondary-only
@@ -9314,7 +9314,7 @@ grep -n 'findAll.*1000\|limit.*1000' apps/api/src/planning/planning.service.ts
 
 ### SA-PERF-017 — getSnapshots has no pagination or limit — returns all historical snapshots for a project
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** secondary-only
@@ -9477,7 +9477,7 @@ grep -n -A5 'members.*include\|include.*members' apps/api/src/analytics/analytic
 
 ### SA-PERF-018 — getProjectStats issues 2 separate TimeEntry findMany — should use one groupBy or aggregate
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** H
 - **Confidence:** secondary-only
