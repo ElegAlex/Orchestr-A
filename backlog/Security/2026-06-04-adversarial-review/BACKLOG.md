@@ -866,7 +866,7 @@ N/A — manual verification
 
 ### PER-007 — importLeaves: getHolidayKeySet + findValidatorForUser called per row inside transaction loop
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** cross-validated
@@ -1501,7 +1501,7 @@ docker exec orchestr-a-db psql -U postgres -d orchestra -c "EXPLAIN SELECT * FRO
 
 ### COR-016 — getLeaveBalance uses new Date().getFullYear() (host-TZ) while balance windows use Paris-anchored parisYearWindow — mismatch on Jan 1 between 00:00 and 01:00 Paris time
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** J
 - **Confidence:** cross-validated
@@ -2101,7 +2101,7 @@ N/A — manual verification
 
 ### SEC-009 — canValidate() delegation fallback grants approve rights across the entire org, bypassing service-scope
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -2735,7 +2735,7 @@ grep -n 'prisma.event.create\|prisma.$transaction' apps/api/src/events/events.se
 
 ### COR-017 — deleteBalance: hard-delete committed before audit log — crash between them produces silent deletion with no audit trace
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** B
 - **Confidence:** primary-only
@@ -3425,7 +3425,7 @@ grep -n 'take\|skip\|limit\|page' apps/api/src/events/events.service.ts apps/api
 
 ### PER-008 — getPendingForValidator: unbounded findMany — no limit/pagination for ADMIN path
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -5068,7 +5068,7 @@ curl -s -X POST http://localhost:4000/api/telework -H 'Authorization: Bearer <ad
 
 ### COR-014 — rejectCancellation writes no audit log — CANCELLATION_REQUESTED→APPROVED transition is invisible to the audit trail
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -5358,7 +5358,7 @@ N/A — manual verification
 
 ### OBS-007 — rejectCancellation() (CANCELLATION_REQUESTED → APPROVED) emits no audit row
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only

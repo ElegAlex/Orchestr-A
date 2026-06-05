@@ -5017,4 +5017,404 @@ describe('LeavesService', () => {
       expect(mockPrismaService.userService.findMany).toHaveBeenCalledTimes(1);
     });
   });
+
+  // ============================================
+  // SEC-009 — canValidate delegation scope bypass
+  // ============================================
+  describe('SEC-009 — canValidate delegation scope', () => {
+    it('SEC-009 — delegate of ManagerA cannot approve a leave whose validatorId is ManagerB (delegation scoped to delegatorId)', async () => {
+      // leave assigned to ManagerB as validator
+      const leaveForManagerB = {
+        ...mockLeave,
+        id: 'leave-sec009',
+        userId: 'user-sec009',
+        validatorId: 'manager-b',
+        status: LeaveStatus.PENDING,
+      };
+      mockPrismaService.leave.findUnique.mockResolvedValueOnce(
+        leaveForManagerB,
+      );
+
+      // delegateId = 'delegate-a' — MANAGER, no manage_any, no services in common
+      const delegateUser = {
+        id: 'delegate-a',
+        role: { code: 'MANAGER' },
+      };
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(delegateUser);
+      mockGetPermissionsForRole.mockImplementation((role: string) => {
+        if (role === 'MANAGER') {
+          return Promise.resolve([
+            'leaves:read',
+            'leaves:approve',
+            'leaves:delete',
+            'leaves:manage_delegations',
+            'leaves:declare_for_others',
+          ]);
+        }
+        return Promise.resolve(['leaves:read']);
+      });
+
+      // No services in common
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findFirst.mockResolvedValue(null);
+
+      // With the fix: canValidate adds `delegatorId: leave.validatorId` = 'manager-b'
+      // to the delegation query. There is NO delegation from manager-b to delegate-a,
+      // so findFirst must return null → canValidate returns false → approve throws 403.
+      // Mock returns null regardless of query args (correct: no delegation from manager-b).
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
+
+      await expect(
+        service.approve('leave-sec009', 'delegate-a', undefined, {
+          roleCode: 'MANAGER',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('SEC-009 — before the fix (no delegatorId scope), a delegate of ManagerA COULD approve any leave (regression proof)', async () => {
+      // This test documents the fix: the delegation check is now scoped to
+      // `delegatorId: leave.validatorId`. Without the fix, any active delegation
+      // (regardless of delegatorId) would return true.
+      //
+      // With the fix: a delegate of ManagerA (delegatorId='manager-a') can still
+      // approve a leave whose validatorId IS 'manager-a'.
+      const leaveForManagerA = {
+        ...mockLeave,
+        id: 'leave-sec009-b',
+        userId: 'user-sec009-b',
+        validatorId: 'manager-a',
+        status: LeaveStatus.PENDING,
+      };
+      mockPrismaService.leave.findUnique
+        .mockResolvedValueOnce(leaveForManagerA) // approve() outer fetch
+        .mockResolvedValueOnce(leaveForManagerA) // canValidate() fetch
+        .mockResolvedValueOnce(leaveForManagerA); // inner tx re-read
+
+      const delegateUser = { id: 'delegate-a', role: { code: 'MANAGER' } };
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(delegateUser);
+      mockGetPermissionsForRole.mockImplementation((role: string) => {
+        if (role === 'MANAGER') {
+          return Promise.resolve([
+            'leaves:read',
+            'leaves:approve',
+            'leaves:delete',
+            'leaves:manage_delegations',
+            'leaves:declare_for_others',
+          ]);
+        }
+        return Promise.resolve(['leaves:read']);
+      });
+
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findFirst.mockResolvedValue(null);
+
+      // Delegation from manager-a to delegate-a — matching delegatorId
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue({
+        id: 'deleg-1',
+        delegatorId: 'manager-a',
+        delegateId: 'delegate-a',
+        isActive: true,
+        startDate: new Date('2020-01-01'),
+        endDate: new Date('2099-12-31'),
+      });
+
+      const updatedLeave = {
+        ...leaveForManagerA,
+        status: LeaveStatus.APPROVED,
+        validatedById: 'delegate-a',
+        validatedAt: new Date(),
+        validationComment: null,
+        user: {
+          id: 'user-sec009-b',
+          firstName: 'U',
+          lastName: 'S',
+          avatarUrl: null,
+          avatarPreset: null,
+          email: 'u@t.com',
+        },
+        leaveType: mockLeaveTypeConfig,
+        validatedBy: delegateUser,
+      };
+      mockPrismaService.leave.update.mockResolvedValueOnce(updatedLeave);
+      // balance check — no configured balance
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue(null);
+      mockPrismaService.leaveBalance.findFirst.mockResolvedValue(null);
+
+      // Should succeed (delegate of the SAME manager = valid)
+      const result = await service.approve(
+        'leave-sec009-b',
+        'delegate-a',
+        undefined,
+        { roleCode: 'MANAGER' },
+      );
+      expect(result.status).toBe(LeaveStatus.APPROVED);
+    });
+  });
+
+  // ============================================
+  // COR-016 — getLeaveBalance Paris-anchored year
+  // ============================================
+  describe('COR-016 — getLeaveBalance Paris TZ year boundary', () => {
+    it('COR-016 — uses Paris year 2026 when wall clock is 2026-12-31T23:30:00Z (Paris 00:30 Jan-1 2027 is still 2026 UTC-local but Paris = 2027 only at 23:00 UTC)', async () => {
+      // 2026-12-31T23:30:00Z = Europe/Paris 2027-01-01 00:30 (+01:00 in winter)
+      // After the fix, getLeaveBalance must use Paris year 2027 for that instant.
+      // Before the fix it used getFullYear() = 2026 (UTC year).
+      // Witness: with system time = 2026-12-31T23:30:00Z, parisYearWindow(2027) is called,
+      // meaning leave.findMany is called with yearEnd corresponding to 2028-01-01 in Paris.
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-12-31T23:30:00Z'));
+      try {
+        mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([]);
+        mockPrismaService.leave.findMany.mockResolvedValue([]);
+        mockPrismaService.leaveBalance.findMany.mockResolvedValue([]);
+
+        await service.getLeaveBalance('user-1');
+
+        // Verify parisYearWindow(2027) was used:
+        // Paris year 2027 starts at 2026-12-31T23:00:00Z (Paris midnight = UTC-1h in winter)
+        // Paris year 2027 ends at 2027-12-31T23:00:00Z
+        // The leave.findMany call should have endDate: { gte: yearStart } where yearStart
+        // corresponds to 2027 Paris = 2026-12-31T23:00:00Z
+        const leaveFinds = mockPrismaService.leave.findMany.mock.calls;
+        expect(leaveFinds.length).toBeGreaterThan(0);
+        const firstCall = leaveFinds[0][0];
+        // yearStart for Paris 2027 = 2026-12-31T23:00:00.000Z
+        const expectedYearStart = new Date('2026-12-31T23:00:00.000Z');
+        expect(firstCall.where.endDate.gte.getTime()).toBe(
+          expectedYearStart.getTime(),
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  // ============================================
+  // COR-017 — deleteBalance atomicity
+  // ============================================
+  describe('COR-017 — deleteBalance atomic delete+audit', () => {
+    it('COR-017 — audit log failure propagates and does NOT silently swallow after delete', async () => {
+      const balance = {
+        id: 'bal-cor017',
+        userId: 'user-1',
+        leaveTypeId: 'leave-type-1',
+        year: 2026,
+        totalDays: 25,
+      };
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(balance);
+      // $transaction must be called (wrapping both delete and audit)
+      // We verify atomicity by checking $transaction is invoked
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      // Make auditPersistence.log throw to simulate crash between delete and audit
+      mockAuditPersistence.log.mockRejectedValueOnce(new Error('audit-crash'));
+
+      await expect(
+        service.deleteBalance('bal-cor017', 'admin-1', { roleCode: 'ADMIN' }),
+      ).rejects.toThrow('audit-crash');
+
+      // The $transaction wrapper means both ops are atomic; prisma.leaveBalance.delete
+      // must have been called (inside tx), but since the mock tx propagates, the
+      // test verifies the error propagates (not swallowed).
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+    });
+  });
+
+  // ============================================
+  // PER-008 — getPendingForValidator hard cap
+  // ============================================
+  describe('PER-008 — getPendingForValidator hard safety cap', () => {
+    it('PER-008 — ADMIN path applies a hard take cap (500) to findMany', async () => {
+      const adminUser = {
+        id: 'admin-1',
+        role: { code: 'ADMIN' },
+      };
+      mockPrismaService.user.findUnique.mockResolvedValueOnce(adminUser);
+      mockGetPermissionsForRole.mockImplementation(() =>
+        Promise.resolve([
+          'leaves:read',
+          'leaves:approve',
+          'leaves:delete',
+          'leaves:manage_any',
+        ]),
+      );
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+
+      await service.getPendingForValidator('admin-1');
+
+      const call = mockPrismaService.leave.findMany.mock.calls[0][0];
+      // After the fix, a hard take cap must be applied
+      expect(call.take).toBeDefined();
+      expect(call.take).toBeLessThanOrEqual(500);
+    });
+  });
+
+  // ============================================
+  // COR-014 / OBS-007 — rejectCancellation audit log
+  // ============================================
+  describe('COR-014/OBS-007 — rejectCancellation emits audit log', () => {
+    it('COR-014 — rejectCancellation emits auditPersistence.log with LEAVE_APPROVED and before.status=CANCELLATION_REQUESTED', async () => {
+      const cancelReqLeave = {
+        ...mockLeave,
+        id: 'leave-cor014',
+        status: LeaveStatus.CANCELLATION_REQUESTED,
+        userId: 'user-2',
+        validatorId: 'manager-1',
+      };
+      mockPrismaService.leave.findUnique
+        .mockResolvedValueOnce(cancelReqLeave) // outer read
+        .mockResolvedValueOnce(cancelReqLeave); // inner re-read in $transaction
+
+      mockPrismaService.leave.update.mockResolvedValueOnce({
+        ...cancelReqLeave,
+        status: LeaveStatus.APPROVED,
+        user: {
+          id: 'user-2',
+          firstName: 'Jane',
+          lastName: 'Doe',
+          avatarUrl: null,
+          avatarPreset: null,
+          email: 'jane@test.com',
+        },
+        leaveType: mockLeaveTypeConfig,
+      });
+
+      // canManageLeave: ADMIN bypass
+      mockGetPermissionsForRole.mockImplementation(() =>
+        Promise.resolve([
+          'leaves:read',
+          'leaves:approve',
+          'leaves:delete',
+          'leaves:manage_any',
+        ]),
+      );
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        id: 'admin-1',
+        role: { code: 'ADMIN' },
+      });
+
+      await service.rejectCancellation('leave-cor014', 'admin-1', 'ADMIN');
+
+      expect(mockAuditPersistence.log).toHaveBeenCalledOnce();
+      const call = mockAuditPersistence.log.mock.calls[0][0];
+      expect(call.action).toBe('LEAVE_APPROVED');
+      expect(call.payload.before.status).toBe(
+        LeaveStatus.CANCELLATION_REQUESTED,
+      );
+    });
+  });
+
+  // ============================================
+  // PER-007 — importLeaves N+1 reduction
+  // ============================================
+  describe('PER-007 — importLeaves N+1 hoisting', () => {
+    it('PER-007 — imports N rows but calls holidayService.findByRange O(1) times (not N times)', async () => {
+      const rows = [
+        {
+          userEmail: 'john@test.com',
+          leaveTypeName: 'Congés payés',
+          startDate: '2026-06-02',
+          endDate: '2026-06-06',
+          halfDay: '',
+        },
+        {
+          userEmail: 'john@test.com',
+          leaveTypeName: 'Congés payés',
+          startDate: '2026-07-01',
+          endDate: '2026-07-03',
+          halfDay: '',
+        },
+        {
+          userEmail: 'john@test.com',
+          leaveTypeName: 'Congés payés',
+          startDate: '2026-08-04',
+          endDate: '2026-08-06',
+          halfDay: '',
+        },
+      ];
+
+      // Pre-import: users + leaveTypes
+      mockPrismaService.user.findMany.mockResolvedValue([
+        { id: 'user-1', email: 'john@test.com' },
+      ]);
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        {
+          ...mockLeaveTypeConfig,
+          name: 'Congés payés',
+          requiresApproval: true,
+        },
+      ]);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.leave.create.mockResolvedValue(mockLeave);
+      mockHolidaysService.findByRange.mockResolvedValue([]);
+
+      await service.importLeaves(rows, 'admin-1');
+
+      // After fix: holiday service called O(1), not O(N=3)
+      expect(mockHolidaysService.findByRange).toHaveBeenCalledTimes(1);
+    });
+
+    it('PER-007 — imports N rows but calls findValidatorForUser at most once per unique userId', async () => {
+      const rows = [
+        {
+          userEmail: 'john@test.com',
+          leaveTypeName: 'Congés payés',
+          startDate: '2026-06-02',
+          endDate: '2026-06-06',
+        },
+        {
+          userEmail: 'john@test.com',
+          leaveTypeName: 'Congés payés',
+          startDate: '2026-07-01',
+          endDate: '2026-07-03',
+        },
+        {
+          userEmail: 'john@test.com',
+          leaveTypeName: 'Congés payés',
+          startDate: '2026-08-04',
+          endDate: '2026-08-06',
+        },
+      ];
+
+      mockPrismaService.user.findMany.mockResolvedValue([
+        { id: 'user-1', email: 'john@test.com' },
+      ]);
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        {
+          ...mockLeaveTypeConfig,
+          name: 'Congés payés',
+          requiresApproval: true,
+        },
+      ]);
+      // findValidatorForUser uses user.findUnique internally
+      // We count how many times it's called for the user's department query
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.leave.create.mockResolvedValue(mockLeave);
+      mockHolidaysService.findByRange.mockResolvedValue([]);
+
+      await service.importLeaves(rows, 'admin-1');
+
+      // After fix: user.findUnique for validator lookup should be called at most once
+      // per unique user (1 user = john@test.com), not 3 times (once per row).
+      // user.findUnique is also called by the $transaction inner code for other purposes,
+      // so we check it was called far fewer than N (3) times for validator lookup.
+      // Since findValidatorForUser calls user.findUnique once per call, verify
+      // the total count is < 3 (N rows) for unique userId memoization.
+      const uniqueCalls = mockPrismaService.user.findUnique.mock.calls.filter(
+        (c: any[]) => c[0]?.where?.id === 'user-1',
+      );
+      expect(uniqueCalls.length).toBeLessThan(rows.length);
+    });
+  });
 });

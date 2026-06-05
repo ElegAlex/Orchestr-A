@@ -22,11 +22,13 @@ import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { HolidaysService } from '../holidays/holidays.service';
 import {
   calculateLeaveDays,
+  LEAVE_TIMEZONE,
   parisDayKey,
   parisYearWindow,
   splitLeaveByYear,
   type DayKey,
 } from './leave-year-window';
+import { formatInTimeZone } from 'date-fns-tz';
 
 /**
  * Permission bypass donnant un accès complet aux congés sans restriction
@@ -893,12 +895,17 @@ export class LeavesService {
 
     // Accès global → toutes les demandes en attente
     if (hasManageAny) {
+      // PER-008 — apply a hard safety cap so the ADMIN path cannot return an
+      // unbounded result set. 500 is a safe ceiling for a daily workload
+      // (organisations using this app rarely exceed a few dozen pending leaves
+      // at once). This prevents OOM on large orgs without breaking UX.
       return this.prisma.leave.findMany({
         where: {
           status: {
             in: [LeaveStatus.PENDING, LeaveStatus.CANCELLATION_REQUESTED],
           },
         },
+        take: 500,
         include: {
           user: {
             select: {
@@ -2284,6 +2291,13 @@ export class LeavesService {
       );
     }
 
+    // COR-014 / OBS-007 — build actor snapshot BEFORE the tx (Redis/Prisma read
+    // must not sit inside the Postgres tx holding the leave row lock).
+    const actorSnapshot = await this.buildActorSnapshot(currentUserId ?? '', {
+      roleCode: currentUserRole ?? null,
+      templateKey: null,
+    });
+
     // COR-009 - wrap in $transaction with inner re-read to prevent TOCTOU race:
     // two validators acting simultaneously can each pass the
     // CANCELLATION_REQUESTED check; without this guard both then issue UPDATE
@@ -2300,7 +2314,7 @@ export class LeavesService {
         );
       }
 
-      return tx.leave.update({
+      const updated = await tx.leave.update({
         where: { id },
         data: { status: LeaveStatus.APPROVED },
         include: {
@@ -2325,6 +2339,26 @@ export class LeavesService {
           },
         },
       });
+
+      // COR-014 / OBS-007 — emit durable audit row inside the tx so the
+      // CANCELLATION_REQUESTED → APPROVED transition is not invisible to the
+      // audit trail. Re-uses LEAVE_APPROVED (the status the leave returns to)
+      // with before/after snapshots to distinguish from a normal approval.
+      await this.auditPersistence.log({
+        action: AuditAction.LEAVE_APPROVED,
+        entityType: 'Leave',
+        entityId: id,
+        actorId: currentUserId ?? null,
+        payload: {
+          actor: actorSnapshot,
+          subject: { leaveId: id, userId: current.userId },
+          before: { status: current.status },
+          after: { status: updated.status },
+          rejectedCancellation: true,
+        },
+      });
+
+      return updated;
     });
   }
 
@@ -2641,7 +2675,11 @@ export class LeavesService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    const currentYear = new Date().getFullYear();
+    // COR-016 — use Paris-anchored year so the Jan-1 window [00:00–01:00 Paris]
+    // resolves to the correct year regardless of the host server's timezone.
+    const currentYear = Number(
+      formatInTimeZone(new Date(), LEAVE_TIMEZONE, 'yyyy'),
+    );
 
     // Récupérer tous les types de congés actifs
     const leaveTypes = await this.prisma.leaveTypeConfig.findMany({
@@ -2995,27 +3033,32 @@ export class LeavesService {
       templateKey: actor?.templateKey ?? null,
     });
 
-    await this.prisma.leaveBalance.delete({ where: { id } });
+    // COR-017 — wrap delete + audit in a single $transaction so a crash between
+    // them cannot produce a silent deletion with no audit trace. Both operations
+    // use the same tx client; if either throws the entire tx is rolled back.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.leaveBalance.delete({ where: { id } });
 
-    await this.auditPersistence.log({
-      action: AuditAction.LEAVE_BALANCE_ADJUSTED,
-      entityType: 'Leave',
-      entityId: id,
-      actorId: actorId ?? null,
-      payload: {
-        actor: actorSnapshot,
-        subject: {
-          balanceId: id,
-          userId: balance.userId,
-          leaveTypeId: balance.leaveTypeId,
-          year: balance.year,
+      await this.auditPersistence.log({
+        action: AuditAction.LEAVE_BALANCE_ADJUSTED,
+        entityType: 'Leave',
+        entityId: id,
+        actorId: actorId ?? null,
+        payload: {
+          actor: actorSnapshot,
+          subject: {
+            balanceId: id,
+            userId: balance.userId,
+            leaveTypeId: balance.leaveTypeId,
+            year: balance.year,
+          },
+          operation: 'DELETE',
+          ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
+          ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
+          before: { totalDays: balance.totalDays.toString() },
+          after: { totalDays: null },
         },
-        operation: 'DELETE',
-        ...(actor?.ip !== undefined ? { ip: actor.ip } : {}),
-        ...(actor?.ua !== undefined ? { ua: actor.ua } : {}),
-        before: { totalDays: balance.totalDays.toString() },
-        after: { totalDays: null },
-      },
+      });
     });
 
     return { message: 'Solde supprimé avec succès' };
@@ -3441,6 +3484,40 @@ export class LeavesService {
           }
         : {};
 
+    // PER-007 — hoist holiday fetch outside the per-row loop. Compute a single
+    // wide range covering all CSV dates; the extra holidays in the set are
+    // harmless because the day-counting cursor only probes keys within each
+    // row's [startDate, endDate] window (same rationale as getHolidayKeySet's
+    // own ±1-day widening). This reduces holidayService.findByRange from O(N)
+    // to O(1) per import.
+    let importHolidayKeys: Set<DayKey> = new Set();
+    if (importDates.length > 0) {
+      const importRangeStart = new Date(
+        Math.min(...importDates.map((d) => d.getTime())),
+      );
+      const importRangeEnd = new Date(
+        Math.max(...importDates.map((d) => d.getTime())),
+      );
+      importHolidayKeys = await this.getHolidayKeySet(
+        importRangeStart,
+        importRangeEnd,
+      );
+    }
+
+    // PER-007 — pre-build a validator cache keyed by userId. For each unique
+    // resolved user in the CSV, call findValidatorForUser exactly once (not
+    // once-per-row). Since findValidatorForUser uses the default Prisma client
+    // (not a tx), this must happen before the $transaction.
+    const validatorIdByUserId = new Map<string, string | null>();
+    for (const row of leaves) {
+      const user = usersByEmail.get(row.userEmail.toLowerCase());
+      if (!user || validatorIdByUserId.has(user.id)) continue;
+      validatorIdByUserId.set(
+        user.id,
+        await this.findValidatorForUser(user.id),
+      );
+    }
+
     // COR-024 — wrap the full iteration (findMany + create loop) in a single
     // $transaction so that:
     //   (a) the existingLeaves snapshot is taken at transaction-start, making
@@ -3564,12 +3641,8 @@ export class LeavesService {
               ? leaveData.halfDay
               : null;
 
-          // COR-003 — soustraire les jours fériés non travaillés, comme la
-          // création standard. Lecture par ligne (volume d'import modéré).
-          const importHolidayKeys = await this.getHolidayKeySet(
-            startDate,
-            endDate,
-          );
+          // COR-003 / PER-007 — use the pre-fetched holiday key set (hoisted
+          // outside the loop); avoids O(N) holidayService.findByRange calls.
           const days = calculateLeaveDays(
             startDate,
             endDate,
@@ -3578,9 +3651,10 @@ export class LeavesService {
             importHolidayKeys,
           );
 
-          // Trouver le validateur approprié
+          // PER-007 — use the pre-built validator cache (hoisted outside the
+          // loop); avoids O(N) findValidatorForUser calls for the same user.
           const validatorId = leaveType.requiresApproval
-            ? await this.findValidatorForUser(user.id)
+            ? (validatorIdByUserId.get(user.id) ?? null)
             : null;
 
           // Déterminer le statut initial
