@@ -309,11 +309,15 @@ export const DayCell = React.memo(({
         )}
 
       <div
-        className={`relative z-10 space-y-1 ${viewMode === "month" ? "min-h-[40px]" : "min-h-[60px]"}`}
+        className={
+          isHalfDayLeave
+            ? `absolute inset-x-1 ${leaveHalfDay === HalfDay.MORNING ? "bottom-0 top-1/2" : "top-0 bottom-1/2"} z-10 space-y-1 overflow-y-auto`
+            : `relative z-10 space-y-1 ${viewMode === "month" ? "min-h-[40px]" : "min-h-[60px]"}`
+        }
       >
         {/* Telework toggle - visible uniquement si pas de congé, jour férié, ni événement toute la journée.
             Le glyphe 🏠 (TT) est gouverné par showTelework, le glyphe 🏢 (bureau) par showOffice. */}
-        {!leaveVisible &&
+        {!fullDayLeaveVisible &&
           !cell.isHoliday &&
           !hasAllDayEvent &&
           canToggleTelework &&
@@ -340,7 +344,7 @@ export const DayCell = React.memo(({
             </div>
           )}
         {/* Telework indicator (read-only) for users without toggle permission */}
-        {!leaveVisible &&
+        {!fullDayLeaveVisible &&
           !cell.isHoliday &&
           !hasAllDayEvent &&
           !canToggleTelework &&
@@ -363,7 +367,7 @@ export const DayCell = React.memo(({
 
         {/* Tasks - masquées si congé, jour férié, ou événement toute la journée.
             Chaque tâche est filtrée par son statut, son type (projet/orphan) et son caractère externe. */}
-        {!leaveVisible &&
+        {!fullDayLeaveVisible &&
           !cell.isHoliday &&
           !hasAllDayEvent &&
           cell.tasks.filter(isTaskVisible).map((task) => {
@@ -444,7 +448,7 @@ export const DayCell = React.memo(({
 
         {/* Predefined Task Assignments - masquées si congé, jour férié, ou événement toute la journée.
             Les assignations externes sont filtrées par showExternalIntervention. */}
-        {!leaveVisible &&
+        {!fullDayLeaveVisible &&
           !cell.isHoliday &&
           !hasAllDayEvent &&
           cell.predefinedTaskAssignments
@@ -533,7 +537,7 @@ export const DayCell = React.memo(({
 
         {/* Events - visible uniquement si pas de congé ni jour férié.
             Filtrés : événements standards par showEvent, interventions externes par showExternalIntervention. */}
-        {!leaveVisible &&
+        {!fullDayLeaveVisible &&
           !cell.isHoliday &&
           cell.events
             .filter((event) =>
