@@ -3287,7 +3287,7 @@ grep -n 'isDismissal\|partial\|unique' packages/database/prisma/schema.prisma | 
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ADVERSARIAL REVIEW: CONFIRMED. TimeEntry model in schema.prisma (lines 446-474) has only plain @@index entries, no @@unique and no partial unique index. The code comment at lines 281-283 ('Prisma ne supporte pas d\'upsert sur clé composite non-unique') explicitly acknowledges the gap. The $transaction buys atomicity for the read-modify-write within one request, but not across concurrent requests under READ COMMITTED isolation.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 5f096b41
 
 ---
 
@@ -3352,7 +3352,7 @@ N/A — manual verification via concurrent load test
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ADVERSARIAL REVIEW: CONFIRMED. Verbatim code verified at lines 84-120. The aggregate→check→create sequence has no wrapping transaction. The code comment at lines 79-82 explicitly documents this as an accepted TOCTOU residual. Reported for completeness; severity is important rather than blocking because the code owns the limitation.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 5f096b41
 
 ---
 
