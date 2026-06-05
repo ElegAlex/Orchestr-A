@@ -6438,7 +6438,7 @@ SELECT COUNT(*) FROM predefined_task_recurring_rules WHERE ("recurrenceType" = '
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence VERBATIM confirmed at lines 8-11. The recurrenceType column was promoted to a proper enum by DAT-012 (20260527130000), but no XOR cross-column CHECK was added in DAT-012 or any other migration. The XOR pattern exists for time_entries actor fields in the same migration batch (lines 168-174: time_entries_actor_xor_check), confirming awareness of this pattern. Current schema gap.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 47a480be
 
 ---
 
@@ -6487,7 +6487,7 @@ SELECT COUNT(*) FROM predefined_task_recurring_rules WHERE ("monthlyOrdinal" IS 
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence VERBATIM confirmed at lines 8-9. Exhaustive grep across all migrations confirms no CHECK constraint exists for these two columns anywhere. Current schema gap — not a historical window issue.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 47a480be
 
 ---
 
