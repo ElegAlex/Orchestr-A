@@ -6556,7 +6556,7 @@ SELECT conname, consrc FROM pg_constraint WHERE conrelid = 'project_snapshots'::
 
 ### DAT-016 — DAT-015 creates redundant dual-layer uniqueness on email: plain @unique (case-sensitive) + LOWER() functional index (case-insensitive) — Prisma findUnique bypasses the case-insensitive guard
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only

@@ -77,8 +77,12 @@ export class AuthService {
     });
 
     if (!user && login.includes('@')) {
-      user = await this.prisma.user.findUnique({
-        where: { email: login },
+      // DAT-016 — email is stored/uniqued case-insensitively (DAT-015 LOWER
+      // unique); match it case-insensitively so 'User@x.com' logs in the row
+      // persisted as 'user@x.com'. findFirst (not findUnique) because the
+      // insensitive predicate is not a unique-where.
+      user = await this.prisma.user.findFirst({
+        where: { email: { equals: login, mode: 'insensitive' } },
       });
     }
 

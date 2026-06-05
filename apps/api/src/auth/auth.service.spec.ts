@@ -223,6 +223,31 @@ describe('AuthService', () => {
       expect(result).toBeNull();
     });
 
+    it('DAT-016 — email login is matched case-insensitively', async () => {
+      // login lookup misses (no exact-case login); email branch must match
+      // case-insensitively (email is stored/uniqued LOWER per DAT-015).
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+      const result = await service.validateUser(
+        'TestUser@Example.com',
+        'password123',
+      );
+
+      expect(result).toBeDefined();
+      expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            email: expect.objectContaining({
+              equals: 'TestUser@Example.com',
+              mode: 'insensitive',
+            }),
+          }),
+        }),
+      );
+    });
+
     it('should return null if password is incorrect', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
