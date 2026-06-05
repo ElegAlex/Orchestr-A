@@ -1,5 +1,5 @@
 import React from "react";
-import { Task, TaskStatus } from "@/types";
+import { Task, TaskStatus, HalfDay } from "@/types";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import { DayCell as DayCellData } from "@/hooks/usePlanningData";
@@ -156,6 +156,14 @@ export const DayCell = React.memo(({
     leaveTypeCode === null ? true : (leaveTypeFilters[leaveTypeCode] ?? true);
   const leaveVisible =
     hasLeave && leaveTypeVisible && (isPending ? showLeavePending : true);
+
+  // Demi-journée : MORNING = overlay en haut, AFTERNOON = en bas, null = journée entière.
+  const leaveHalfDay = leaveVisible ? (leave?.halfDay ?? null) : null;
+  const isHalfDayLeave =
+    leaveHalfDay === HalfDay.MORNING || leaveHalfDay === HalfDay.AFTERNOON;
+  // Un congé journée entière masque tout ; un congé demi-journée laisse l'autre
+  // moitié libre pour les tâches/événements.
+  const fullDayLeaveVisible = leaveVisible && !isHalfDayLeave;
 
   // Résoudre l'icône et la couleur depuis le leaveType config (custom ou défaut)
   const leaveIcon = leave?.leaveType?.icon ?? "🌴";
