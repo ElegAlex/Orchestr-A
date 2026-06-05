@@ -8,6 +8,7 @@ import {
   IsArray,
   ValidateNested,
   Min,
+  ArrayMaxSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TaskStatus, Priority } from 'database';
@@ -81,6 +82,8 @@ export class ImportTasksDto {
     type: [ImportTaskDto],
   })
   @IsArray()
+  // PER-024 — cap at 500 tasks per import to prevent full-table scans on duplicate check
+  @ArrayMaxSize(500)
   @ValidateNested({ each: true })
   @Type(() => ImportTaskDto)
   tasks: ImportTaskDto[];

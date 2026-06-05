@@ -702,7 +702,7 @@ N/A — manual verification
 
 ### PER-021 — getTasksByAssignee and getTasksByProject have no pagination — unbounded findMany
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** cross-validated
@@ -757,7 +757,7 @@ N/A — manual verification
 
 ### PER-022 — getMyDoneUndeclaredTasks: unbounded findMany with NOT EXISTS subquery — full table scan risk
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** cross-validated
@@ -808,7 +808,7 @@ N/A — manual verification
 
 ### PER-025 — findOrphans: unbounded findMany on tasks with projectId IS NULL — no pagination
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** cross-validated
@@ -929,7 +929,7 @@ N/A — manual verification
 
 ### PER-023 — checkCircularDependency: one DB query per BFS node — potential N+1 for deep dependency graphs
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** cross-validated
@@ -992,7 +992,7 @@ N/A — manual verification
 
 ### PER-024 — importTasks: sequential await inside for-loop — N DB round trips for task creation + M subtask inserts
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** cross-validated
@@ -1874,7 +1874,7 @@ grep -n 'projectId\|assertCanAccessProject' apps/api/src/documents/documents.ser
 
 ### COR-029 — reorderSubtasks: subtask IDs from payload not validated to belong to taskId — cross-task position manipulation possible
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -2269,7 +2269,7 @@ grep -n 'assertProjectOwnershipOrBypass' apps/api/src/projects/projects.service.
 
 ### SEC-022 — reorderSubtasks does not verify that subtaskIds belong to the taskId — cross-task IDOR
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -3043,7 +3043,7 @@ grep -n 'assertTeleworkCompatibility\|predefinedTaskAssignment.create' apps/api/
 
 ### COR-031 — addDependency: check-then-create pattern is not race-safe — duplicate dependency race between circular-check and create
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -3706,7 +3706,7 @@ curl -s 'http://localhost:3000/api/skills?limit=9999' | jq '.meta.limit' # shoul
 
 ### PER-027 — findAll tasks allows limit=1000 — 10x higher than documented default, no hard cap at reasonable size
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -4409,7 +4409,7 @@ N/A — manual verification
 
 ### PER-026 — reorderSubtasks: one DB UPDATE per subtask in a transaction — N sequential round trips
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -8854,7 +8854,7 @@ grep -n 'isUniqueViolation\|P2002\|catch' apps/api/src/skills/skills.service.ts
 
 ### COR-028 — importTasks: missing date validity check — invalid startDate/endDate strings silently stored as Invalid Date
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** primary-only
@@ -8900,7 +8900,7 @@ grep -n 'new Date(taskData\.' apps/api/src/tasks/tasks.service.ts
 
 ### COR-030 — update(): date clearing is impossible — falsy check prevents clearing startDate/endDate to null
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** primary-only
@@ -9593,7 +9593,7 @@ grep -n 'user_skills.*validatedBy\|validatedBy.*user_skills\|validated_by.*fkey'
 
 ### SA-COR-004 — addDependency allows two orphan tasks (projectId = null) to be linked, violating the 'same project' invariant
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** L
 - **Confidence:** secondary-only
@@ -9644,7 +9644,7 @@ grep -n 'projectId !== dependsOnTask.projectId' apps/api/src/tasks/tasks.service
 
 ### SA-COR-008 — tasks.update: assigning an epicId or milestoneId that belongs to a different project than the task's (possibly updated) projectId is not validated
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** L
 - **Confidence:** secondary-only

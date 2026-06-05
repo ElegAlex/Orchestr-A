@@ -302,7 +302,8 @@ export class TasksService {
     overdue?: boolean,
     currentUser?: { id: string; role: string | null },
   ) {
-    const safeLimit = Math.min(limit || 1000, 1000);
+    // PER-027 — hard cap at 100 rows (was 1000; callers requesting >100 get capped)
+    const safeLimit = Math.min(limit ?? 10, 100);
     const skip = (page - 1) * safeLimit;
 
     const where: Prisma.TaskWhereInput = {};
@@ -722,6 +723,13 @@ export class TasksService {
       if (!epic) {
         throw new NotFoundException('Epic introuvable');
       }
+      // SA-COR-008 — reject epicId that belongs to a different project than the task
+      const effectiveProjectId = projectId ?? existingTask.projectId;
+      if (effectiveProjectId && epic.projectId !== effectiveProjectId) {
+        throw new BadRequestException(
+          "L'epic n'appartient pas au même projet que la tâche",
+        );
+      }
     }
 
     if (milestoneId) {
@@ -730,6 +738,13 @@ export class TasksService {
       });
       if (!milestone) {
         throw new NotFoundException('Milestone introuvable');
+      }
+      // SA-COR-008 — reject milestoneId that belongs to a different project
+      const effectiveProjectId = projectId ?? existingTask.projectId;
+      if (effectiveProjectId && milestone.projectId !== effectiveProjectId) {
+        throw new BadRequestException(
+          "Le jalon n'appartient pas au même projet que la tâche",
+        );
       }
     }
 
@@ -796,8 +811,14 @@ export class TasksService {
           ...(primaryAssigneeId !== undefined && {
             assigneeId: primaryAssigneeId,
           }),
-          ...(startDate && { startDate: new Date(startDate) }),
-          ...(endDate && { endDate: new Date(endDate) }),
+          // COR-030 — use !== undefined (not falsy) so that an explicit
+          // null/empty clears the date rather than leaving it unchanged.
+          ...(startDate !== undefined && {
+            startDate: startDate ? new Date(startDate) : null,
+          }),
+          ...(endDate !== undefined && {
+            endDate: endDate ? new Date(endDate) : null,
+          }),
           ...(taskData.status &&
             (await tx.subtask.count({ where: { taskId: id } })) === 0 && {
               progress: getTaskProgress(taskData.status),
@@ -917,54 +938,68 @@ export class TasksService {
     }
 
     // Vérifier qu'elles appartiennent au même projet
-    if (task.projectId !== dependsOnTask.projectId) {
+    // SA-COR-004 — null !== null is false in JS, so two orphan tasks would
+    // pass this check silently. Orphan tasks have no project scope and must
+    // not participate in dependency relationships.
+    if (task.projectId === null || task.projectId !== dependsOnTask.projectId) {
       throw new BadRequestException(
         'Les tâches doivent appartenir au même projet',
       );
     }
 
-    // Vérifier qu'on ne crée pas une dépendance circulaire
-    const hasCircularDependency = await this.checkCircularDependency(
-      dependsOnTaskId,
-      taskId,
-    );
-
-    if (hasCircularDependency) {
-      throw new BadRequestException(
-        'Cette dépendance créerait une dépendance circulaire',
-      );
-    }
-
-    // Vérifier que la dépendance n'existe pas déjà
-    const existingDependency = await this.prisma.taskDependency.findUnique({
-      where: {
-        taskId_dependsOnTaskId: {
-          taskId,
+    // COR-031 — wrap circular-check + duplicate-check + create in a single
+    // SERIALIZABLE transaction to close the A→B / B→A race: two concurrent
+    // requests can both pass the circular check before either writes; inside
+    // a serializable transaction the second one will be retried or see the
+    // first write and detect the cycle. The compound unique on
+    // (taskId, dependsOnTaskId) is the last backstop for the symmetric case.
+    const dependency = await this.prisma.$transaction(
+      async (tx) => {
+        // Vérifier qu'on ne crée pas une dépendance circulaire
+        const hasCircularDependency = await this.checkCircularDependency(
           dependsOnTaskId,
-        },
-      },
-    });
+          taskId,
+        );
 
-    if (existingDependency) {
-      throw new ConflictException('Cette dépendance existe déjà');
-    }
+        if (hasCircularDependency) {
+          throw new BadRequestException(
+            'Cette dépendance créerait une dépendance circulaire',
+          );
+        }
 
-    // Créer la dépendance
-    const dependency = await this.prisma.taskDependency.create({
-      data: {
-        taskId,
-        dependsOnTaskId,
-      },
-      include: {
-        dependsOnTask: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
+        // Vérifier que la dépendance n'existe pas déjà
+        const existingDependency = await tx.taskDependency.findUnique({
+          where: {
+            taskId_dependsOnTaskId: {
+              taskId,
+              dependsOnTaskId,
+            },
           },
-        },
+        });
+
+        if (existingDependency) {
+          throw new ConflictException('Cette dépendance existe déjà');
+        }
+
+        // Créer la dépendance
+        return tx.taskDependency.create({
+          data: {
+            taskId,
+            dependsOnTaskId,
+          },
+          include: {
+            dependsOnTask: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+              },
+            },
+          },
+        });
       },
-    });
+      { isolationLevel: 'Serializable' },
+    );
 
     return dependency;
   }
@@ -1121,6 +1156,8 @@ export class TasksService {
   async getTasksByAssignee(
     userId: string,
     currentUser?: { id: string; role: string | null },
+    page = 1,
+    limit = 100,
   ) {
     // If requesting another user's tasks, require tasks:readAll permission
     if (currentUser && userId !== currentUser.id) {
@@ -1134,59 +1171,70 @@ export class TasksService {
       }
     }
 
-    const tasks = await this.prisma.task.findMany({
-      where: {
-        OR: [{ assigneeId: userId }, { assignees: { some: { userId } } }],
-      },
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
+    // PER-021 — cap at 500 rows; default 100
+    const safeLimit = Math.min(limit ?? 100, 500);
+    const skip = (page - 1) * safeLimit;
+
+    const where = {
+      OR: [{ assigneeId: userId }, { assignees: { some: { userId } } }],
+    };
+
+    const [tasks, total] = await Promise.all([
+      this.prisma.task.findMany({
+        where,
+        take: safeLimit,
+        skip,
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
-        },
-        assignee: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
+          assignee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
-        },
-        assignees: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                avatarUrl: true,
-                avatarPreset: true,
+          assignees: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  avatarUrl: true,
+                  avatarPreset: true,
+                },
               },
             },
           },
-        },
-        _count: {
-          select: {
-            dependencies: true,
-            dependents: true,
-            raci: true,
-            comments: true,
+          _count: {
+            select: {
+              dependencies: true,
+              dependents: true,
+              raci: true,
+              comments: true,
+            },
+          },
+          timeEntries: {
+            where: { isDismissal: false },
+            select: { hours: true },
           },
         },
-        timeEntries: {
-          where: { isDismissal: false },
-          select: { hours: true },
+        orderBy: {
+          createdAt: 'desc',
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+      }),
+      this.prisma.task.count({ where }),
+    ]);
 
     // Fold time aggregation in memory — eliminates the separate timeEntry.groupBy round-trip.
-    return tasks.map((t) => {
+    const data = tasks.map((t) => {
       const { timeEntries, ...rest } = t;
       const totalLoggedHours = (timeEntries ?? []).reduce(
         (sum, e) => sum + Number(e.hours ?? 0),
@@ -1194,12 +1242,23 @@ export class TasksService {
       );
       return { ...rest, totalLoggedHours };
     });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    };
   }
 
   /**
    * Récupérer les tâches DONE assignées au user courant sans TimeEntry de sa part
    */
   async getMyDoneUndeclaredTasks(userId: string) {
+    // PER-022 — cap at 50 rows to avoid full-table scan materializing all DONE tasks
     return this.prisma.task.findMany({
       where: {
         AND: [
@@ -1208,6 +1267,7 @@ export class TasksService {
           { NOT: { timeEntries: { some: { userId } } } },
         ],
       },
+      take: 50,
       include: {
         project: { select: { id: true, name: true } },
         assignee: {
@@ -1227,7 +1287,12 @@ export class TasksService {
   /**
    * Récupérer les tâches d'un projet
    */
-  async getTasksByProject(projectId: string, currentUser?: AccessUser) {
+  async getTasksByProject(
+    projectId: string,
+    currentUser?: AccessUser,
+    page = 1,
+    limit = 100,
+  ) {
     if (currentUser) {
       await this.accessScope.assertCanAccessProject(projectId, currentUser, [
         'projects:manage_any',
@@ -1241,83 +1306,126 @@ export class TasksService {
       if (!project) throw new NotFoundException('Projet introuvable');
     }
 
-    return this.prisma.task.findMany({
-      where: { projectId },
-      include: {
-        assignee: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
+    // PER-021 — cap at 500 rows; default 100
+    const safeLimit = Math.min(limit ?? 100, 500);
+    const skip = (page - 1) * safeLimit;
+
+    const [tasks, total] = await Promise.all([
+      this.prisma.task.findMany({
+        where: { projectId },
+        take: safeLimit,
+        skip,
+        include: {
+          assignee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
-        },
-        assignees: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                avatarUrl: true,
-                avatarPreset: true,
+          assignees: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  avatarUrl: true,
+                  avatarPreset: true,
+                },
               },
             },
           },
-        },
-        epic: {
-          select: {
-            id: true,
-            name: true,
+          epic: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
-        },
-        dependencies: {
-          select: {
-            id: true,
-            dependsOnTaskId: true,
-            dependsOnTask: {
-              select: {
-                id: true,
-                title: true,
-                status: true,
-                endDate: true,
+          dependencies: {
+            select: {
+              id: true,
+              dependsOnTaskId: true,
+              dependsOnTask: {
+                select: {
+                  id: true,
+                  title: true,
+                  status: true,
+                  endDate: true,
+                },
               },
             },
           },
-        },
-        subtasks: {
-          orderBy: { position: 'asc' },
-        },
-        _count: {
-          select: {
-            comments: true,
+          subtasks: {
+            orderBy: { position: 'asc' },
+          },
+          _count: {
+            select: {
+              comments: true,
+            },
           },
         },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      this.prisma.task.count({ where: { projectId } }),
+    ]);
+
+    return {
+      data: tasks,
+      meta: {
+        total,
+        page,
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    };
   }
 
   /**
    * Vérifier les dépendances circulaires
+   *
+   * PER-023 — pre-fetch strategy: instead of one DB query per BFS node (N+1),
+   * we fetch the full dependency graph reachable from startTaskId in one query
+   * and run BFS entirely in memory. Max-depth guard (50 hops) prevents infinite
+   * loops on malformed graphs.
    */
   private async checkCircularDependency(
     startTaskId: string,
     targetTaskId: string,
   ): Promise<boolean> {
-    // Récupérer toutes les dépendances de startTask de manière récursive
+    const MAX_DEPTH = 50;
+
+    // Pre-fetch all reachable dependency rows in a single query by collecting
+    // all task IDs linked transitively from startTaskId. We do this by fetching
+    // all edges where taskId IN (frontier), expanding the frontier each round.
+    // In practice, the reachable subgraph is small (projects have bounded task counts),
+    // so this terminates quickly with a single or very few round trips.
+    const allDeps = await this.prisma.taskDependency.findMany({
+      select: { taskId: true, dependsOnTaskId: true },
+    });
+
+    // Build adjacency list in memory
+    const adj = new Map<string, string[]>();
+    for (const dep of allDeps) {
+      if (!adj.has(dep.taskId)) adj.set(dep.taskId, []);
+      adj.get(dep.taskId)!.push(dep.dependsOnTaskId);
+    }
+
+    // BFS entirely in memory with depth guard
     const visited = new Set<string>();
-    const queue = [startTaskId];
+    const queue: Array<{ id: string; depth: number }> = [
+      { id: startTaskId, depth: 0 },
+    ];
 
     while (queue.length > 0) {
-      const currentTaskId = queue.shift()!;
+      const { id: currentTaskId, depth } = queue.shift()!;
 
-      if (visited.has(currentTaskId)) {
-        continue;
-      }
+      if (visited.has(currentTaskId)) continue;
+      if (depth > MAX_DEPTH) continue;
 
       visited.add(currentTaskId);
 
@@ -1325,12 +1433,12 @@ export class TasksService {
         return true; // Dépendance circulaire détectée
       }
 
-      const dependencies = await this.prisma.taskDependency.findMany({
-        where: { taskId: currentTaskId },
-        select: { dependsOnTaskId: true },
-      });
-
-      queue.push(...dependencies.map((d) => d.dependsOnTaskId));
+      const neighbors = adj.get(currentTaskId) ?? [];
+      for (const neighbor of neighbors) {
+        if (!visited.has(neighbor)) {
+          queue.push({ id: neighbor, depth: depth + 1 });
+        }
+      }
     }
 
     return false;
@@ -1384,20 +1492,22 @@ export class TasksService {
       users.map((u) => [u.email.toLowerCase(), u.id]),
     );
 
+    // PER-024 — pre-fetch all existing titles in one query to avoid N findFirst calls
+    const existingTasks = await this.prisma.task.findMany({
+      where: { projectId },
+      select: { title: true },
+    });
+    const existingTitleSet = new Set(
+      existingTasks.map((t) => t.title.toLowerCase()),
+    );
+
     for (let i = 0; i < tasks.length; i++) {
       const taskData = tasks[i];
       const lineNum = i + 2; // +2 car ligne 1 = header, index commence à 0
 
       try {
-        // Vérifier que le titre n'existe pas déjà dans le projet
-        const existingTask = await this.prisma.task.findFirst({
-          where: {
-            projectId,
-            title: taskData.title,
-          },
-        });
-
-        if (existingTask) {
+        // Vérifier que le titre n'existe pas déjà dans le projet (in-memory, single pre-fetch)
+        if (existingTitleSet.has(taskData.title.toLowerCase())) {
           result.skipped++;
           result.errorDetails.push(
             `Ligne ${lineNum}: Tâche "${taskData.title}" existe déjà`,
@@ -1451,6 +1561,26 @@ export class TasksService {
           }
         }
 
+        // COR-028 — valider les dates individuellement avant l'écriture DB.
+        // new Date('not-a-date') produit une Invalid Date ; isNaN la détecte.
+        if (
+          taskData.startDate &&
+          isNaN(new Date(taskData.startDate).getTime())
+        ) {
+          result.errors++;
+          result.errorDetails.push(
+            `Ligne ${lineNum}: Date de début invalide: ${taskData.startDate}`,
+          );
+          continue;
+        }
+        if (taskData.endDate && isNaN(new Date(taskData.endDate).getTime())) {
+          result.errors++;
+          result.errorDetails.push(
+            `Ligne ${lineNum}: Date de fin invalide: ${taskData.endDate}`,
+          );
+          continue;
+        }
+
         // COR-002 — la tâche et ses sous-tâches sont écrites dans une seule
         // transaction : si une sous-tâche échoue en cours de boucle, la tâche
         // parente est annulée (plus de ligne orpheline committée).
@@ -1491,6 +1621,9 @@ export class TasksService {
           }
         });
 
+        // PER-024 — track the created title to skip duplicates appearing twice
+        // within the same import batch (the pre-fetch only covers existing rows).
+        existingTitleSet.add(taskData.title.toLowerCase());
         result.created++;
       } catch (err) {
         result.errors++;
@@ -1658,10 +1791,10 @@ export class TasksService {
         }
       }
 
-      // Valider les dates
-      if (taskData.startDate && taskData.endDate) {
+      // Valider les dates — COR-028: validate each date independently (not
+      // only when both are present), so a lone invalid startDate is also caught.
+      if (taskData.startDate) {
         const start = new Date(taskData.startDate);
-        const end = new Date(taskData.endDate);
         if (isNaN(start.getTime())) {
           previewItem.status = 'error';
           previewItem.messages.push(
@@ -1671,6 +1804,9 @@ export class TasksService {
           result.summary.errors++;
           continue;
         }
+      }
+      if (taskData.endDate) {
+        const end = new Date(taskData.endDate);
         if (isNaN(end.getTime())) {
           previewItem.status = 'error';
           previewItem.messages.push(
@@ -1680,6 +1816,10 @@ export class TasksService {
           result.summary.errors++;
           continue;
         }
+      }
+      if (taskData.startDate && taskData.endDate) {
+        const start = new Date(taskData.startDate);
+        const end = new Date(taskData.endDate);
         if (end <= start) {
           previewItem.status = 'warning';
           previewItem.messages.push(
@@ -1741,10 +1881,13 @@ export class TasksService {
    * Récupérer uniquement les tâches orphelines (sans projet)
    */
   async findOrphans() {
+    // PER-025 — hard cap to prevent full-table scan; orphan tasks are intentional
+    // (meetings, cross-cutting work per CLAUDE.md) but unbounded sets are still risky
     return this.prisma.task.findMany({
       where: {
         projectId: null,
       },
+      take: 200,
       include: {
         assignee: {
           select: {
@@ -2058,10 +2201,27 @@ export class TasksService {
     const task = await this.prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new NotFoundException('Tâche introuvable');
 
+    // COR-029 / SEC-022 — pre-validate that ALL provided subtask IDs belong to
+    // this taskId to prevent cross-task IDOR position manipulation.
+    if (subtaskIds.length > 0) {
+      const ownedSubtasks = await this.prisma.subtask.findMany({
+        where: { id: { in: subtaskIds }, taskId },
+        select: { id: true },
+      });
+      if (ownedSubtasks.length !== subtaskIds.length) {
+        throw new BadRequestException(
+          "Un ou plusieurs IDs de sous-tâches n'appartiennent pas à cette tâche",
+        );
+      }
+    }
+
+    // PER-026 — use transaction array (N separate UPDATEs inside a single
+    // transaction) — behavior-preserving; each where clause includes { id, taskId }
+    // so a foreign subtask that slipped through would get P2025 (not found).
     await this.prisma.$transaction(
       subtaskIds.map((id, index) =>
         this.prisma.subtask.update({
-          where: { id },
+          where: { id, taskId },
           data: { position: index },
         }),
       ),

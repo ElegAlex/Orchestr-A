@@ -386,9 +386,10 @@ describe('TasksService', () => {
         '2026-04-19',
       );
 
+      // PER-027: limit=1000 is capped at 100 (hard cap lowered from 1000)
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          take: 1000,
+          take: 100,
           skip: 0,
         }),
       );
@@ -937,7 +938,7 @@ describe('TasksService', () => {
   });
 
   describe('getTasksByAssignee', () => {
-    it('should return tasks assigned to user with totalLoggedHours=0 when no entries', async () => {
+    it('should return paginated tasks assigned to user with totalLoggedHours=0 when no entries', async () => {
       const mockTasks = [
         {
           id: 'task-1',
@@ -954,14 +955,21 @@ describe('TasksService', () => {
       ];
 
       mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
+      mockPrismaService.task.count.mockResolvedValue(2);
 
       const result = await service.getTasksByAssignee('user-1');
 
-      expect(result).toHaveLength(2);
-      expect(result[0]).toMatchObject({ id: 'task-1', totalLoggedHours: 0 });
-      expect(result[1]).toMatchObject({ id: 'task-2', totalLoggedHours: 0 });
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0]).toMatchObject({
+        id: 'task-1',
+        totalLoggedHours: 0,
+      });
+      expect(result.data[1]).toMatchObject({
+        id: 'task-2',
+        totalLoggedHours: 0,
+      });
       // timeEntries must be stripped from the response shape
-      expect(result[0]).not.toHaveProperty('timeEntries');
+      expect(result.data[0]).not.toHaveProperty('timeEntries');
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -992,11 +1000,12 @@ describe('TasksService', () => {
       ];
 
       mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
+      mockPrismaService.task.count.mockResolvedValue(2);
       mockPrismaService.timeEntry.groupBy.mockClear();
 
       const result = await service.getTasksByAssignee('user-1');
 
-      expect(result).toEqual([
+      expect(result.data).toEqual([
         expect.objectContaining({ id: 'task-1', totalLoggedHours: 3.5 }),
         expect.objectContaining({ id: 'task-2', totalLoggedHours: 0 }),
       ]);
@@ -1005,11 +1014,12 @@ describe('TasksService', () => {
 
     it('should skip groupBy call when no tasks returned', async () => {
       mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.task.count.mockResolvedValue(0);
       mockPrismaService.timeEntry.groupBy.mockClear();
 
       const result = await service.getTasksByAssignee('user-1');
 
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
       expect(mockPrismaService.timeEntry.groupBy).not.toHaveBeenCalled();
     });
 
@@ -1025,12 +1035,13 @@ describe('TasksService', () => {
         },
       ];
       mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
+      mockPrismaService.task.count.mockResolvedValue(1);
       mockPrismaService.timeEntry.groupBy.mockClear();
 
       const result = await service.getTasksByAssignee('user-1');
 
-      expect(result).toHaveLength(1);
-      expect(result[0].totalLoggedHours).toBeCloseTo(3.5);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].totalLoggedHours).toBeCloseTo(3.5);
       expect(mockPrismaService.timeEntry.groupBy).not.toHaveBeenCalled();
     });
   });
@@ -1043,33 +1054,36 @@ describe('TasksService', () => {
       const result = await service.getMyDoneUndeclaredTasks('user-1');
 
       expect(result).toEqual(mockTasks);
-      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith({
-        where: {
-          AND: [
-            { status: 'DONE' },
-            {
-              OR: [
-                { assigneeId: 'user-1' },
-                { assignees: { some: { userId: 'user-1' } } },
-              ],
-            },
-            { NOT: { timeEntries: { some: { userId: 'user-1' } } } },
-          ],
-        },
-        include: {
-          project: { select: { id: true, name: true } },
-          assignee: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            AND: [
+              { status: 'DONE' },
+              {
+                OR: [
+                  { assigneeId: 'user-1' },
+                  { assignees: { some: { userId: 'user-1' } } },
+                ],
+              },
+              { NOT: { timeEntries: { some: { userId: 'user-1' } } } },
+            ],
+          },
+          include: {
+            project: { select: { id: true, name: true } },
+            assignee: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
+              },
             },
           },
-        },
-        orderBy: { endDate: 'desc' },
-      });
+          orderBy: { endDate: 'desc' },
+          take: 50,
+        }),
+      );
     });
 
     it('should return an empty array when no tasks match', async () => {
@@ -1082,7 +1096,7 @@ describe('TasksService', () => {
   });
 
   describe('getTasksByProject', () => {
-    it('should return tasks for a project', async () => {
+    it('should return paginated tasks for a project', async () => {
       const mockProject = { id: 'project-1' };
       const mockTasks = [
         { id: 'task-1', projectId: 'project-1' },
@@ -1091,10 +1105,12 @@ describe('TasksService', () => {
 
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.task.findMany.mockResolvedValue(mockTasks);
+      mockPrismaService.task.count.mockResolvedValue(2);
 
       const result = await service.getTasksByProject('project-1');
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
+      expect(result).toHaveProperty('meta');
     });
 
     it('should throw error when project not found', async () => {
@@ -1122,7 +1138,8 @@ describe('TasksService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.milestone.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      // PER-024: pre-fetch of existing titles replaces per-row findFirst
+      mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
 
       const tasks = [{ title: 'New Task' }];
@@ -1169,10 +1186,10 @@ describe('TasksService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.milestone.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.task.findFirst.mockResolvedValue({
-        id: 'existing-task',
-        title: 'Existing Task',
-      });
+      // Pre-fetch returns the existing task title
+      mockPrismaService.task.findMany.mockResolvedValue([
+        { title: 'Existing Task' },
+      ]);
 
       const tasks = [{ title: 'Existing Task' }];
 
@@ -1195,7 +1212,7 @@ describe('TasksService', () => {
           isActive: true,
         },
       ]);
-      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
 
       const tasks = [
@@ -1218,7 +1235,7 @@ describe('TasksService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.milestone.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
 
       const tasks = [
         {
@@ -1240,7 +1257,7 @@ describe('TasksService', () => {
         { id: 'ms-1', name: 'Sprint 1', projectId },
       ]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
 
       const tasks = [
@@ -1263,7 +1280,7 @@ describe('TasksService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.milestone.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
 
       const tasks = [
         {
@@ -1283,7 +1300,7 @@ describe('TasksService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.milestone.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
 
       const tasks = [
@@ -1307,7 +1324,7 @@ describe('TasksService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.milestone.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
 
       const tasks = [
@@ -1331,7 +1348,7 @@ describe('TasksService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.milestone.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.create.mockRejectedValue(
         new Error('Database error'),
       );
@@ -1349,10 +1366,8 @@ describe('TasksService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.milestone.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.task.findFirst
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'existing', title: 'Task B' })
-        .mockResolvedValueOnce(null);
+      // Pre-fetch returns 'Task B' as existing — Task A and C are new
+      mockPrismaService.task.findMany.mockResolvedValue([{ title: 'Task B' }]);
       mockPrismaService.task.create.mockResolvedValue({ id: 'new' });
 
       const tasks = [
@@ -1371,7 +1386,7 @@ describe('TasksService', () => {
       mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
       mockPrismaService.milestone.findMany.mockResolvedValue([]);
       mockPrismaService.user.findMany.mockResolvedValue([]);
-      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
       mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
 
       const tasks = [
@@ -2121,6 +2136,373 @@ describe('TasksService', () => {
         .mock.calls[0];
       expect(Array.isArray(arg)).toBe(true);
       expect(arg).toHaveLength(SUBTASK_IDS.length);
+    });
+  });
+
+  // ─── PER-027 ──────────────────────────────────────────────────────────────
+  describe('PER-027 — findAll hard cap at 100', () => {
+    it('PER-027 — GET /tasks?limit=1000 is capped at 100 (not 1000)', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.task.count.mockResolvedValue(0);
+
+      const result = await service.findAll(1, 1000);
+
+      // Before fix: meta.limit === 1000. After fix: meta.limit === 100.
+      expect(result.meta.limit).toBe(100);
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 100 }),
+      );
+    });
+  });
+
+  // ─── PER-021 ──────────────────────────────────────────────────────────────
+  describe('PER-021 — getTasksByAssignee pagination', () => {
+    it('PER-021 — getTasksByAssignee returns meta + capped data, not an unbounded array', async () => {
+      const manyTasks = Array.from({ length: 10 }, (_, i) => ({
+        id: `t${i}`,
+        assigneeId: 'user-1',
+        timeEntries: [],
+      }));
+      mockPrismaService.task.findMany.mockResolvedValue(manyTasks);
+      mockPrismaService.task.count.mockResolvedValue(600);
+
+      const result = await service.getTasksByAssignee(
+        'user-1',
+        undefined,
+        1,
+        100,
+      );
+
+      // Before fix: plain array returned. After fix: { data, meta }.
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('meta');
+      expect((result as any).meta.total).toBe(600);
+      expect((result as any).meta.limit).toBe(100);
+    });
+  });
+
+  describe('PER-021 — getTasksByProject pagination', () => {
+    it('PER-021 — getTasksByProject returns meta + capped data, not an unbounded array', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.task.count.mockResolvedValue(600);
+
+      const result = await service.getTasksByProject(
+        'project-1',
+        undefined,
+        1,
+        100,
+      );
+
+      // Before fix: plain array returned. After fix: { data, meta }.
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('meta');
+      expect((result as any).meta.total).toBe(600);
+      expect((result as any).meta.limit).toBe(100);
+    });
+  });
+
+  // ─── PER-022 ──────────────────────────────────────────────────────────────
+  describe('PER-022 — getMyDoneUndeclaredTasks cap at 50', () => {
+    it('PER-022 — findMany is called with take: 50 to cap DONE-undeclared result set', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      await service.getMyDoneUndeclaredTasks('user-1');
+
+      // Before fix: no take clause. After fix: take: 50.
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 50 }),
+      );
+    });
+  });
+
+  // ─── PER-025 ──────────────────────────────────────────────────────────────
+  describe('PER-025 — findOrphans cap at 200', () => {
+    it('PER-025 — findOrphans issues take: 200 to prevent unbounded orphan scan', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      await service.findOrphans();
+
+      // Before fix: no take clause. After fix: take: 200.
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 200 }),
+      );
+    });
+  });
+
+  // ─── PER-024 ──────────────────────────────────────────────────────────────
+  describe('PER-024 — importTasks pre-fetches existing titles (no N findFirst calls)', () => {
+    it('PER-024 — importTasks uses task.findMany for pre-fetch, not per-row findFirst', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.task.create.mockResolvedValue({ id: 'new' });
+
+      await service.importTasks('project-1', [
+        { title: 'Task A' } as any,
+        { title: 'Task B' } as any,
+        { title: 'Task C' } as any,
+      ]);
+
+      // Before fix: task.findFirst called N times (once per row).
+      // After fix: task.findMany called once for pre-fetch; findFirst not called.
+      expect(mockPrismaService.task.findFirst).not.toHaveBeenCalled();
+      // findMany called once for pre-fetch (not for milestones/users — those use milestone/user)
+      const taskFindManyCalls = (
+        mockPrismaService.task.findMany as ReturnType<typeof vi.fn>
+      ).mock.calls;
+      expect(taskFindManyCalls.length).toBe(1);
+    });
+  });
+
+  // ─── SA-COR-004 ───────────────────────────────────────────────────────────
+  describe('SA-COR-004 — addDependency rejects orphan-orphan dependencies', () => {
+    it('SA-COR-004 — addDependency(orphan1, orphan2) throws BadRequestException', async () => {
+      const orphan1 = { id: 'orphan-1', projectId: null };
+      const orphan2 = { id: 'orphan-2', projectId: null };
+
+      mockPrismaService.task.findUnique
+        .mockResolvedValueOnce(orphan1)
+        .mockResolvedValueOnce(orphan2);
+
+      // Before fix: null !== null is false → guard passes → dependency created.
+      // After fix: projectId === null → BadRequestException thrown.
+      await expect(
+        service.addDependency('orphan-1', { dependsOnId: 'orphan-2' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('SA-COR-004 — addDependency(projectTask, orphanTask) throws BadRequestException', async () => {
+      const projectTask = { id: 'task-1', projectId: 'project-1' };
+      const orphanTask = { id: 'orphan-1', projectId: null };
+
+      mockPrismaService.task.findUnique
+        .mockResolvedValueOnce(projectTask)
+        .mockResolvedValueOnce(orphanTask);
+
+      await expect(
+        service.addDependency('task-1', { dependsOnId: 'orphan-1' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ─── SA-COR-008 ───────────────────────────────────────────────────────────
+  describe('SA-COR-008 — update rejects epic/milestone from a different project', () => {
+    it('SA-COR-008 — PATCH with epicId from a different project throws BadRequestException', async () => {
+      const existingTask = {
+        id: 'task-1',
+        projectId: 'project-1',
+        project: { members: [] },
+        assignees: [],
+      };
+      const epicFromOtherProject = { id: 'epic-bad', projectId: 'project-2' };
+
+      mockPrismaService.task.findUnique.mockResolvedValue(existingTask);
+      mockPrismaService.epic.findUnique.mockResolvedValue(epicFromOtherProject);
+
+      // Before fix: no cross-project check → DB trigger fires → HTTP 500.
+      // After fix: service throws BadRequestException → HTTP 400.
+      await expect(
+        service.update('task-1', { epicId: 'epic-bad' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('SA-COR-008 — PATCH with milestoneId from a different project throws BadRequestException', async () => {
+      const existingTask = {
+        id: 'task-1',
+        projectId: 'project-1',
+        project: { members: [] },
+        assignees: [],
+      };
+      const milestoneFromOtherProject = {
+        id: 'ms-bad',
+        projectId: 'project-2',
+      };
+
+      mockPrismaService.task.findUnique.mockResolvedValue(existingTask);
+      mockPrismaService.milestone.findUnique.mockResolvedValue(
+        milestoneFromOtherProject,
+      );
+
+      await expect(
+        service.update('task-1', { milestoneId: 'ms-bad' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ─── COR-030 ──────────────────────────────────────────────────────────────
+  describe('COR-030 — update allows clearing startDate/endDate to null', () => {
+    it('COR-030 — PATCH with endDate: null clears the date (does not leave it unchanged)', async () => {
+      const existingTask = {
+        id: 'task-1',
+        projectId: 'project-1',
+        endDate: new Date('2025-12-31'),
+        project: { members: [] },
+        assignees: [],
+      };
+      mockPrismaService.task.findUnique.mockResolvedValue(existingTask);
+      mockPrismaService.task.update.mockResolvedValue({
+        id: 'task-1',
+        endDate: null,
+      });
+
+      await service.update('task-1', { endDate: null as unknown as string });
+
+      // Before fix: falsy check skips undefined AND null → endDate not sent to DB.
+      // After fix: undefined=skip, null=clear → endDate: null passed to DB.
+      const callData = mockPrismaService.task.update.mock.calls[0][0] as {
+        data: Record<string, unknown>;
+      };
+      expect(callData.data).toHaveProperty('endDate', null);
+    });
+  });
+
+  // ─── COR-028 ──────────────────────────────────────────────────────────────
+  describe('COR-028 — importTasks validates dates individually', () => {
+    it('COR-028 — importTasks with startDate=not-a-date and no endDate adds a per-row error', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      const result = await service.importTasks('project-1', [
+        { title: 'Task', startDate: 'not-a-date' } as any,
+      ]);
+
+      // Before fix: passed to new Date() silently → Prisma error → generic catch.
+      // After fix: per-row error with clear message before DB hit.
+      expect(result.errors).toBe(1);
+      expect(result.created).toBe(0);
+      expect(result.errorDetails[0]).toMatch(/Date de début invalide/);
+      // DB create must NOT have been called
+      expect(mockPrismaService.task.create).not.toHaveBeenCalled();
+    });
+
+    it('COR-028 — validateImport flags a lone invalid startDate (not just when both dates present)', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      const result = await service.validateImport('project-1', [
+        { title: 'Task', startDate: 'not-a-date' } as any,
+      ]);
+
+      // Before fix: validation only runs when BOTH dates present → lone bad
+      // startDate passes dry-run and then fails in importTasks DB call.
+      // After fix: each date is validated independently.
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0].messages[0]).toMatch(/Date de début invalide/);
+    });
+  });
+
+  // ─── COR-029 / SEC-022 ────────────────────────────────────────────────────
+  describe('COR-029 / SEC-022 — reorderSubtasks rejects foreign subtask IDs', () => {
+    it('SEC-022 — reorderSubtasks with a subtaskId from a different task throws BadRequestException', async () => {
+      const TASK_ID = 'task-1';
+      const FOREIGN_SUBTASK_ID = 'sub-from-task-2';
+
+      mockPrismaService.task.findUnique.mockResolvedValue({ id: TASK_ID });
+      // Owned subtasks: only 0 of the 1 provided ID belongs to TASK_ID
+      mockPrismaService.subtask.findMany.mockResolvedValueOnce([]); // pre-validation: 0 owned
+
+      // Before fix: position of sub-from-task-2 is silently overwritten.
+      // After fix: BadRequestException thrown.
+      await expect(
+        service.reorderSubtasks(TASK_ID, [FOREIGN_SUBTASK_ID]),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('COR-029 — reorderSubtasks update where clause includes taskId as extra safety', async () => {
+      const TASK_ID = 'task-reorder';
+      const SUBTASK_IDS = ['sub-a', 'sub-b'];
+
+      mockPrismaService.task.findUnique.mockResolvedValue({ id: TASK_ID });
+      // Pre-validation: both subtasks belong to TASK_ID
+      mockPrismaService.subtask.findMany.mockResolvedValueOnce(
+        SUBTASK_IDS.map((id) => ({ id, taskId: TASK_ID })),
+      );
+      // getSubtasks call
+      mockPrismaService.subtask.findMany.mockResolvedValueOnce([]);
+      mockPrismaService.subtask.update.mockResolvedValue({});
+
+      await service.reorderSubtasks(TASK_ID, SUBTASK_IDS);
+
+      // Each update must include taskId in the where clause
+      const updateCalls = mockPrismaService.subtask.update.mock.calls as Array<
+        [{ where: Record<string, unknown> }]
+      >;
+      for (const [call] of updateCalls) {
+        expect(call.where).toMatchObject({ taskId: TASK_ID });
+      }
+    });
+  });
+
+  // ─── COR-031 ──────────────────────────────────────────────────────────────
+  describe('COR-031 — addDependency wraps circular-check+create in a transaction', () => {
+    it('COR-031 — addDependency calls $transaction to serialise circular-check and create', async () => {
+      const task = { id: 'task-1', projectId: 'project-1' };
+      const dependsOnTask = { id: 'task-2', projectId: 'project-1' };
+      const dependency = { taskId: 'task-1', dependsOnTaskId: 'task-2' };
+
+      mockPrismaService.task.findUnique
+        .mockResolvedValueOnce(task)
+        .mockResolvedValueOnce(dependsOnTask);
+      // Pre-fetch for checkCircularDependency (single findMany)
+      mockPrismaService.taskDependency.findMany.mockResolvedValue([]);
+      mockPrismaService.taskDependency.findUnique.mockResolvedValue(null);
+      mockPrismaService.taskDependency.create.mockResolvedValue(dependency);
+
+      await service.addDependency('task-1', { dependsOnId: 'task-2' });
+
+      // Before fix: no $transaction call (direct create). After fix: $transaction called.
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ─── PER-023 ──────────────────────────────────────────────────────────────
+  describe('PER-023 — checkCircularDependency uses a single pre-fetch', () => {
+    it('PER-023 — circular-check issues exactly one taskDependency.findMany (not N per node)', async () => {
+      // Discriminating graph: task-2 → task-3 (one edge).
+      // OLD code (per-node BFS): calls findMany({ where: { taskId: 'task-2' }}) →
+      //   returns the chain edge, queues task-3; then findMany({ where: { taskId: 'task-3' }}) → []
+      //   Total: 2 findMany calls → witness RED on old code.
+      // NEW code (single pre-fetch): one findMany with no where → returns all edges,
+      //   BFS runs in-memory → exactly 1 findMany call → witness GREEN.
+      const task = { id: 'task-1', projectId: 'project-1' };
+      const dependsOnTask = { id: 'task-2', projectId: 'project-1' };
+
+      mockPrismaService.task.findUnique
+        .mockResolvedValueOnce(task)
+        .mockResolvedValueOnce(dependsOnTask);
+
+      // First findMany call: the pre-fetch (new code) OR the task-2 BFS step (old code)
+      // both return the edge task-2→task-3 (no cycle toward task-1).
+      // Second findMany call (old code only): task-3 BFS step, returns empty.
+      mockPrismaService.taskDependency.findMany
+        .mockResolvedValueOnce([
+          { taskId: 'task-2', dependsOnTaskId: 'task-3' },
+        ])
+        .mockResolvedValueOnce([]);
+
+      mockPrismaService.taskDependency.findUnique.mockResolvedValue(null);
+      mockPrismaService.taskDependency.create.mockResolvedValue({});
+
+      await service.addDependency('task-1', { dependsOnId: 'task-2' });
+
+      // After fix: exactly 1 pre-fetch query (old code would issue 2).
+      const findManyCalls =
+        mockPrismaService.taskDependency.findMany.mock.calls.length;
+      expect(findManyCalls).toBe(1);
     });
   });
 });
