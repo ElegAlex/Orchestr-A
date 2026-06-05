@@ -28,10 +28,13 @@ export class MetricsInterceptor implements NestInterceptor {
     const req = context.switchToHttp().getRequest<{
       method: string;
       path: string;
+      routeOptions?: { url?: string };
     }>();
     const start = Date.now();
     const method = req.method ?? 'UNKNOWN';
-    const route = req.path ?? '/';
+    // PER-009 — use the Fastify route template (e.g. /api/projects/:id) instead of
+    // the raw runtime path, which contains UUIDs and causes unbounded Map growth.
+    const route = req.routeOptions?.url ?? req.path ?? '/';
 
     return next.handle().pipe(
       tap(() => {

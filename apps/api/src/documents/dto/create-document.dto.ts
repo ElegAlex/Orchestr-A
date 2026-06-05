@@ -6,6 +6,8 @@ import {
   IsUUID,
   IsUrl,
   IsIn,
+  IsInt,
+  Min,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -86,7 +88,10 @@ export class CreateDocumentDto {
   mimeType: string;
 
   @ApiProperty({ description: 'Taille en bytes', example: 2048576 })
-  @IsNotEmpty()
+  // COR-011: byte count must be a non-negative integer; floats and negative
+  // values are semantically invalid and would corrupt quota calculations.
+  @IsInt()
+  @Min(0)
   size: number;
 
   @ApiProperty({ description: 'ID du projet', example: 'uuid-here' })

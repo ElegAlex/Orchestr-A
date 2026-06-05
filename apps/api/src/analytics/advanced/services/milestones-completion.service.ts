@@ -72,9 +72,13 @@ export class MilestonesCompletionService {
       if (isCompleted) entry.reached++;
     }
 
-    const total = completed + overdue;
+    // `due` = milestones that have passed their deadline (completed or overdue);
+    // used as the denominator for the completion ratio.
+    const due = completed + overdue;
+    // `total` = all milestones in scope (completed + overdue + upcoming).
+    const total = due + upcoming;
     const onTime = completed;
-    const ratio = total > 0 ? onTime / total : 0;
+    const ratio = due > 0 ? onTime / due : 0;
 
     const byProject: MilestoneByProjectDto[] = Array.from(projectMap.entries())
       .map(([projectId, { name, reached, total: projectTotal }]) => ({

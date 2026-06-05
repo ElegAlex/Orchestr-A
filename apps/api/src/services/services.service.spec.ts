@@ -24,6 +24,7 @@ describe('ServicesService', () => {
     userService: {
       deleteMany: vi.fn(),
     },
+    $transaction: vi.fn(),
   };
 
   const mockService = {
@@ -286,6 +287,10 @@ describe('ServicesService', () => {
       mockPrismaService.service.findUnique.mockResolvedValue(
         mockServiceNoUsers,
       );
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
       mockPrismaService.service.delete.mockResolvedValue(mockServiceNoUsers);
 
       const result = await service.remove('service-1');
@@ -312,8 +317,11 @@ describe('ServicesService', () => {
       mockPrismaService.service.findUnique.mockResolvedValue(
         mockServiceWithUsers,
       );
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
       mockPrismaService.userService.deleteMany.mockResolvedValue({ count: 5 });
-      mockPrismaService.service.update.mockResolvedValue(mockServiceWithUsers);
       mockPrismaService.service.delete.mockResolvedValue(mockServiceWithUsers);
 
       const result = await service.remove('service-1');
@@ -322,6 +330,28 @@ describe('ServicesService', () => {
         where: { serviceId: 'service-1' },
       });
       expect(result.message).toBe('Service supprimé avec succès');
+    });
+
+    // COR-026: remove() must be atomic — all DB writes wrapped in a single
+    // prisma.$transaction() so a crash between steps cannot leave orphaned rows.
+    it('COR-026 — remove() wraps all writes in prisma.$transaction()', async () => {
+      const mockServiceWithUsers = {
+        ...mockService,
+        _count: { userServices: 3 },
+      };
+      mockPrismaService.service.findUnique.mockResolvedValue(
+        mockServiceWithUsers,
+      );
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
+      mockPrismaService.userService.deleteMany.mockResolvedValue({ count: 3 });
+      mockPrismaService.service.delete.mockResolvedValue(mockServiceWithUsers);
+
+      await service.remove('service-1');
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
     });
   });
 

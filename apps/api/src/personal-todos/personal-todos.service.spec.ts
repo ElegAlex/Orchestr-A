@@ -21,6 +21,10 @@ describe('PersonalTodosService', () => {
       deleteMany: vi.fn(),
       count: vi.fn(),
     },
+    $transaction: vi.fn(
+      async (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+        cb(mockPrismaService),
+    ),
   };
 
   const userId = 'user-1';
@@ -90,6 +94,20 @@ describe('PersonalTodosService', () => {
       await expect(
         service.create(userId, { text: 'todo 20' }),
       ).resolves.toBeDefined();
+    });
+
+    it('COR-019 — create() wraps count+create in a $transaction to prevent TOCTOU race on the 20-todo limit', async () => {
+      // Arrange: count below the limit so the guard passes
+      mockPrismaService.personalTodo.count.mockResolvedValue(5);
+      const todo = makeTodo({ text: 'concurrent todo' });
+      mockPrismaService.personalTodo.create.mockResolvedValue(todo);
+
+      // Act
+      await service.create(userId, { text: 'concurrent todo' });
+
+      // Assert: the count+create must be wrapped in a single transaction
+      // so concurrent requests cannot both read count<20 and both insert
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
     });
   });
 

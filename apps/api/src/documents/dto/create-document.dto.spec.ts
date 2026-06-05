@@ -77,3 +77,35 @@ describe('UpdateDocumentDto — SEC-009 validation propagates via PartialType', 
     ).toHaveProperty('isUrl');
   });
 });
+
+describe('CreateDocumentDto — COR-011 size field validation', () => {
+  it('COR-011 — rejects a negative size', async () => {
+    const dto = plainToInstance(CreateDocumentDto, { ...base, size: -1 });
+    const errors = await validate(dto);
+    const sizeErr = errors.find((e) => e.property === 'size');
+    expect(sizeErr?.constraints).toBeDefined();
+    expect(
+      Object.keys(sizeErr?.constraints ?? {}).some((k) =>
+        ['min', 'isInt', 'isNumber'].includes(k),
+      ),
+    ).toBe(true);
+  });
+
+  it('COR-011 — rejects a float size', async () => {
+    const dto = plainToInstance(CreateDocumentDto, { ...base, size: 3.14 });
+    const errors = await validate(dto);
+    const sizeErr = errors.find((e) => e.property === 'size');
+    expect(sizeErr?.constraints).toBeDefined();
+    expect(
+      Object.keys(sizeErr?.constraints ?? {}).some((k) =>
+        ['isInt', 'isNumber'].includes(k),
+      ),
+    ).toBe(true);
+  });
+
+  it('COR-011 — accepts size: 0 (zero-byte document)', async () => {
+    const dto = plainToInstance(CreateDocumentDto, { ...base, size: 0 });
+    const errors = await validate(dto);
+    expect(errors.find((e) => e.property === 'size')).toBeUndefined();
+  });
+});

@@ -29,21 +29,30 @@ export class PersonalTodosService {
   }
 
   async create(userId: string, dto: CreatePersonalTodoDto) {
-    // Vérifier la limite de 20 todos
-    const count = await this.prisma.personalTodo.count({
-      where: { userId },
-    });
+    // COR-019: wrap count+create in a SERIALIZABLE transaction so two
+    // concurrent requests cannot both read count<MAX and both insert,
+    // which would violate the hard 20-todo-per-user invariant.
+    return this.prisma.$transaction(
+      async (tx) => {
+        const count = await tx.personalTodo.count({
+          where: { userId },
+        });
 
-    if (count >= MAX_TODOS) {
-      throw new BadRequestException(`Limite de ${MAX_TODOS} to-dos atteinte`);
-    }
+        if (count >= MAX_TODOS) {
+          throw new BadRequestException(
+            `Limite de ${MAX_TODOS} to-dos atteinte`,
+          );
+        }
 
-    return this.prisma.personalTodo.create({
-      data: {
-        userId,
-        text: dto.text,
+        return tx.personalTodo.create({
+          data: {
+            userId,
+            text: dto.text,
+          },
+        });
       },
-    });
+      { isolationLevel: 'Serializable' },
+    );
   }
 
   async update(id: string, userId: string, dto: UpdatePersonalTodoDto) {

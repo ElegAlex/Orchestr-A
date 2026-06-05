@@ -18,6 +18,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { of } from 'rxjs';
+import { readFileSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
 import { MetricsService } from './metrics.service';
 import { MetricsController } from './metrics.controller';
 import { MetricsInterceptor } from './metrics.interceptor';
@@ -132,6 +134,51 @@ describe('MetricsController (OBS-011)', () => {
   });
 });
 
+describe('MetricsController (SEC-011)', () => {
+  let controller: MetricsController;
+  let service: MetricsService;
+  const OLD_ENV = process.env;
+
+  beforeEach(async () => {
+    process.env = { ...OLD_ENV };
+    delete process.env['METRICS_TOKEN'];
+
+    service = new MetricsService();
+
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [MetricsController],
+      providers: [{ provide: MetricsService, useValue: service }],
+    }).compile();
+    controller = module.get<MetricsController>(MetricsController);
+  });
+
+  afterEach(() => {
+    process.env = OLD_ENV;
+  });
+
+  it('SEC-011 — controller source uses timingSafeEqual (constant-time guard)', () => {
+    // Structural witness: verify the source imports and uses crypto.timingSafeEqual.
+    // This is RED on the original code (no timingSafeEqual present) and GREEN after the fix.
+    const src = readFileSync(
+      resolvePath(__dirname, 'metrics.controller.ts'),
+      'utf8',
+    );
+    expect(src).toContain('timingSafeEqual');
+    expect(src).toContain("from 'crypto'");
+    // Length guard must be present to avoid the 'buffers must be equal length' exception
+    expect(src).toMatch(/a\.length\s*!==\s*b\.length/);
+  });
+
+  it('SEC-011 — different-length token throws 401 without crashing (length guard works)', () => {
+    process.env['METRICS_TOKEN'] = 'secret123';
+    // 'Bearer short' has a different length than 'Bearer secret123'
+    // Without a length guard, timingSafeEqual would throw a RangeError
+    expect(() => controller.getMetrics('Bearer short')).toThrow(
+      UnauthorizedException,
+    );
+  });
+});
+
 describe('MetricsInterceptor (OBS-011)', () => {
   let service: MetricsService;
   let interceptor: MetricsInterceptor;
@@ -196,6 +243,41 @@ describe('MetricsInterceptor (OBS-011)', () => {
       'POST',
       '/api/tasks',
       500,
+      expect.any(Number),
+    );
+  });
+
+  it('PER-009 — uses route template from routeOptions.url instead of raw UUID path', async () => {
+    const spy = vi.spyOn(service, 'recordRequest');
+
+    const uuid = '550e8400-e29b-41d4-a716-446655440000';
+    const mockContext = {
+      getType: () => 'http',
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: 'GET',
+          path: `/api/projects/${uuid}`,
+          routeOptions: { url: '/api/projects/:id' },
+        }),
+        getResponse: () => ({ statusCode: 200 }),
+      }),
+    } as any;
+
+    const mockHandler = {
+      handle: () => of('response'),
+    };
+
+    await new Promise<void>((resolve) => {
+      interceptor.intercept(mockContext, mockHandler).subscribe({
+        complete: () => resolve(),
+      });
+    });
+
+    // Must be called with the route template, NOT the raw UUID path
+    expect(spy).toHaveBeenCalledWith(
+      'GET',
+      '/api/projects/:id',
+      200,
       expect.any(Number),
     );
   });

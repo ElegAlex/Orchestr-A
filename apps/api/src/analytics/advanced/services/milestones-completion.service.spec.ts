@@ -86,6 +86,7 @@ describe('MilestonesCompletionService', () => {
 
     const result = await service.getMilestonesCompletion();
 
+    // total = completed + overdue + upcoming = 0
     expect(result).toEqual({
       onTime: 0,
       total: 0,
@@ -135,9 +136,9 @@ describe('MilestonesCompletionService', () => {
     expect(result.completed).toBe(2);
     expect(result.overdue).toBe(1);
     expect(result.upcoming).toBe(2);
-    expect(result.total).toBe(3); // completed + overdue
+    expect(result.total).toBe(5); // true total: completed + overdue + upcoming
     expect(result.onTime).toBe(2);
-    expect(result.ratio).toBeCloseTo(2 / 3, 5);
+    expect(result.ratio).toBeCloseTo(2 / 3, 5); // ratio = completed / (completed + overdue)
   });
 
   // -------------------------------------------------------------------------
@@ -176,9 +177,10 @@ describe('MilestonesCompletionService', () => {
 
     expect(result.completed).toBe(3);
     expect(result.overdue).toBe(2);
-    expect(result.total).toBe(5);
+    expect(result.upcoming).toBe(0);
+    expect(result.total).toBe(5); // true total: 3 completed + 2 overdue + 0 upcoming
     expect(result.onTime).toBe(3);
-    expect(result.ratio).toBeCloseTo(0.6, 5);
+    expect(result.ratio).toBeCloseTo(0.6, 5); // ratio = 3 / (3 + 2)
   });
 
   // -------------------------------------------------------------------------
@@ -208,7 +210,7 @@ describe('MilestonesCompletionService', () => {
     expect(result.completed).toBe(3);
     expect(result.overdue).toBe(0);
     expect(result.upcoming).toBe(0);
-    expect(result.total).toBe(3);
+    expect(result.total).toBe(3); // true total: 3 + 0 + 0
     expect(result.onTime).toBe(3);
     expect(result.ratio).toBe(1);
   });
@@ -235,9 +237,9 @@ describe('MilestonesCompletionService', () => {
     expect(result.completed).toBe(0);
     expect(result.overdue).toBe(0);
     expect(result.upcoming).toBe(2);
-    expect(result.total).toBe(0);
+    expect(result.total).toBe(2); // true total: 0 + 0 + 2 upcoming
     expect(result.onTime).toBe(0);
-    expect(result.ratio).toBe(0);
+    expect(result.ratio).toBe(0); // ratio = 0 / (0 + 0) = 0 (no due milestones)
   });
 
   // -------------------------------------------------------------------------
@@ -307,9 +309,9 @@ describe('MilestonesCompletionService', () => {
     expect(result.completed).toBe(3);
     expect(result.overdue).toBe(1);
     expect(result.upcoming).toBe(1);
-    expect(result.total).toBe(4); // 3 completed + 1 overdue
+    expect(result.total).toBe(5); // true total: 3 completed + 1 overdue + 1 upcoming
     expect(result.onTime).toBe(3);
-    expect(result.ratio).toBeCloseTo(3 / 4, 5);
+    expect(result.ratio).toBeCloseTo(3 / 4, 5); // ratio = completed / (completed + overdue)
   });
 
   // -------------------------------------------------------------------------
@@ -329,8 +331,57 @@ describe('MilestonesCompletionService', () => {
     expect(result.overdue).toBe(1);
     expect(result.upcoming).toBe(0);
     expect(result.completed).toBe(0);
-    expect(result.total).toBe(1);
+    expect(result.total).toBe(1); // true total: 0 + 1 + 0
     expect(result.ratio).toBe(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // COR-004 — total must equal completed + overdue + upcoming (true total)
+  // -------------------------------------------------------------------------
+  it('COR-004 — total equals completed + overdue + upcoming, not just completed + overdue', async () => {
+    // 2 completed + 1 overdue + 3 upcoming → true total = 6, due = 3
+    mockPrisma.milestone.findMany.mockResolvedValue([
+      makeMilestone({
+        id: 'ms-1',
+        status: MilestoneStatus.COMPLETED,
+        dueDate: past(5),
+      }),
+      makeMilestone({
+        id: 'ms-2',
+        status: MilestoneStatus.COMPLETED,
+        dueDate: past(3),
+      }),
+      makeMilestone({
+        id: 'ms-3',
+        status: MilestoneStatus.PENDING,
+        dueDate: past(2),
+      }), // overdue
+      makeMilestone({
+        id: 'ms-4',
+        status: MilestoneStatus.IN_PROGRESS,
+        dueDate: future(7),
+      }), // upcoming
+      makeMilestone({
+        id: 'ms-5',
+        status: MilestoneStatus.PENDING,
+        dueDate: future(3),
+      }), // upcoming
+      makeMilestone({
+        id: 'ms-6',
+        status: MilestoneStatus.DELAYED,
+        dueDate: future(1),
+      }), // upcoming
+    ]);
+
+    const result = await service.getMilestonesCompletion();
+
+    expect(result.completed).toBe(2);
+    expect(result.overdue).toBe(1);
+    expect(result.upcoming).toBe(3);
+    // total must be the TRUE total (all milestones), not just due milestones
+    expect(result.total).toBe(6); // 2 + 1 + 3
+    // ratio is still completed / (completed + overdue) — completion rate of actionable milestones
+    expect(result.ratio).toBeCloseTo(2 / 3, 5);
   });
 
   // -------------------------------------------------------------------------

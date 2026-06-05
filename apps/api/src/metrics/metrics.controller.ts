@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import {
   Controller,
   Get,
@@ -30,7 +31,12 @@ export class MetricsController {
     const token = process.env['METRICS_TOKEN'];
     if (token) {
       const expected = `Bearer ${token}`;
-      if (!authorization || authorization !== expected) {
+      const authHeader = authorization ?? '';
+      // SEC-011: use constant-time comparison to prevent timing side-channels.
+      // Must check lengths first — timingSafeEqual throws if buffers differ in length.
+      const a = Buffer.from(authHeader);
+      const b = Buffer.from(expected);
+      if (a.length !== b.length || !timingSafeEqual(a, b)) {
         throw new UnauthorizedException('Invalid or missing METRICS_TOKEN');
       }
     }

@@ -35,8 +35,14 @@ export interface MilestoneDetailDto {
 }
 
 export interface MilestonesCompletionResponseDto {
+  /** Milestones that were completed on time (alias for `completed`). */
   onTime: number;
+  /** Total milestones in scope: completed + overdue + upcoming. */
   total: number;
+  /**
+   * Completion rate of actionable milestones: completed / (completed + overdue).
+   * Upcoming milestones are excluded from this ratio.
+   */
   ratio: number;
   completed: number;
   overdue: number;

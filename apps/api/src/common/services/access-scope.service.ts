@@ -87,14 +87,20 @@ export class AccessScopeService {
     user: AccessUser | undefined,
     bypassPermissions: readonly string[] = ['projects:manage_any'],
   ): Promise<void> {
+    // PER-002: run the access-scoped check first so that the happy path
+    // (access granted) costs exactly 1 DB query instead of 2. The bare
+    // existence check is deferred to the error path only, where it lets us
+    // distinguish a missing project (404) from an out-of-scope one (403).
+    if (await this.canAccessProject(projectId, user, bypassPermissions)) {
+      return;
+    }
+
     const projectExists = await this.prisma.project.count({
       where: { id: projectId },
     });
     if (projectExists === 0) throw new NotFoundException('Projet introuvable');
 
-    if (!(await this.canAccessProject(projectId, user, bypassPermissions))) {
-      throw new ForbiddenException('Accès projet non autorisé');
-    }
+    throw new ForbiddenException('Accès projet non autorisé');
   }
 
   async taskReadWhere(

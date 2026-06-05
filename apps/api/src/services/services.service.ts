@@ -321,23 +321,21 @@ export class ServicesService {
       throw new NotFoundException('Service introuvable');
     }
 
-    // Détacher les utilisateurs liés avant suppression
-    if (service._count.userServices > 0) {
-      await this.prisma.userService.deleteMany({
-        where: { serviceId: id },
-      });
-    }
+    // COR-026: wrap all writes in a single transaction so a crash between
+    // steps cannot leave the data in an inconsistent intermediate state.
+    // The managerId=null update is omitted: the row is deleted immediately
+    // after and the DB cascade (onDelete: Cascade on UserService.service)
+    // handles pivot rows, but we keep the explicit deleteMany for clarity.
+    await this.prisma.$transaction(async (tx) => {
+      if (service._count.userServices > 0) {
+        await tx.userService.deleteMany({
+          where: { serviceId: id },
+        });
+      }
 
-    // Retirer le manager du service
-    if (service.managerId) {
-      await this.prisma.service.update({
+      await tx.service.delete({
         where: { id },
-        data: { managerId: null },
       });
-    }
-
-    await this.prisma.service.delete({
-      where: { id },
     });
 
     return { message: 'Service supprimé avec succès' };

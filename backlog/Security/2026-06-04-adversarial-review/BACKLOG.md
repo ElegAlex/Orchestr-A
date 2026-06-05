@@ -513,7 +513,7 @@ N/A — manual verification; inject a failing roleCode after valid serviceIds in
 
 ### COR-019 — personal-todos.service.ts create() has TOCTOU race on the 20-todo limit
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** C
 - **Confidence:** cross-validated
@@ -1607,7 +1607,7 @@ N/A — manual verification: grep -rn 'NoopErrorReporter\|SentryClient\|captureE
 
 ### SEC-011 — Metrics METRICS_TOKEN comparison uses non-constant-time string equality
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** L
 - **Confidence:** cross-validated
@@ -2854,7 +2854,7 @@ grep -n 'auditPersistence.log\|project.delete' apps/api/src/projects/projects.se
 
 ### COR-026 — services.service.ts remove() performs 3 sequential DB writes without a transaction — inconsistent state on crash
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** B
 - **Confidence:** primary-only
@@ -3804,7 +3804,7 @@ time curl -s 'http://localhost:4000/api/telework?startDate=2020-01-01&endDate=20
 
 ### PER-002 — assertCanAccessProject issues two project.count queries for the same projectId
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -4583,7 +4583,7 @@ N/A — manual verification
 
 ### COR-011 — CreateDocumentDto.size has no @IsNumber() or @Min(0) — negative/float sizes accepted
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -7219,7 +7219,7 @@ curl -s http://localhost:4000/api/health | jq 'keys'
 
 ### PER-009 — MetricsInterceptor uses raw URL path as label key — unbounded Map growth via unique UUIDs
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -8622,7 +8622,7 @@ SELECT COUNT(*) FROM users WHERE "roleId" IS NULL;
 
 ### COR-004 — MilestonesCompletionResponseDto.total means 'due milestones' not 'all milestones'
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** primary-only

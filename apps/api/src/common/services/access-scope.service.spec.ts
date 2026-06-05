@@ -54,6 +54,85 @@ describe('AccessScopeService.userReadWhere', () => {
   });
 });
 
+// PER-002 — assertCanAccessProject must issue exactly 1 DB query on the happy
+// path (access granted), not 2. The existence check must only run as a
+// fallback when canAccessProject returns false, to distinguish 404 from 403.
+describe('AccessScopeService.assertCanAccessProject — PER-002 query count', () => {
+  let service: AccessScopeService;
+  const getPermissionsForRole = vi.fn();
+  const projectCount = vi.fn();
+
+  beforeEach(() => {
+    getPermissionsForRole.mockReset();
+    projectCount.mockReset();
+    service = new AccessScopeService(
+      { project: { count: projectCount } } as never,
+      { getPermissionsForRole } as never,
+    );
+  });
+
+  it('PER-002 — happy path: only 1 project.count call when caller has access', async () => {
+    // Caller has no bypass permission, but the project IS in their scope.
+    getPermissionsForRole.mockResolvedValue([]);
+    // The combined access-scoped count returns 1 → access granted.
+    projectCount.mockResolvedValue(1);
+
+    await service.assertCanAccessProject('proj-1', {
+      id: 'user-1',
+      role: 'CONTRIBUTEUR',
+    });
+
+    // Must have been called exactly once (the combined count in canAccessProject).
+    expect(projectCount).toHaveBeenCalledTimes(1);
+  });
+
+  it('PER-002 — 404 path: 2 project.count calls when project does not exist', async () => {
+    // Caller has no bypass permission, and neither query finds the project.
+    getPermissionsForRole.mockResolvedValue([]);
+    // First call (access-scoped) → 0; second call (bare existence) → 0.
+    projectCount.mockResolvedValue(0);
+
+    await expect(
+      service.assertCanAccessProject('missing-proj', {
+        id: 'user-1',
+        role: 'CONTRIBUTEUR',
+      }),
+    ).rejects.toThrow('Projet introuvable');
+
+    expect(projectCount).toHaveBeenCalledTimes(2);
+  });
+
+  it('PER-002 — 403 path: 2 project.count calls when project exists but caller lacks access', async () => {
+    // Caller has no bypass permission; project exists but is not in their scope.
+    getPermissionsForRole.mockResolvedValue([]);
+    // First call (access-scoped in canAccessProject) → 0 (no access).
+    // Second call (bare existence to distinguish 404 vs 403) → 1 (exists).
+    projectCount.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+
+    await expect(
+      service.assertCanAccessProject('proj-2', {
+        id: 'user-1',
+        role: 'CONTRIBUTEUR',
+      }),
+    ).rejects.toThrow('Accès projet non autorisé');
+
+    expect(projectCount).toHaveBeenCalledTimes(2);
+  });
+
+  it('PER-002 — bypass path: 0 project.count calls when caller has projects:manage_any', async () => {
+    // Bypass callers short-circuit before any DB query.
+    getPermissionsForRole.mockResolvedValue(['projects:manage_any']);
+
+    await service.assertCanAccessProject('proj-3', {
+      id: 'admin-1',
+      role: 'ADMIN',
+    });
+
+    // canAccessProject returns true immediately → no DB query needed.
+    expect(projectCount).not.toHaveBeenCalled();
+  });
+});
+
 // SEC-028 — taskReadWhere must not leak confidential tasks via assignment.
 // A task marked confidential=true must only be readable by privileged callers
 // (tasks:readAll / tasks:manage_any) or project-role members — never by
