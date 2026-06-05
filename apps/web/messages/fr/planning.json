@@ -88,7 +88,9 @@
     "pending": "En attente",
     "externalShort": "EXT",
     "externalIntervention": "Intervention ext.",
-    "allDay": "Journée entière"
+    "allDay": "Journée entière",
+    "halfDayMorning": "Matin",
+    "halfDayAfternoon": "Après-midi"
   },
   "taskModal": {
     "description": "Description",
