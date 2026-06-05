@@ -2207,7 +2207,7 @@ N/A — manual verification
 - Related (same run): COR-057.
 - Audit note: Adversarial check: controller line 116 confirmed: `complete(@Param('id', ParseUUIDPipe) id: string)` — no @CurrentUser. Service complete() signature is `async complete(id: string)` — no user params. update() and remove() both accept currentUserId/currentUserRole and call assertProjectMembership. Gap is real.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 006605b3
 
 ---
 
@@ -2981,7 +2981,7 @@ grep -n 'findFirst\|createMany\|skipDuplicates' apps/api/src/milestones/mileston
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 006605b3
 
 ---
 
@@ -4092,7 +4092,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ImportMilestonesDto.milestones has no @Max constraint — batch size is unbounded.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 006605b3
 
 ---
 
