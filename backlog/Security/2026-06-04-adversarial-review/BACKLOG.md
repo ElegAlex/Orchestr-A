@@ -4846,7 +4846,7 @@ N/A — manual verification
 
 ### SEC-018 — ImportSkillsDto.skills array has no @ArrayMaxSize — sequential DB writes enable per-request DoS
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -4896,13 +4896,13 @@ curl -s -X POST http://localhost:4000/api/skills/import -H 'Authorization: Beare
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Both POST /skills/import and POST /skills/import/validate are affected. Verified: ImportSkillsDto at lines 46-54 has no @ArrayMaxSize. importSkills() service method (skills.service.ts lines 693-730) uses a sequential for loop with prisma.skill.create() per item — no batching, no size guard.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** b26d3430
 
 ---
 
 ### SEC-020 — ImportTasksDto.tasks has no @ArrayMaxSize — unbounded bulk import enabling DoS
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -4954,7 +4954,7 @@ N/A — manual verification: craft a body with 1001 task objects and POST to the
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial review: verbatim code confirmed at import-tasks.dto.ts lines 78-87. The 1 MiB bodyLimit in main.ts (SEC-025) caps byte size but not item count — a 1000-element array of short tasks easily fits under 1 MiB. No @ArrayMaxSize found anywhere in the file. Finding confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** b26d3430
 
 ---
 
