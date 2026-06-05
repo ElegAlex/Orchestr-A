@@ -452,7 +452,7 @@ N/A — manual verification via concurrent HTTP test or integration test with pa
 
 ### COR-040 — users.service update(): service-membership deleteMany+createMany execute outside the user.update() transaction — partial failure leaves the user with no services
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** B
 - **Confidence:** cross-validated
@@ -1054,7 +1054,7 @@ N/A — manual verification
 
 ### PER-030 — importUsers executes N sequential DB round-trips (findFirst + bcrypt + create) per row
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** cross-validated
@@ -1659,7 +1659,7 @@ grep -n 'authorization' apps/api/src/metrics/metrics.controller.ts
 
 ### COR-039 — users.service changePassword() and admin resetPassword() do not call jwtNotBefore.bumpUser() — live access tokens remain valid after password change for up to the access TTL
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** N
 - **Confidence:** cross-validated
@@ -1710,7 +1710,7 @@ grep -n 'bumpUser' apps/api/src/users/users.service.ts
 
 ### SEC-028 — Admin password reset (POST /users/:id/reset-password) does not bump JWT nbf, leaving existing access tokens valid for up to 15 min
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** N
 - **Confidence:** cross-validated
@@ -9051,7 +9051,7 @@ grep -rn 'DOCUMENT_DOWNLOADED' /home/alex/Documents/REPO/ORCHESTRA/apps/api/src 
 
 ### SA-DAT-004 — USER_DELETED audit entry committed before erasure transaction — stale audit if tx rolls back
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** secondary-only

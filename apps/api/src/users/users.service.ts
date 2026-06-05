@@ -85,7 +85,11 @@ export class UsersService {
     return role.id;
   }
 
-  async create(createUserDto: CreateUserDto, callerRoleCode?: string) {
+  async create(
+    createUserDto: CreateUserDto,
+    callerRoleCode?: string,
+    callerId?: string,
+  ) {
     await this.roleHierarchy.assertCanAssignRole(
       callerRoleCode,
       createUserDto.roleCode,
@@ -214,6 +218,22 @@ export class UsersService {
         })),
       });
     }
+
+    // OBS-017 — durable audit trail for admin user provisioning. Mirrors the
+    // USR-DEL-001 USER_DELETED entry (emitted in hardDelete) so the full
+    // create/delete lifecycle is traceable. AuditAction.USER_CREATED is added
+    // to the enum in audit-action.enum.ts (cross_file_needs OBS-017).
+    await this.auditPersistence.log({
+      action: 'USER_CREATED' as AuditAction,
+      entityType: 'User',
+      entityId: user.id,
+      actorId: callerId ?? null,
+      payload: {
+        roleId,
+        departmentId: createUserDto.departmentId ?? null,
+        source: 'admin',
+      },
+    });
 
     return user;
   }
@@ -617,62 +637,68 @@ export class UsersService {
       updateData.passwordHash = await bcrypt.hash(password, 12);
     }
 
-    if (updateUserDto.serviceIds !== undefined) {
-      await this.prisma.userService.deleteMany({
-        where: { userId: id },
-      });
-
-      if (updateUserDto.serviceIds.length > 0) {
-        await this.prisma.userService.createMany({
-          data: updateUserDto.serviceIds.map((serviceId) => ({
-            userId: id,
-            serviceId,
-          })),
+    // COR-040 — serviceIds deleteMany + createMany + user.update must be atomic.
+    // Without a transaction, a failure in user.update (e.g. a concurrent unique
+    // constraint violation) would leave the service memberships deleted but not
+    // re-created, producing orphaned state. Wrap all three in a single $transaction.
+    const user = await this.prisma.$transaction(async (tx) => {
+      if (updateUserDto.serviceIds !== undefined) {
+        await tx.userService.deleteMany({
+          where: { userId: id },
         });
-      }
-    }
 
-    const user = await this.prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        login: true,
-        firstName: true,
-        lastName: true,
-        avatarUrl: true,
-        avatarPreset: true,
-        roleId: true,
-        role: {
-          select: {
-            id: true,
-            code: true,
-            label: true,
-            templateKey: true,
-            isSystem: true,
+        if (updateUserDto.serviceIds.length > 0) {
+          await tx.userService.createMany({
+            data: updateUserDto.serviceIds.map((serviceId) => ({
+              userId: id,
+              serviceId,
+            })),
+          });
+        }
+      }
+
+      return tx.user.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          login: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+          avatarPreset: true,
+          roleId: true,
+          role: {
+            select: {
+              id: true,
+              code: true,
+              label: true,
+              templateKey: true,
+              isSystem: true,
+            },
           },
-        },
-        departmentId: true,
-        isActive: true,
-        updatedAt: true,
-        department: {
-          select: {
-            id: true,
-            name: true,
+          departmentId: true,
+          isActive: true,
+          updatedAt: true,
+          department: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
-        },
-        userServices: {
-          select: {
-            service: {
-              select: {
-                id: true,
-                name: true,
+          userServices: {
+            select: {
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
         },
-      },
+      });
     });
 
     // AUD-EMIT-001 — durable audit trail for role / deactivation mutations.
@@ -906,35 +932,6 @@ export class UsersService {
     });
     const anonymiseShell = authoredAuditRows > 0;
 
-    // USR-DEL-001 — snapshot to the immutable audit trail BEFORE erasure/anonymise,
-    // mirroring DAT-007's PROJECT_DELETED and OBS-005's ROLE_DELETED. actorId is the
-    // requesting admin (not the target), so it does not add to the target's own
-    // audit count. Plain await, non-transactional (AuditPersistenceService runs its
-    // own client + advisory lock and takes no tx client — the archive()/unarchive()
-    // + DAT-007 precedent). The snapshot is an explicit allow-list: passwordHash and
-    // the token relations are never included.
-    await this.auditPersistence.log({
-      action: AuditAction.USER_DELETED,
-      entityType: 'User',
-      entityId: id,
-      actorId: requestingUserId ?? null,
-      payload: {
-        // OBS-027 — REFERENCE-ONLY governed accountability metadata. The trail
-        // proves "admin <actorId> deleted user <id> (role/department/active state)
-        // at <row timestamp>"; it must NOT denormalise the person's identity, so
-        // anonymising the User row (the audit-bearing path) erases PII everywhere.
-        // No name/email/login/avatar (nor the password hash) is ever recorded.
-        snapshot: {
-          id: user.id,
-          roleId: user.roleId,
-          departmentId: user.departmentId,
-          isActive: user.isActive,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-        },
-      },
-    });
-
     // Full erasure in ONE transaction. Every record OWNED by the user (their own
     // data) is deleted explicitly here, never relying on a silent ON DELETE
     // CASCADE, so the erasure set is auditable in code. Records that merely
@@ -1002,6 +999,34 @@ export class UsersService {
       }
     });
 
+    // SA-DAT-004 — USR-DEL-001 snapshot to the immutable audit trail AFTER the
+    // erasure transaction commits. Writing audit before the transaction would
+    // produce a ghost audit entry if the transaction rolls back. The snapshot
+    // uses the 'user' object captured before erasure so the data is still
+    // available. AuditPersistenceService runs its own advisory-locked client
+    // (no tx client needed). The allow-list excludes passwordHash and PII fields.
+    await this.auditPersistence.log({
+      action: AuditAction.USER_DELETED,
+      entityType: 'User',
+      entityId: id,
+      actorId: requestingUserId ?? null,
+      payload: {
+        // OBS-027 — REFERENCE-ONLY governed accountability metadata. The trail
+        // proves "admin <actorId> deleted user <id> (role/department/active state)
+        // at <row timestamp>"; it must NOT denormalise the person's identity, so
+        // anonymising the User row (the audit-bearing path) erases PII everywhere.
+        // No name/email/login/avatar (nor the password hash) is ever recorded.
+        snapshot: {
+          id: user.id,
+          roleId: user.roleId,
+          departmentId: user.departmentId,
+          isActive: user.isActive,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
+      },
+    });
+
     // Remove the on-disk avatar file (PII) in BOTH paths — file I/O is kept out of
     // the DB transaction (it cannot roll back). Reuses the SEC-015/017-hardened
     // path reconstruction (never derived from the stored avatarUrl).
@@ -1048,6 +1073,11 @@ export class UsersService {
     });
 
     await this.refreshTokenService.revokeAllForUser(userId);
+    // COR-039 — revoking refresh tokens alone does not invalidate live access
+    // tokens. bumpUser() sets a per-user nbf (not-before) timestamp checked by
+    // JwtStrategy.validate on every request, so existing bearer tokens are
+    // rejected immediately after a password change.
+    await this.jwtNotBefore.bumpUser(userId);
 
     // SEC-004 / AC#4 — durable, hash-chained audit_logs entry. Every
     // self-service password change is audit-sensitive; before/after track the
@@ -1131,6 +1161,10 @@ export class UsersService {
     });
 
     await this.refreshTokenService.revokeAllForUser(userId);
+    // SEC-028 / COR-039 — same rationale as changePassword(): revoking refresh
+    // tokens does not invalidate live access tokens. bumpUser() sets a per-user
+    // nbf so JwtStrategy rejects any bearer token issued before this call.
+    await this.jwtNotBefore.bumpUser(userId);
 
     // OBS-004 — durable admin-reset event. Renamed from the SEC-003 free-string
     // 'PASSWORD_RESET_ADMIN' to the AuditAction enum value (advances OBS-024's
@@ -1269,6 +1303,7 @@ export class UsersService {
   async importUsers(
     users: ImportUserDto[],
     callerRoleCode?: string,
+    callerId?: string,
   ): Promise<ImportUsersResultDto> {
     const result: ImportUsersResultDto = {
       created: 0,
@@ -1302,22 +1337,38 @@ export class UsersService {
     // un rôle institutionnel au wording cible dans /admin/roles avant import.
     const roleMap = new Map(roles.map((r) => [r.code, r.id]));
 
+    // PER-030 — pre-flight duplicate check: one findMany for ALL emails + logins
+    // in the batch replaces the per-row findFirst (N+1 anti-pattern). Case-
+    // insensitive via mode:'insensitive' (matches the DAT-015 LOWER() unique index).
+    const allEmails = users.map((u) => u.email);
+    const allLogins = users.map((u) => u.login);
+    const existingUsers = await this.prisma.user.findMany({
+      where: {
+        OR: [
+          { email: { in: allEmails, mode: 'insensitive' } },
+          { login: { in: allLogins, mode: 'insensitive' } },
+        ],
+      },
+      select: { email: true, login: true },
+    });
+    const existingEmailsSet = new Set(
+      existingUsers.map((u) => u.email.toLowerCase()),
+    );
+    const existingLoginsSet = new Set(
+      existingUsers.map((u) => u.login.toLowerCase()),
+    );
+
     for (let i = 0; i < users.length; i++) {
       const userData = users[i];
       const rowNum = i + 2;
 
       try {
-        const existingUser = await this.prisma.user.findFirst({
-          where: {
-            // DAT-015: case-insensitive lookup
-            OR: [
-              { email: { equals: userData.email, mode: 'insensitive' } },
-              { login: { equals: userData.login, mode: 'insensitive' } },
-            ],
-          },
-        });
+        // PER-030 — use the pre-flight sets instead of a per-row findFirst query.
+        const isDuplicate =
+          existingEmailsSet.has(userData.email.toLowerCase()) ||
+          existingLoginsSet.has(userData.login.toLowerCase());
 
-        if (existingUser) {
+        if (isDuplicate) {
           result.skipped++;
           result.errorDetails.push(
             `Ligne ${rowNum}: Utilisateur ${userData.email} ou login ${userData.login} existe déjà`,
@@ -1436,6 +1487,22 @@ export class UsersService {
             })),
           });
         }
+
+        // OBS-016 — durable audit trail for each successfully imported user.
+        // Mirrors OBS-017's create() emit. Non-blocking: a failed audit row
+        // is caught by the outer catch so it is reported as a row error rather
+        // than silently swallowed, but a future failure model may fire-and-forget.
+        await this.auditPersistence.log({
+          action: 'USER_CREATED' as AuditAction,
+          entityType: 'User',
+          entityId: user.id,
+          actorId: callerId ?? null,
+          payload: {
+            source: 'import',
+            row: rowNum,
+            roleId: user.roleId,
+          },
+        });
 
         result.created++;
         result.createdUsers.push(user);

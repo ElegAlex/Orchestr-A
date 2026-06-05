@@ -64,9 +64,14 @@ export class UsersController {
   })
   create(
     @Body() createUserDto: CreateUserDto,
-    @CurrentUser() caller: { role?: { code: string } | null },
+    @CurrentUser() caller: { id?: string; role?: { code: string } | null },
   ) {
-    return this.usersService.create(createUserDto, caller?.role?.code);
+    // OBS-017 — pass callerId so create() can emit the USER_CREATED audit row
+    return this.usersService.create(
+      createUserDto,
+      caller?.role?.code,
+      caller?.id,
+    );
   }
 
   @Post('import/validate')
@@ -116,11 +121,13 @@ export class UsersController {
   })
   importUsers(
     @Body() importUsersDto: ImportUsersDto,
-    @CurrentUser() caller: { role?: { code: string } | null },
+    @CurrentUser() caller: { id?: string; role?: { code: string } | null },
   ) {
+    // OBS-016 — pass callerId so importUsers() can emit USER_CREATED audit rows
     return this.usersService.importUsers(
       importUsersDto.users,
       caller?.role?.code,
+      caller?.id,
     );
   }
 

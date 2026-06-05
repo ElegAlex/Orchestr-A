@@ -2354,6 +2354,8 @@ describe('UsersService', () => {
       expect(mockPrismaService.user.create).not.toHaveBeenCalled();
     });
 
+    // PER-030 — test updated: importUsers now uses a pre-flight findMany rather
+    // than a per-row findFirst. Mock user.findMany to return the existing user.
     it('should skip existing users', async () => {
       const importData = [
         {
@@ -2369,11 +2371,10 @@ describe('UsersService', () => {
       mockPrismaService.department.findMany.mockResolvedValue([]);
       mockPrismaService.service.findMany.mockResolvedValue([]);
       mockPrismaService.role.findMany.mockResolvedValue(mockRoles);
-      mockPrismaService.user.findFirst.mockResolvedValue({
-        id: 'existing-1',
-        email: 'existing@example.com',
-        login: 'existing.user',
-      });
+      // PER-030: pre-flight findMany returns the existing user so the row is skipped
+      mockPrismaService.user.findMany.mockResolvedValue([
+        { email: 'existing@example.com', login: 'existing.user' },
+      ]);
 
       const result = await service.importUsers(importData);
 
@@ -2973,5 +2974,302 @@ describe('UsersService', () => {
 
       expect(mockJwtNotBefore.bumpUser).toHaveBeenCalledWith('target-2');
     });
+  });
+
+  // COR-039 — changePassword() must call jwtNotBefore.bumpUser() so that live
+  // access tokens are immediately invalidated after a password change.
+  // Revoking refresh tokens alone (revokeAllForUser) does not invalidate tokens
+  // that are already live; bumpUser sets a per-user nbf so JwtStrategy rejects them.
+  it('COR-039 — changePassword() calls jwtNotBefore.bumpUser() after revoking refresh tokens', async () => {
+    const mockUser = {
+      id: 'user-cor039',
+      passwordHash: await bcrypt.hash('OldPass1!', 12),
+      forcePasswordChange: false,
+    };
+    mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+    mockPrismaService.user.update.mockResolvedValue(mockUser);
+
+    await service.changePassword('user-cor039', {
+      currentPassword: 'OldPass1!',
+      newPassword: 'NewPass2@',
+    });
+
+    expect(mockJwtNotBefore.bumpUser).toHaveBeenCalledWith('user-cor039');
+  });
+
+  // SEC-028 / COR-039 — resetPassword() must also call jwtNotBefore.bumpUser()
+  // so that the target's live access tokens are invalidated immediately after an
+  // admin-forced password reset.
+  it('SEC-028/COR-039 — resetPassword() calls jwtNotBefore.bumpUser() after revoking refresh tokens', async () => {
+    const targetUser = {
+      id: 'user-sec028',
+      login: 'tsec028',
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      role: { code: 'CONTRIBUTEUR' },
+    };
+    // resetPassword() calls findUnique twice when callerId is provided:
+    // first for the target, second for the caller's role lookup.
+    mockPrismaService.user.findUnique
+      .mockResolvedValueOnce(targetUser) // target
+      .mockResolvedValueOnce({ role: { code: 'ADMIN' } }); // caller
+    // roleHierarchy.assertCanAssignRole calls prisma.role.findUnique for templateKey
+    mockPrismaService.role.findUnique
+      .mockResolvedValueOnce({ templateKey: 'CONTRIBUTOR' }) // target role
+      .mockResolvedValueOnce({ templateKey: 'ADMIN' }); // caller role
+    mockPrismaService.user.update.mockResolvedValue({
+      id: 'user-sec028',
+      updatedAt: new Date('2026-06-01T00:00:00.000Z'),
+    });
+
+    await service.resetPassword('user-sec028', 'NewAdminPass3!', 'admin-1');
+
+    expect(mockJwtNotBefore.bumpUser).toHaveBeenCalledWith('user-sec028');
+  });
+
+  // OBS-017 — create() must emit a USER_CREATED audit row so that admin user
+  // provisioning is traceable in the immutable audit trail.
+  it('OBS-017 — create() emits a USER_CREATED audit row after prisma.user.create()', async () => {
+    const mockDepartment = { id: 'dept-1', name: 'IT' };
+    const mockCreatedUser = {
+      id: 'new-obs017',
+      email: 'obs017@example.com',
+      login: 'obs017',
+      firstName: 'Obs',
+      lastName: 'Seventeen',
+      role: {
+        id: 'role-contrib',
+        code: 'CONTRIBUTEUR',
+        label: 'Contributeur',
+        templateKey: 'CONTRIBUTOR',
+        isSystem: false,
+      },
+      roleId: 'role-contrib',
+      departmentId: 'dept-1',
+      avatarUrl: null,
+      avatarPreset: null,
+      isActive: true,
+      createdAt: new Date(),
+      department: mockDepartment,
+      userServices: [],
+    };
+
+    mockPrismaService.user.findFirst.mockResolvedValue(null);
+    mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
+    mockPrismaService.service.findMany.mockResolvedValue([]);
+    mockPrismaService.role.findUnique.mockResolvedValue({ id: 'role-contrib' });
+    mockPrismaService.user.create.mockResolvedValue(mockCreatedUser);
+
+    await service.create(
+      {
+        email: 'obs017@example.com',
+        login: 'obs017',
+        password: 'Password1!',
+        firstName: 'Obs',
+        lastName: 'Seventeen',
+        roleCode: 'CONTRIBUTEUR',
+        departmentId: 'dept-1',
+      },
+      undefined,
+      'admin-caller-1',
+    );
+
+    expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'USER_CREATED',
+        entityType: 'User',
+        entityId: 'new-obs017',
+      }),
+    );
+  });
+
+  // OBS-016 — importUsers() must emit a USER_CREATED audit row for each
+  // successfully imported user so that bulk provisioning is traceable.
+  it('OBS-016 — importUsers() emits USER_CREATED audit row for each successfully created user', async () => {
+    const importData = [
+      {
+        email: 'obs016@example.com',
+        login: 'obs016',
+        password: 'Password1!',
+        firstName: 'Obs',
+        lastName: 'Sixteen',
+        roleCode: 'CONTRIBUTEUR',
+      },
+    ];
+
+    mockPrismaService.department.findMany.mockResolvedValue([]);
+    mockPrismaService.service.findMany.mockResolvedValue([]);
+    mockPrismaService.role.findMany.mockResolvedValue([
+      { id: 'role-contrib', code: 'CONTRIBUTEUR' },
+    ]);
+    mockPrismaService.user.findMany.mockResolvedValue([]);
+    mockPrismaService.user.create.mockResolvedValue({
+      id: 'created-obs016',
+      email: 'obs016@example.com',
+      login: 'obs016',
+      firstName: 'Obs',
+      lastName: 'Sixteen',
+      roleId: 'role-contrib',
+      role: {
+        id: 'role-contrib',
+        code: 'CONTRIBUTEUR',
+        label: 'Contributeur',
+        templateKey: 'CONTRIBUTOR',
+      },
+      departmentId: null,
+      avatarUrl: null,
+      avatarPreset: null,
+    });
+
+    const result = await service.importUsers(importData, undefined, 'admin-1');
+
+    expect(result.created).toBe(1);
+    expect(mockAuditPersistence.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'USER_CREATED',
+        entityType: 'User',
+        entityId: 'created-obs016',
+      }),
+    );
+  });
+
+  // SA-DAT-004 — hardDelete() must write the USER_DELETED audit AFTER the
+  // erasure transaction commits. Writing it before the transaction means the
+  // audit entry is durable even if the transaction rolls back (ghost audit).
+  it('SA-DAT-004 — hardDelete() writes USER_DELETED audit AFTER the erasure transaction, not before', async () => {
+    const callOrder: string[] = [];
+
+    mockPrismaService.user.findUnique.mockResolvedValue({
+      id: 'user-sadat004',
+      email: 'sadat004@example.com',
+      login: 'sadat004',
+      firstName: 'Sa',
+      lastName: 'Dat004',
+      roleId: 'role-1',
+      departmentId: null,
+      isActive: true,
+      avatarUrl: null,
+      avatarPreset: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockPrismaService.auditLog.count.mockResolvedValue(0);
+
+    // Override $transaction to record when it runs
+    mockPrismaService.$transaction.mockImplementationOnce(
+      async (callback: (tx: typeof mockPrismaService) => Promise<void>) => {
+        callOrder.push('transaction');
+        return callback(mockPrismaService);
+      },
+    );
+
+    // Override auditPersistence.log to record when it runs
+    mockAuditPersistence.log.mockImplementationOnce(async () => {
+      callOrder.push('audit');
+    });
+
+    mockPrismaService.user.delete.mockResolvedValue({ id: 'user-sadat004' });
+
+    await service.hardDelete('user-sadat004', 'admin-1');
+
+    // Audit must come AFTER transaction (index of 'audit' > index of 'transaction')
+    expect(callOrder.indexOf('transaction')).toBeLessThan(
+      callOrder.indexOf('audit'),
+    );
+  });
+
+  // COR-040 — update() must wrap the serviceIds deleteMany+createMany+user.update
+  // inside a single $transaction so that a failure in user.update does not leave
+  // orphaned (deleted but not re-created) service memberships.
+  it('COR-040 — update() wraps serviceIds mutation and user.update in a single $transaction', async () => {
+    // assertCanManageUser → user.count
+    mockPrismaService.user.count.mockResolvedValueOnce(1);
+    mockPrismaService.user.findUnique.mockResolvedValueOnce({
+      id: 'cor040-user',
+      roleId: 'role-x',
+      isActive: true,
+      departmentId: null,
+      role: { code: 'CONTRIBUTEUR' },
+      userServices: [{ serviceId: 'svc-old' }],
+    });
+    mockPrismaService.service.findMany.mockResolvedValue([
+      { id: 'svc-new', name: 'New Service' },
+    ]);
+    mockPrismaService.userService.deleteMany.mockResolvedValue({ count: 1 });
+    mockPrismaService.userService.createMany.mockResolvedValue({ count: 1 });
+    mockPrismaService.user.update.mockResolvedValueOnce({
+      id: 'cor040-user',
+      isActive: true,
+      role: { code: 'CONTRIBUTEUR' },
+      userServices: [{ service: { id: 'svc-new', name: 'New Service' } }],
+    });
+
+    await service.update('cor040-user', { serviceIds: ['svc-new'] }, 'ADMIN');
+
+    // $transaction must have been called (wrapping the serviceIds mutation + user.update)
+    expect(mockPrismaService.$transaction).toHaveBeenCalled();
+  });
+
+  // PER-030 — importUsers() must not call prisma.user.findFirst() once per row.
+  // A single pre-flight findMany for all emails+logins must replace the N per-row
+  // findFirst calls, reducing DB round-trips from O(N) to O(1).
+  it('PER-030 — importUsers() uses a single pre-flight findMany for duplicate check, not per-row findFirst calls', async () => {
+    const importData = [
+      {
+        email: 'per030a@example.com',
+        login: 'per030a',
+        password: 'Password1!',
+        firstName: 'Per',
+        lastName: 'ThirtyA',
+        roleCode: 'CONTRIBUTEUR',
+      },
+      {
+        email: 'per030b@example.com',
+        login: 'per030b',
+        password: 'Password1!',
+        firstName: 'Per',
+        lastName: 'ThirtyB',
+        roleCode: 'CONTRIBUTEUR',
+      },
+    ];
+
+    mockPrismaService.department.findMany.mockResolvedValue([]);
+    mockPrismaService.service.findMany.mockResolvedValue([]);
+    mockPrismaService.role.findMany.mockResolvedValue([
+      { id: 'role-contrib', code: 'CONTRIBUTEUR' },
+    ]);
+    // Pre-flight findMany returns empty (no duplicates)
+    mockPrismaService.user.findMany.mockResolvedValue([]);
+    mockPrismaService.user.create.mockResolvedValue({
+      id: 'any-id',
+      email: 'per030a@example.com',
+      login: 'per030a',
+      firstName: 'Per',
+      lastName: 'ThirtyA',
+      roleId: 'role-contrib',
+      role: {
+        id: 'role-contrib',
+        code: 'CONTRIBUTEUR',
+        label: 'Contributeur',
+        templateKey: 'CONTRIBUTOR',
+      },
+      departmentId: null,
+      avatarUrl: null,
+      avatarPreset: null,
+    });
+
+    await service.importUsers(importData);
+
+    // findFirst must NOT have been called (N+1 eliminated)
+    expect(mockPrismaService.user.findFirst).not.toHaveBeenCalled();
+    // findMany must have been called exactly once for the pre-flight duplicate check
+    // (note: findMany is also called for departments/services/roles via Promise.all,
+    //  so we check that the user.findMany call includes the OR with emails/logins)
+    const userFindManyCalls = mockPrismaService.user.findMany.mock.calls;
+    expect(userFindManyCalls.length).toBeGreaterThanOrEqual(1);
+    const preflightCall = userFindManyCalls.find((call: unknown[]) => {
+      const arg = call[0] as { where?: { OR?: unknown[] } };
+      return arg?.where?.OR !== undefined;
+    });
+    expect(preflightCall).toBeDefined();
   });
 });

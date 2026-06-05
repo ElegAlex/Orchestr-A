@@ -101,9 +101,12 @@ describe('UsersController', () => {
       const result = await controller.create(createUserDto, ADMIN_CALLER);
 
       expect(result).toEqual(expectedUser);
+      // OBS-017 — controller now passes callerId as 3rd arg so the service can
+      // emit the USER_CREATED audit row with the actor identity.
       expect(mockUsersService.create).toHaveBeenCalledWith(
         createUserDto,
         'ADMIN',
+        'caller-admin-id',
       );
       expect(mockUsersService.create).toHaveBeenCalledTimes(1);
     });
@@ -588,7 +591,13 @@ describe('UsersController', () => {
         ADMIN_CALLER,
       );
 
-      expect(mockUsersService.importUsers).toHaveBeenCalledWith([], 'ADMIN');
+      // OBS-016 — controller now passes callerId as 3rd arg so importUsers()
+      // can emit USER_CREATED audit rows with the actor identity.
+      expect(mockUsersService.importUsers).toHaveBeenCalledWith(
+        [],
+        'ADMIN',
+        'caller-admin-id',
+      );
       expect(result).toEqual(importResult);
     });
   });
