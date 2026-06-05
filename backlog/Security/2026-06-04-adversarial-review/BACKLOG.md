@@ -6874,7 +6874,7 @@ N/A — manual verification: create leave with endHalfDay, then call GET /leaves
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The issue is architectural: endHalfDay is accepted in the DTO, affects the `days` computation, but is never persisted. The `getAvailableDays` re-derivation cannot be correct without it. The fix with lowest risk is option (a) — add the column. Adversarial check: schema.prisma confirmed only `halfDay HalfDay?` at line 618, no endHalfDay field. splitLeaveByYear confirmed to use endHalfDay parameter (lines 140-141 of leave-year-window.ts). create() confirmed stores only `halfDay: effectiveHalfDay` (line 614). Finding stands.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** c5962c24
 
 ---
 
