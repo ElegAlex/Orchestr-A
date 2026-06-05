@@ -4687,7 +4687,7 @@ N/A — manual verification: POST /leaves/import with payload {"leaves": [... 50
 
 ### SEC-014 — BulkAssignmentDto.userIds and BulkAssignmentDto.dates have no @ArrayMaxSize — cartesian product DoS
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -4735,7 +4735,7 @@ N/A — manual verification: craft a body with large userIds/dates arrays, confi
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial review: verbatim code confirmed at bulk-assignment.dto.ts lines 26-39. @ArrayMinSize(1) present, no @ArrayMaxSize on either field. Finding confirmed. The daysOfWeek array in CreateBulkRecurringRulesDto is bounded at 0-6 per element but not in count; a validated array of 7 elements is the maximum semantic payload and is fine, but the userIds array is the main risk vector here.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 99511a42
 
 ---
 
