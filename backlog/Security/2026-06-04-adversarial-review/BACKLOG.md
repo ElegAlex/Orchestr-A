@@ -329,7 +329,7 @@ grep -n 'expandRecurringRulesForRange' apps/api/src/telework/telework.service.ts
 
 ### DAT-001 — audit_logs created with ON DELETE SET NULL — immutability trigger added 31 days later, leaving a window where audit rows could be silently mutated
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** H
 - **Confidence:** primary-only
@@ -370,7 +370,7 @@ SELECT COUNT(*) FROM audit_logs WHERE "actorId" IS NULL AND "createdAt" < '2026-
 - Related (same run): DAT-013, DAT-028.
 - Audit note: Code evidence VERBATIM confirmed at line 24. The immutability trigger migration 20260525190000 lines 95-104 explicitly states 'A SetNull on user deletion issues an UPDATE on audit_logs that the immutability trigger (step 6) would reject', confirming this was a known design flaw fixed retroactively. Current schema is now protected (FK changed to NO ACTION), but historical impact is real and unrecoverable without a backup from the window period.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** fe91b806
 
 ---
 
@@ -6013,7 +6013,7 @@ psql $DATABASE_URL -c "TRUNCATE audit_logs;" 2>&1 | grep 'audit_logs is append-o
 
 ### OBS-020 — Audit log retention policy undeclared and unenforced — audit_logs grows unbounded
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** H
 - **Confidence:** primary-only
@@ -6054,13 +6054,13 @@ N/A — manual verification: check packages/database/prisma/migrations/ for any 
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ADVERSARIAL REVIEW: Fully confirmed. Code evidence at line 1220 is verbatim correct. The immutability trigger comment is present at that exact line. No PARTITION BY statement exists in the schema. The finding correctly identifies that DELETE/TRUNCATE revocation + immutability trigger means no automated pruning path exists. Confirmed as a governance/compliance gap. Finding stands at severity=important.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** fe91b806
 
 ---
 
 ### DAT-003 — DOUBLE PRECISION used for HR-sensitive hours/days columns — rounding errors accumulate
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -6105,7 +6105,7 @@ psql -c "\d time_entries" | grep hours
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at lines 160 and 198 and 215 of init migration. Fixed by migration 20260524100100_dat005_convert_float_to_decimal (2026-05-24) which converts time_entries.hours to NUMERIC(5,2), leaves.days to NUMERIC(6,2), leave_balances.totalDays to NUMERIC(6,2), tasks.estimatedHours to NUMERIC(5,2). Downgraded to low confidence — issue is resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** fe91b806
 
 ---
 
@@ -6157,7 +6157,7 @@ N/A — manual verification
 
 ### DAT-005 — leave_balances unique index on nullable userId treats multiple NULL rows as distinct — global balance uniqueness not enforced
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -6199,13 +6199,13 @@ psql -c "SELECT indexname FROM pg_indexes WHERE tablename='leave_balances' AND i
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at lines 4 and 21 of add_leave_balances_and_rbac_granularity migration. Fixed by migration 20260523171000_self_approved_and_global_balance_unique which adds: CREATE UNIQUE INDEX "leave_balances_global_unique" ON "leave_balances" ("leaveTypeId", "year") WHERE "userId" IS NULL. Downgraded to low confidence — issue resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** fe91b806
 
 ---
 
 ### DAT-006 — leave_balances.totalDays declared DOUBLE PRECISION — balance summaries accumulate float errors
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -6244,13 +6244,13 @@ psql -c "\d leave_balances" | grep totalDays
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at line 7 of add_leave_balances_and_rbac_granularity migration. Fixed by migration 20260524100100_dat005_convert_float_to_decimal (2026-05-24). Downgraded to low confidence — issue resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** fe91b806
 
 ---
 
 ### DAT-007 — ON DELETE CASCADE on project_snapshots destroys historical trend data when project is hard-deleted
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -6290,7 +6290,7 @@ psql -c "\d project_snapshots" | grep projectId
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at line 15 of add_project_snapshots migration. Fixed by migration 20260525200000_dat007_project_fk_restrict_preserve_history which drops CASCADE and adds RESTRICT on project_snapshots_projectId_fkey. Also fixes tasks, documents, and time_entries FKs in same migration. Downgraded to low confidence — issue resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** fe91b806
 
 ---
 
@@ -8561,7 +8561,7 @@ grep -c '@smoke' e2e/tests/rbac/api-permissions.spec.ts
 
 ### DAT-010 — RBAC V4 drops role_permissions, permissions, role_configs tables and users.role column with no backup or preflight verification
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** P
 - **Confidence:** primary-only
@@ -8616,7 +8616,7 @@ SELECT COUNT(*) FROM users WHERE "roleId" IS NULL;
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence VERBATIM confirmed at lines 1-19 (the entire file). V0 migration (20260419192835) does have correct post-backfill verification (lines 100-107: RAISE EXCEPTION if any user has NULL roleId). In normal sequential Prisma deployment V0 must succeed before V4 runs. Risk is limited to partial DB restore or manual migration replay scenarios. Downgraded from high to medium confidence because the normal deployment path is protected by V0's guard.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** fe91b806
 
 ---
 
