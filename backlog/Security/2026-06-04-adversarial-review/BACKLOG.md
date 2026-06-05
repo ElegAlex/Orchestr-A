@@ -6111,7 +6111,7 @@ psql -c "\d time_entries" | grep hours
 
 ### DAT-004 — ON DELETE CASCADE on leave_balances.leaveTypeId destroys balance history when leave type is deleted
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -6346,7 +6346,7 @@ SELECT COUNT(*) FROM project_third_party_members WHERE allocation < 0 OR allocat
 
 ### DAT-009 — time_entries.thirdPartyId ON DELETE CASCADE silently destroys billing/payroll records when a ThirdParty is deleted
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only
