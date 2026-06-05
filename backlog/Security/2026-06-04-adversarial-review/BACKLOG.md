@@ -6801,7 +6801,7 @@ node -e "const d = new Date(Date.UTC(2025,2,29)); d.setDate(d.getDate()+1); cons
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The leave-year-window.ts module correctly uses setUTCDate/getUTCDate throughout. This function in holidays.service.ts should adopt the same pattern. Adversarial check: countWorkingDays is only called from the holidays controller (informational endpoint) — confirmed via grep. It is not wired into balance calculations, so impact is limited to display data. Code verbatim confirmed at lines 460-477.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 97a5b2bd
 
 ---
 
@@ -9806,7 +9806,7 @@ curl -s http://localhost:4000/api/metrics | grep http_requests_total
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-OBS-008` to avoid ID collision with the primary run; original id `OBS-008` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 97a5b2bd
 
 ---
 
@@ -9856,7 +9856,7 @@ curl -s http://localhost:4000/api/metrics | grep -E 'db_|redis_|prisma_|pool_'
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-OBS-009` to avoid ID collision with the primary run; original id `OBS-009` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 97a5b2bd
 
 ---
 
@@ -10415,7 +10415,7 @@ grep -n '_count\|leaveBalance\|balance' /home/alex/Documents/REPO/ORCHESTRA/apps
 - sessionA-only finding (99-run). Namespaced `SA-DAT-003` to avoid ID collision with the primary run; original id `DAT-003` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: Schema line 710 confirms onDelete: Cascade on LeaveBalance.leaveType FK. Service line 152-155 selects only _count.leaves. Leave_balance cascade confirmed in migration 20260321105758.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 97a5b2bd
 
 ---
 
