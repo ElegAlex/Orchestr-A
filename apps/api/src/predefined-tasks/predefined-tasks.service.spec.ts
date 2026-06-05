@@ -10,7 +10,12 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { CreatePredefinedTaskDto } from './dto/create-predefined-task.dto';
-import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
+import {
+  CreateRecurringRuleDto,
+  GenerateFromRulesDto,
+} from './dto/create-recurring-rule.dto';
+import { BulkAssignmentDto } from './dto/bulk-assignment.dto';
+import { CreateBulkRecurringRulesDto } from './dto/create-bulk-recurring-rules.dto';
 
 describe('PredefinedTasksService', () => {
   let service: PredefinedTasksService;
@@ -33,6 +38,7 @@ describe('PredefinedTasksService', () => {
     },
     predefinedTaskRecurringRule: {
       create: vi.fn(),
+      createMany: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -545,8 +551,14 @@ describe('PredefinedTasksService', () => {
   describe('createBulkAssignment', () => {
     it('devrait créer des assignations pour chaque combinaison user × date', async () => {
       mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
-        mockAssignment,
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+      // PER-012: createMany returns { count } — 2 users × 2 dates = 4
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 4,
+      });
+      (mockPrismaService as any).$transaction = vi.fn(
+        async (callback: (tx: any) => Promise<any>) =>
+          callback(mockPrismaService),
       );
 
       const dto = {
@@ -558,19 +570,25 @@ describe('PredefinedTasksService', () => {
 
       const result = await service.createBulkAssignment('admin-1', dto);
 
-      // 2 users × 2 dates = 4 assignations
+      // PER-012: individual create must NOT be called
       expect(
         mockPrismaService.predefinedTaskAssignment.create,
-      ).toHaveBeenCalledTimes(4);
+      ).not.toHaveBeenCalled();
       expect(result.created).toBe(4);
       expect(result.skipped).toBe(0);
     });
 
     it("devrait compter les doublons dans skipped sans lever d'erreur", async () => {
       mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
-      mockPrismaService.predefinedTaskAssignment.create
-        .mockResolvedValueOnce(mockAssignment)
-        .mockRejectedValueOnce({ code: 'P2002' });
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+      // 2 pairs attempted, 1 inserted (1 skipped by DB skipDuplicates)
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 1,
+      });
+      (mockPrismaService as any).$transaction = vi.fn(
+        async (callback: (tx: any) => Promise<any>) =>
+          callback(mockPrismaService),
+      );
 
       const dto = {
         predefinedTaskId: 'task-1',
@@ -593,9 +611,13 @@ describe('PredefinedTasksService', () => {
       mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
         {
           userId: 'user-2',
-          date: new Date('2026-03-26T00:00:00Z'),
+          date: new Date('2026-03-26T00:00:00.000Z'),
         },
       ]);
+      (mockPrismaService as any).$transaction = vi.fn(
+        async (callback: (tx: any) => Promise<any>) =>
+          callback(mockPrismaService),
+      );
 
       const dto = {
         predefinedTaskId: 'task-1',
@@ -608,7 +630,71 @@ describe('PredefinedTasksService', () => {
         service.createBulkAssignment('admin-1', dto),
       ).rejects.toThrow(BadRequestException);
       expect(
+        mockPrismaService.predefinedTaskAssignment.createMany,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('PER-012 — createMany is called exactly once with all (user × date) pairs instead of N individual creates', async () => {
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 4,
+      });
+      (mockPrismaService as any).$transaction = vi.fn(
+        async (callback: (tx: any) => Promise<any>) =>
+          callback(mockPrismaService),
+      );
+
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userIds: ['user-1', 'user-2'],
+        dates: ['2026-03-25T00:00:00Z', '2026-03-26T00:00:00Z'],
+        period: 'FULL_DAY',
+      };
+
+      await service.createBulkAssignment('admin-1', dto);
+
+      // Exactly one batched insert, never individual create calls
+      expect(
+        mockPrismaService.predefinedTaskAssignment.createMany,
+      ).toHaveBeenCalledTimes(1);
+      expect(
         mockPrismaService.predefinedTaskAssignment.create,
+      ).not.toHaveBeenCalled();
+      const call =
+        mockPrismaService.predefinedTaskAssignment.createMany.mock.calls[0][0];
+      expect(call.skipDuplicates).toBe(true);
+      expect(call.data).toHaveLength(4);
+    });
+
+    it('COR-021 — telework check is re-run inside the transaction (snapshot is atomic)', async () => {
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue({
+        ...mockTask,
+        isTeleworkAllowed: false,
+      });
+      // Simulate: concurrent telework mutation makes the check find a conflict
+      // inside the tx, even though an outside-tx check might have passed
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
+        { userId: 'user-1', date: new Date('2026-03-25T00:00:00.000Z') },
+      ]);
+      (mockPrismaService as any).$transaction = vi.fn(
+        async (callback: (tx: any) => Promise<any>) =>
+          callback(mockPrismaService),
+      );
+
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userIds: ['user-1'],
+        dates: ['2026-03-25T00:00:00Z'],
+        period: 'FULL_DAY',
+      };
+
+      // The check inside the transaction must catch the conflict and reject
+      await expect(
+        service.createBulkAssignment('admin-1', dto),
+      ).rejects.toThrow(BadRequestException);
+      expect(
+        mockPrismaService.predefinedTaskAssignment.createMany,
       ).not.toHaveBeenCalled();
     });
   });
@@ -630,9 +716,10 @@ describe('PredefinedTasksService', () => {
       mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
         rule,
       ]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
-        mockAssignment,
-      );
+      // PER-014: createMany returns { count: 1 } for 1 Monday in the range
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 1,
+      });
 
       // Range: 2026-03-23 (Monday) to 2026-03-29 (Sunday)
       const dto = {
@@ -648,7 +735,7 @@ describe('PredefinedTasksService', () => {
       expect(result.rulesProcessed).toBe(1);
     });
 
-    it('devrait sauter les assignations déjà existantes (P2002)', async () => {
+    it('devrait sauter les assignations déjà existantes (P2002 → skipDuplicates)', async () => {
       const rule = {
         ...mockRecurringRule,
         dayOfWeek: 0, // Monday
@@ -659,8 +746,9 @@ describe('PredefinedTasksService', () => {
       mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
         rule,
       ]);
-      mockPrismaService.predefinedTaskAssignment.create.mockRejectedValue({
-        code: 'P2002',
+      // count=0: all duplicates skipped by DB-level skipDuplicates
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 0,
       });
 
       const dto = {
@@ -702,9 +790,10 @@ describe('PredefinedTasksService', () => {
       mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
         rule,
       ]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
-        mockAssignment,
-      );
+      // No occurrences → createMany not called, or called with empty data (count=0)
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 0,
+      });
 
       // Range: 2026-03-23 (Monday) - before rule start
       const dto = {
@@ -717,6 +806,51 @@ describe('PredefinedTasksService', () => {
       // Despite the rule having dayOfWeek=0 (Monday) and 2026-03-23 being a Monday,
       // the rule doesn't start until 2026-04-01
       expect(result.created).toBe(0);
+    });
+
+    it('PER-014 — createMany called once with all occurrence pairs instead of O(R*D) individual creates', async () => {
+      const rule1 = {
+        ...mockRecurringRule,
+        id: 'rule-1',
+        dayOfWeek: 0,
+        startDate: new Date('2026-01-01'),
+        endDate: null,
+      };
+      const rule2 = {
+        ...mockRecurringRule,
+        id: 'rule-2',
+        userId: 'user-2',
+        dayOfWeek: 2,
+        startDate: new Date('2026-01-01'),
+        endDate: null,
+      };
+
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
+        rule1,
+        rule2,
+      ]);
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 2,
+      });
+
+      // Range: 2026-03-23 (Mon) to 2026-03-25 (Wed) — 1 Monday + 1 Wednesday
+      const dto = {
+        startDate: '2026-03-23T00:00:00Z',
+        endDate: '2026-03-25T00:00:00Z',
+      };
+
+      await service.generateFromRules('admin-1', dto);
+
+      // Exactly one batched insert for all rules combined
+      expect(
+        mockPrismaService.predefinedTaskAssignment.createMany,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockPrismaService.predefinedTaskAssignment.create,
+      ).not.toHaveBeenCalled();
+      const call =
+        mockPrismaService.predefinedTaskAssignment.createMany.mock.calls[0][0];
+      expect(call.skipDuplicates).toBe(true);
     });
   });
 
@@ -733,9 +867,10 @@ describe('PredefinedTasksService', () => {
       mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
         biweeklyRule,
       ]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
-        mockAssignment,
-      );
+      // PER-014: createMany returns count of created occurrences
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 2,
+      });
 
       const result = await service.generateFromRules('admin-1', {
         startDate: '2026-01-05T00:00:00Z',
@@ -746,8 +881,8 @@ describe('PredefinedTasksService', () => {
       // weekInterval=2, anchor=Jan 5: week 0 (YES), week 1 (NO), week 2 (YES), week 3 (NO)
       expect(result.created).toBe(2);
       expect(
-        mockPrismaService.predefinedTaskAssignment.create,
-      ).toHaveBeenCalledTimes(2);
+        mockPrismaService.predefinedTaskAssignment.createMany,
+      ).toHaveBeenCalledTimes(1);
     });
 
     it('devrait generer chaque semaine quand weekInterval=1', async () => {
@@ -762,9 +897,9 @@ describe('PredefinedTasksService', () => {
       mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
         weeklyRule,
       ]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
-        mockAssignment,
-      );
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 4,
+      });
 
       const result = await service.generateFromRules('admin-1', {
         startDate: '2026-01-05T00:00:00Z',
@@ -785,9 +920,9 @@ describe('PredefinedTasksService', () => {
       mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
         rule,
       ]);
-      mockPrismaService.predefinedTaskAssignment.create.mockResolvedValue(
-        mockAssignment,
-      );
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 2,
+      });
 
       const result = await service.generateFromRules('admin-1', {
         startDate: '2026-01-19T00:00:00Z',
@@ -911,13 +1046,20 @@ describe('PredefinedTasksService', () => {
   describe('bulkCreateRecurringRules', () => {
     it('devrait creer N users x M jours regles atomiques', async () => {
       mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+      // PER-013: createMany returns { count }, then findMany to get records
+      mockPrismaService.predefinedTaskRecurringRule.createMany.mockResolvedValue(
+        { count: 4 },
+      );
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
+        mockRecurringRule,
+        mockRecurringRule,
+        mockRecurringRule,
+        mockRecurringRule,
+      ]);
       (mockPrismaService as any).$transaction = vi.fn(
         async (callback: (tx: any) => Promise<any>) => {
           return callback(mockPrismaService);
         },
-      );
-      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(
-        mockRecurringRule,
       );
 
       const dto = {
@@ -932,9 +1074,10 @@ describe('PredefinedTasksService', () => {
       const result = await service.bulkCreateRecurringRules('admin-1', dto);
 
       expect(result.created).toBe(4);
+      // PER-013: individual create must NOT be called
       expect(
         mockPrismaService.predefinedTaskRecurringRule.create,
-      ).toHaveBeenCalledTimes(4);
+      ).not.toHaveBeenCalled();
     });
 
     it('devrait lever NotFoundException si la tache est inactive', async () => {
@@ -958,13 +1101,16 @@ describe('PredefinedTasksService', () => {
 
     it('devrait utiliser weekInterval=1 par defaut', async () => {
       mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.predefinedTaskRecurringRule.createMany.mockResolvedValue(
+        { count: 1 },
+      );
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue([
+        mockRecurringRule,
+      ]);
       (mockPrismaService as any).$transaction = vi.fn(
         async (callback: (tx: any) => Promise<any>) => {
           return callback(mockPrismaService);
         },
-      );
-      mockPrismaService.predefinedTaskRecurringRule.create.mockResolvedValue(
-        mockRecurringRule,
       );
 
       const dto = {
@@ -977,15 +1123,49 @@ describe('PredefinedTasksService', () => {
 
       await service.bulkCreateRecurringRules('admin-1', dto);
 
+      // weekInterval=1 must be in the createMany data payload
       expect(
-        mockPrismaService.predefinedTaskRecurringRule.create,
+        mockPrismaService.predefinedTaskRecurringRule.createMany,
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            weekInterval: 1,
-          }),
+          data: expect.arrayContaining([
+            expect.objectContaining({ weekInterval: 1 }),
+          ]),
         }),
       );
+    });
+
+    it('PER-013 — createMany is called once instead of N×D individual creates', async () => {
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.predefinedTaskRecurringRule.createMany.mockResolvedValue(
+        { count: 6 },
+      );
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue(
+        Array(6).fill(mockRecurringRule),
+      );
+      (mockPrismaService as any).$transaction = vi.fn(
+        async (callback: (tx: any) => Promise<any>) =>
+          callback(mockPrismaService),
+      );
+
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userIds: ['user-1', 'user-2', 'user-3'],
+        daysOfWeek: [0, 2],
+        period: 'FULL_DAY',
+        startDate: '2026-01-06T00:00:00Z',
+      };
+
+      const result = await service.bulkCreateRecurringRules('admin-1', dto);
+
+      // Exactly one batched insert
+      expect(
+        mockPrismaService.predefinedTaskRecurringRule.createMany,
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        mockPrismaService.predefinedTaskRecurringRule.create,
+      ).not.toHaveBeenCalled();
+      expect(result.created).toBe(6);
     });
   });
 
@@ -1059,6 +1239,130 @@ describe('PredefinedTasksService', () => {
       await expect(service.removeRecurringRule('unknown-id')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  // ===========================
+  // COR-022 — assertTeleworkCompatibility: UTC-safe date construction
+  // ===========================
+
+  describe('COR-022 — assertTeleworkCompatibility date UTC normalization', () => {
+    it('COR-022 — date-only string correctly maps to UTC midnight for telework conflict detection', async () => {
+      // Simulate a Paris-timezone date: new Date('2026-03-25') in Paris TZ
+      // would be 2026-03-24T23:00:00Z, missing the DB row stored as 2026-03-25T00:00:00Z.
+      // After fix, Date.UTC() is used, producing 2026-03-25T00:00:00.000Z exactly.
+      const taskNoTelework = { ...mockTask, isTeleworkAllowed: false };
+      mockPrismaService.predefinedTask.findUnique.mockResolvedValue(
+        taskNoTelework,
+      );
+      // DB stores date as 2026-03-25T00:00:00.000Z (UTC midnight)
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([
+        { userId: 'user-1', date: new Date('2026-03-25T00:00:00.000Z') },
+      ]);
+      (mockPrismaService as any).$transaction = vi.fn(
+        async (callback: (tx: any) => Promise<any>) =>
+          callback(mockPrismaService),
+      );
+      mockPrismaService.predefinedTaskAssignment.createMany.mockResolvedValue({
+        count: 0,
+      });
+
+      // Date-only string (no explicit TZ — ambiguous in non-UTC environments)
+      const dto = {
+        predefinedTaskId: 'task-1',
+        userIds: ['user-1'],
+        dates: ['2026-03-25'],
+        period: 'FULL_DAY',
+      };
+
+      // The telework check MUST detect the conflict regardless of server TZ
+      await expect(
+        service.createBulkAssignment('admin-1', dto),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ===========================
+  // PER-014 — GenerateFromRulesDto: date range max validation
+  // ===========================
+
+  describe('PER-014 — GenerateFromRulesDto max date range validation', () => {
+    it('PER-014 — rejects date range > 3 months with a validation error', async () => {
+      const dto = plainToInstance(GenerateFromRulesDto, {
+        startDate: '2026-01-01T00:00:00Z',
+        endDate: '2026-05-01T00:00:00Z', // 4 months — exceeds 3-month cap
+      });
+      const errors = await validate(dto);
+      // Must have at least one validation error (range too wide)
+      expect(errors.length).toBeGreaterThan(0);
+    });
+
+    it('PER-014 — accepts date range of exactly 3 months', async () => {
+      const dto = plainToInstance(GenerateFromRulesDto, {
+        startDate: '2026-01-01T00:00:00Z',
+        endDate: '2026-03-31T00:00:00Z', // ~90 days — within cap
+      });
+      const errors = await validate(dto);
+      expect(errors.length).toBe(0);
+    });
+  });
+
+  // ===========================
+  // PER-012 — BulkAssignmentDto: ArrayMaxSize validation
+  // ===========================
+
+  describe('PER-012 — BulkAssignmentDto ArrayMaxSize validation', () => {
+    it('PER-012 — rejects userIds with more than 50 entries', async () => {
+      const dto = plainToInstance(BulkAssignmentDto, {
+        predefinedTaskId: '00000000-0000-0000-0000-000000000001',
+        userIds: Array.from(
+          { length: 51 },
+          (_, i) => `00000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
+        ),
+        dates: ['2026-03-25T00:00:00Z'],
+        period: 'FULL_DAY',
+      });
+      const errors = await validate(dto);
+      const err = errors.find((e) => e.property === 'userIds');
+      expect(err).toBeDefined();
+    });
+
+    it('PER-012 — rejects dates with more than 90 entries', async () => {
+      const dto = plainToInstance(BulkAssignmentDto, {
+        predefinedTaskId: '00000000-0000-0000-0000-000000000001',
+        userIds: ['00000000-0000-0000-0000-000000000001'],
+        dates: Array.from(
+          { length: 91 },
+          (_, i) =>
+            `2026-01-${String((i % 28) + 1).padStart(2, '0')}T00:00:00Z`,
+        ),
+        period: 'FULL_DAY',
+      });
+      const errors = await validate(dto);
+      const err = errors.find((e) => e.property === 'dates');
+      expect(err).toBeDefined();
+    });
+  });
+
+  // ===========================
+  // PER-013 — CreateBulkRecurringRulesDto: ArrayMaxSize validation
+  // ===========================
+
+  describe('PER-013 — CreateBulkRecurringRulesDto ArrayMaxSize validation', () => {
+    it('PER-013 — rejects userIds with more than 50 entries', async () => {
+      const dto = plainToInstance(CreateBulkRecurringRulesDto, {
+        predefinedTaskId: '00000000-0000-0000-0000-000000000001',
+        userIds: Array.from(
+          { length: 51 },
+          (_, i) => `00000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
+        ),
+        daysOfWeek: [0, 2],
+        period: 'FULL_DAY',
+        startDate: '2026-01-06T00:00:00Z',
+      });
+      const errors = await validate(dto);
+      const err = errors.find((e) => e.property === 'userIds');
+      expect(err).toBeDefined();
     });
   });
 

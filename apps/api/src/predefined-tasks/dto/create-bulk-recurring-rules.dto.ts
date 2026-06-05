@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
   ArrayMinSize,
+  ArrayMaxSize,
   IsUUID,
   IsInt,
   Min,
@@ -23,11 +24,13 @@ export class CreateBulkRecurringRulesDto {
   predefinedTaskId: string;
 
   @ApiProperty({
-    description: 'IDs des utilisateurs',
+    description: 'IDs des utilisateurs (max 50)',
     example: ['uuid-user-1', 'uuid-user-2'],
+    maxItems: 50,
   })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(50) // PER-013: cap to avoid unbounded N×D INSERTs in a held transaction
   @IsUUID('all', { each: true })
   userIds: string[];
 

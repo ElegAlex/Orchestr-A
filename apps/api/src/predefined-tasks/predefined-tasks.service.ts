@@ -4,6 +4,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { DayPeriod } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePredefinedTaskDto } from './dto/create-predefined-task.dto';
 import { UpdatePredefinedTaskDto } from './dto/update-predefined-task.dto';
@@ -21,7 +22,24 @@ import { generateOccurrences, RuleLike } from './occurrence-generator';
 export class PredefinedTasksService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async assertTeleworkCompatibility(
+  // COR-022: Normalize date strings to UTC midnight to match occurrence-generator.ts
+  // convention and avoid TZ ambiguity for date-only strings.
+  private toUtcDates(dates: string[]): Date[] {
+    return dates.map((d) => {
+      const datePart = d.split('T')[0];
+      const [y, m, day] = datePart.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, day));
+    });
+  }
+
+  // COR-021: Accept a Prisma client (or transaction client) so the telework check
+  // can run inside the same transaction as the bulk insert (atomic snapshot).
+  private async assertTeleworkCompatibilityTx(
+    client: {
+      teleworkSchedule: {
+        findMany(args: object): Promise<Array<{ userId: string; date: Date }>>;
+      };
+    },
     task: { isTeleworkAllowed: boolean; name: string },
     userIds: string[],
     dates: string[],
@@ -29,10 +47,12 @@ export class PredefinedTasksService {
     if (task.isTeleworkAllowed) return;
     if (userIds.length === 0 || dates.length === 0) return;
 
-    const teleworkSchedules = await this.prisma.teleworkSchedule.findMany({
+    const utcDates = this.toUtcDates(dates);
+
+    const teleworkSchedules = await client.teleworkSchedule.findMany({
       where: {
         userId: { in: userIds },
-        date: { in: dates.map((date) => new Date(date)) },
+        date: { in: utcDates },
         isTelework: true,
       },
       select: { userId: true, date: true },
@@ -49,6 +69,19 @@ export class PredefinedTasksService {
         `La tâche "${task.name}" n'est pas réalisable en télétravail. Agents incompatibles : ${details}`,
       );
     }
+  }
+
+  private async assertTeleworkCompatibility(
+    task: { isTeleworkAllowed: boolean; name: string },
+    userIds: string[],
+    dates: string[],
+  ): Promise<void> {
+    return this.assertTeleworkCompatibilityTx(
+      this.prisma,
+      task,
+      userIds,
+      dates,
+    );
   }
 
   // ===========================
@@ -286,7 +319,7 @@ export class PredefinedTasksService {
   }
 
   async createBulkAssignment(assignedById: string, dto: BulkAssignmentDto) {
-    // Check predefined task exists
+    // Check predefined task exists (outside transaction — read-only, cheap)
     const task = await this.prisma.predefinedTask.findUnique({
       where: { id: dto.predefinedTaskId },
     });
@@ -295,42 +328,47 @@ export class PredefinedTasksService {
         `Tâche prédéfinie ${dto.predefinedTaskId} introuvable ou inactive`,
       );
     }
-    await this.assertTeleworkCompatibility(task, dto.userIds, dto.dates);
 
-    const results = { created: 0, skipped: 0, errors: [] as string[] };
+    // COR-021 + PER-012: wrap telework check + batch insert in a single transaction
+    // so the snapshot and writes are atomic (eliminates TOCTOU race).
+    // PER-012: build all pairs in memory then call createMany once (skipDuplicates).
+    const totalPairs = dto.userIds.length * dto.dates.length;
 
-    for (const userId of dto.userIds) {
-      for (const dateStr of dto.dates) {
-        try {
-          await this.prisma.predefinedTaskAssignment.create({
-            data: {
-              predefinedTaskId: dto.predefinedTaskId,
-              userId,
-              date: new Date(dateStr),
-              period: dto.period,
-              assignedById,
-              isRecurring: false,
-            },
-          });
-          results.created++;
-        } catch (error: unknown) {
-          if (
-            typeof error === 'object' &&
-            error !== null &&
-            'code' in error &&
-            (error as { code: string }).code === 'P2002'
-          ) {
-            results.skipped++;
-          } else {
-            results.errors.push(
-              `userId=${userId} date=${dateStr}: ${String(error)}`,
-            );
-          }
-        }
-      }
-    }
+    const { count } = await this.prisma.$transaction(async (tx) => {
+      // Re-run telework check inside the transaction for atomicity (COR-021)
+      await this.assertTeleworkCompatibilityTx(
+        tx,
+        task,
+        dto.userIds,
+        dto.dates,
+      );
 
-    return results;
+      const allPairs = dto.userIds.flatMap((userId) =>
+        dto.dates.map((dateStr) => {
+          const datePart = dateStr.split('T')[0];
+          const [y, m, day] = datePart.split('-').map(Number);
+          return {
+            predefinedTaskId: dto.predefinedTaskId,
+            userId,
+            date: new Date(Date.UTC(y, m - 1, day)),
+            period: dto.period,
+            assignedById,
+            isRecurring: false as const,
+          };
+        }),
+      );
+
+      return tx.predefinedTaskAssignment.createMany({
+        data: allPairs,
+        skipDuplicates: true,
+      });
+    });
+
+    return {
+      created: count,
+      skipped: totalPairs - count,
+      errors: [] as string[],
+    };
   }
 
   async removeAssignment(id: string) {
@@ -445,47 +483,61 @@ export class PredefinedTasksService {
     }
 
     const weekInterval = dto.weekInterval ?? 1;
+
+    // PER-013: Build all (user × dayOfWeek) pairs in memory, then createMany once.
+    // Prisma 6 createMany does not support include, so fetch records with findMany after.
+    const allRuleData = dto.userIds.flatMap((userId) =>
+      dto.daysOfWeek.map((dayOfWeek) => ({
+        predefinedTaskId: dto.predefinedTaskId,
+        userId,
+        dayOfWeek,
+        period: dto.period,
+        weekInterval,
+        startDate: new Date(dto.startDate),
+        ...(dto.endDate && { endDate: new Date(dto.endDate) }),
+        createdById,
+        isActive: true,
+      })),
+    );
+
     const rules = await this.prisma.$transaction(async (tx) => {
-      const created: any[] = [];
-      for (const userId of dto.userIds) {
-        for (const dayOfWeek of dto.daysOfWeek) {
-          const rule = await tx.predefinedTaskRecurringRule.create({
-            data: {
-              predefinedTaskId: dto.predefinedTaskId,
-              userId,
-              dayOfWeek,
-              period: dto.period,
-              weekInterval,
-              startDate: new Date(dto.startDate),
-              ...(dto.endDate && { endDate: new Date(dto.endDate) }),
-              createdById,
-              isActive: true,
+      const { count } = await tx.predefinedTaskRecurringRule.createMany({
+        data: allRuleData,
+      });
+
+      if (count === 0) return [];
+
+      // Fetch created records with full includes (createMany has no include support)
+      return tx.predefinedTaskRecurringRule.findMany({
+        where: {
+          predefinedTaskId: dto.predefinedTaskId,
+          createdById,
+          isActive: true,
+          userId: { in: dto.userIds },
+          dayOfWeek: { in: dto.daysOfWeek },
+        },
+        include: {
+          predefinedTask: {
+            select: {
+              id: true,
+              name: true,
+              color: true,
+              icon: true,
+              isTeleworkAllowed: true,
             },
-            include: {
-              predefinedTask: {
-                select: {
-                  id: true,
-                  name: true,
-                  color: true,
-                  icon: true,
-                  isTeleworkAllowed: true,
-                },
-              },
-              user: {
-                select: { id: true, firstName: true, lastName: true },
-              },
-              createdBy: {
-                select: { id: true, firstName: true, lastName: true },
-              },
-            },
-          });
-          created.push(rule);
-        }
-      }
-      return created;
+          },
+          user: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          createdBy: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+        },
+        orderBy: [{ userId: 'asc' }, { dayOfWeek: 'asc' }],
+      });
     });
 
-    return { created: rules.length, rules };
+    return { created: allRuleData.length, rules };
   }
 
   async updateRecurringRule(id: string, dto: UpdateRecurringRuleDto) {
@@ -560,10 +612,19 @@ export class PredefinedTasksService {
       },
     });
 
-    const results = { created: 0, skipped: 0 };
+    // PER-014: Collect all (rule, date) pairs across all rules into one array,
+    // then issue a single createMany (skipDuplicates) instead of O(R*D) inserts.
+    const allPairs: Array<{
+      predefinedTaskId: string;
+      userId: string;
+      date: Date;
+      period: DayPeriod;
+      assignedById: string;
+      isRecurring: boolean;
+      recurringRuleId: string;
+    }> = [];
 
     for (const rule of rules) {
-      // Adapter Prisma record → RuleLike interface
       const ruleLike: RuleLike = {
         id: rule.id,
         recurrenceType: (rule.recurrenceType ?? 'WEEKLY') as
@@ -582,34 +643,31 @@ export class PredefinedTasksService {
       const dates = generateOccurrences(ruleLike, rangeStart, rangeEnd);
 
       for (const date of dates) {
-        try {
-          await this.prisma.predefinedTaskAssignment.create({
-            data: {
-              predefinedTaskId: rule.predefinedTaskId,
-              userId: rule.userId,
-              date,
-              period: rule.period,
-              assignedById,
-              isRecurring: true,
-              recurringRuleId: rule.id,
-            },
-          });
-          results.created++;
-        } catch (error: unknown) {
-          if (
-            typeof error === 'object' &&
-            error !== null &&
-            'code' in error &&
-            (error as { code: string }).code === 'P2002'
-          ) {
-            results.skipped++;
-          } else {
-            throw error;
-          }
-        }
+        allPairs.push({
+          predefinedTaskId: rule.predefinedTaskId,
+          userId: rule.userId,
+          date,
+          period: rule.period,
+          assignedById,
+          isRecurring: true,
+          recurringRuleId: rule.id,
+        });
       }
     }
 
-    return { ...results, rulesProcessed: rules.length };
+    if (allPairs.length === 0) {
+      return { created: 0, skipped: 0, rulesProcessed: rules.length };
+    }
+
+    const { count } = await this.prisma.predefinedTaskAssignment.createMany({
+      data: allPairs,
+      skipDuplicates: true,
+    });
+
+    return {
+      created: count,
+      skipped: allPairs.length - count,
+      rulesProcessed: rules.length,
+    };
   }
 }

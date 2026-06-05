@@ -2987,7 +2987,7 @@ grep -n 'findFirst\|createMany\|skipDuplicates' apps/api/src/milestones/mileston
 
 ### COR-021 — createBulkAssignment: telework check snapshot race — assertTeleworkCompatibility runs before the bulk inserts, but concurrent mutations can invalidate it
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -4161,7 +4161,7 @@ grep -n 'await this.prisma.event.create\|createMany\|MAX_IMPORT' apps/api/src/pl
 
 ### PER-012 — createBulkAssignment: one DB INSERT per (user × date) pair — sequential awaits in nested loop, no transaction
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -4220,7 +4220,7 @@ N/A — manual verification
 
 ### PER-013 — bulkCreateRecurringRules: one DB INSERT per (user × dayOfWeek) inside a transaction — sequential awaits
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -4281,7 +4281,7 @@ N/A — manual verification
 
 ### PER-014 — generateFromRules: one DB INSERT per occurrence date, sequential await inside nested for-loop
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -6936,7 +6936,7 @@ grep -n 'startDate\|endDate\|dateFilter' apps/api/src/planning-export/planning-e
 
 ### COR-022 — assertTeleworkCompatibility: date comparison uses naive new Date(string) — TZ ambiguity with date-only strings
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** J
 - **Confidence:** primary-only

@@ -286,6 +286,40 @@ export class UpdateRecurringRuleDto {
   weekInterval?: number;
 }
 
+// PER-014: cross-field validator — rejects date ranges wider than 3 months (~92 days)
+// to prevent O(R*D) INSERTs on unbounded ranges.
+@ValidatorConstraint({ name: 'isDateRangeAtMost3Months', async: false })
+export class IsDateRangeAtMost3MonthsConstraint
+  implements ValidatorConstraintInterface
+{
+  validate(_value: unknown, args: ValidationArguments): boolean {
+    const dto = args.object as GenerateFromRulesDto;
+    if (!dto.startDate || !dto.endDate) return true; // other validators handle missing
+    const start = new Date(dto.startDate);
+    const end = new Date(dto.endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return true;
+    const diffMs = end.getTime() - start.getTime();
+    const maxMs = 92 * 24 * 60 * 60 * 1000; // 92 days ≈ 3 months
+    return diffMs >= 0 && diffMs <= maxMs;
+  }
+
+  defaultMessage(): string {
+    return 'La plage de dates ne peut pas dépasser 3 mois (92 jours)';
+  }
+}
+
+function IsDateRangeAtMost3Months(validationOptions?: ValidationOptions) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      constraints: [],
+      validator: IsDateRangeAtMost3MonthsConstraint,
+    });
+  };
+}
+
 export class GenerateFromRulesDto {
   @ApiProperty({
     description: 'Date de début de la plage (ISO)',
@@ -296,10 +330,11 @@ export class GenerateFromRulesDto {
   startDate: string;
 
   @ApiProperty({
-    description: 'Date de fin de la plage (ISO)',
+    description: 'Date de fin de la plage (ISO, max 3 mois après startDate)',
     example: '2026-04-30T00:00:00Z',
   })
   @IsDateString()
   @IsNotEmpty()
+  @IsDateRangeAtMost3Months() // PER-014: cap to prevent unbounded O(R*D) inserts
   endDate: string;
 }
