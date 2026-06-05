@@ -197,7 +197,7 @@ psql $DATABASE_URL -c "SELECT COUNT(*) FROM information_schema.referential_const
 - Related (same run): PER-036.
 - Audit note: ADVERSARIAL REVIEW CONFIRMED. Verified in schema.prisma lines 405-417 verbatim. Init migration (20251116093059_init/migration.sql line 360) adds only task_raci_taskId_fkey, never a userId FK. No subsequent migration adds it. The User model relations block (lines 56-97) has no taskRaci back-relation. Crucially, users.service.ts hard-delete transaction (lines 948-969) lists taskAssignee.deleteMany but NOT taskRACI.deleteMany — RACI rows are silently orphaned on user deletion. Application layer validates user existence on RACI creation (tasks.service.ts line 1029-1035) but provides NO protection … [truncated — full text in findings.json]
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 61194f42
 
 ---
 
