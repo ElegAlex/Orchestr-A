@@ -6151,7 +6151,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at line 27 of add_leave_balances_and_rbac_granularity migration. Verified no later migration changes this FK behavior — searched all migration SQL files for 'leave_balances_leaveTypeId_fkey' and found only the creation entry. No fix migration exists. The dat008_026_user_fk_full_erasure migration (2026-06-04) explicitly states it handles user deletion FKs only; leave_type_config FKs are not in scope. REMAINS OPEN.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 85278391
 
 ---
 
@@ -6388,7 +6388,7 @@ SELECT tp.id, COUNT(te.id) as te_count FROM third_parties tp JOIN time_entries t
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence VERBATIM confirmed at lines 159-161. Schema.prisma line 463 confirms ON DELETE Cascade. The hardDelete service (third-parties.service.ts line 180-187) explicitly comments 'Cascade FK handles time_entries, task_third_party_assignees, project_third_party_members' — meaning this CASCADE is intentional design, not an oversight. However, the finding remains valid: the design choice to allow hard-delete of a ThirdParty with associated time entries is architecturally dangerous for an HR/billing system with legal retention requirements. The application intentionally offers this endpoint, … [truncated — full text in findings.json]
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 85278391
 
 ---
 
