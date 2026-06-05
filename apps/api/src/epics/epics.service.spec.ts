@@ -20,6 +20,9 @@ describe('EpicsService', () => {
     project: {
       findUnique: vi.fn(),
     },
+    projectMember: {
+      count: vi.fn(),
+    },
   };
 
   const mockPermissionsService = {
@@ -119,6 +122,34 @@ describe('EpicsService', () => {
       expect(result).toHaveProperty('meta');
       expect(result.data).toHaveLength(2);
     });
+
+    it('SEC-006 — non-privileged caller only sees epics from projects they are a member of', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+      mockPrismaService.epic.findMany.mockResolvedValue([]);
+      mockPrismaService.epic.count.mockResolvedValue(0);
+
+      await service.findAll(1, 10, undefined, 'user-1', 'CONTRIBUTEUR');
+
+      // The WHERE clause forwarded to Prisma must scope to member projects
+      const findManyCall = mockPrismaService.epic.findMany.mock.calls[0][0];
+      expect(findManyCall.where).toMatchObject({
+        project: { members: { some: { userId: 'user-1' } } },
+      });
+    });
+
+    it('SEC-006 — ADMIN (projects:manage_any) sees all epics without membership filter', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+      ]);
+      mockPrismaService.epic.findMany.mockResolvedValue([]);
+      mockPrismaService.epic.count.mockResolvedValue(0);
+
+      await service.findAll(1, 10, undefined, 'admin-1', 'ADMIN');
+
+      const findManyCall = mockPrismaService.epic.findMany.mock.calls[0][0];
+      // No membership filter for privileged caller
+      expect(findManyCall.where).not.toHaveProperty('project');
+    });
   });
 
   describe('findOne', () => {
@@ -202,20 +233,20 @@ describe('EpicsService', () => {
   });
 
   describe('update with project membership check', () => {
-    const mockEpicWithProject = {
+    // After PER-004 fix: assertProjectMembership fetches a slim epic (id +
+    // projectId only) then calls projectMember.count — no full members array.
+    const mockEpicSlim = { id: '1', projectId: 'project-1' };
+    const mockEpicFull = {
       id: '1',
       name: 'Epic',
       tasks: [],
-      project: {
-        id: 'project-1',
-        members: [{ userId: 'user-1' }],
-      },
+      project: { id: 'project-1', name: 'Project' },
     };
 
     it('should skip membership check when no currentUserId', async () => {
-      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicFull);
       mockPrismaService.epic.update.mockResolvedValue({
-        ...mockEpicWithProject,
+        ...mockEpicFull,
         name: 'Updated',
       });
 
@@ -226,9 +257,9 @@ describe('EpicsService', () => {
     });
 
     it('should bypass membership check for ADMIN role', async () => {
-      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicFull);
       mockPrismaService.epic.update.mockResolvedValue({
-        ...mockEpicWithProject,
+        ...mockEpicFull,
         name: 'Admin Updated',
       });
 
@@ -243,12 +274,14 @@ describe('EpicsService', () => {
     });
 
     it('should allow member to update', async () => {
-      // First call for assertProjectMembership, second for findOne
+      // assertProjectMembership: slim epic lookup + projectMember.count=1
+      // findOne: full epic lookup
       mockPrismaService.epic.findUnique
-        .mockResolvedValueOnce(mockEpicWithProject)
-        .mockResolvedValueOnce(mockEpicWithProject);
+        .mockResolvedValueOnce(mockEpicSlim)
+        .mockResolvedValueOnce(mockEpicFull);
+      mockPrismaService.projectMember.count.mockResolvedValue(1);
       mockPrismaService.epic.update.mockResolvedValue({
-        ...mockEpicWithProject,
+        ...mockEpicFull,
         name: 'Member Updated',
       });
 
@@ -263,7 +296,8 @@ describe('EpicsService', () => {
     });
 
     it('should throw ForbiddenException when non-member tries to update', async () => {
-      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicSlim);
+      mockPrismaService.projectMember.count.mockResolvedValue(0);
 
       await expect(
         service.update(
@@ -277,18 +311,17 @@ describe('EpicsService', () => {
   });
 
   describe('remove with project membership check', () => {
-    const mockEpicWithProject = {
+    const mockEpicSlim = { id: '1', projectId: 'project-1' };
+    const mockEpicFull = {
       id: '1',
       name: 'Epic',
       tasks: [],
-      project: {
-        id: 'project-1',
-        members: [{ userId: 'user-1' }],
-      },
+      project: { id: 'project-1', name: 'Project' },
     };
 
     it('should throw ForbiddenException when non-member tries to remove', async () => {
-      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicSlim);
+      mockPrismaService.projectMember.count.mockResolvedValue(0);
 
       await expect(
         service.remove('1', 'non-member', 'CONTRIBUTEUR'),
@@ -296,8 +329,8 @@ describe('EpicsService', () => {
     });
 
     it('should skip membership check when no currentUserId is provided to remove', async () => {
-      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
-      mockPrismaService.epic.delete.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicFull);
+      mockPrismaService.epic.delete.mockResolvedValue(mockEpicFull);
 
       const result = await service.remove('1');
 
@@ -310,14 +343,12 @@ describe('EpicsService', () => {
   // The member-passes regression is covered by 'should allow member to update'
   // above; the witness that matters here is the institutional-role bypass.
   describe('assertProjectMembership permission bypass (COR-001)', () => {
-    const mockEpicWithProject = {
+    const mockEpicSlim = { id: '1', projectId: 'project-1' };
+    const mockEpicFull = {
       id: '1',
       name: 'Epic',
       tasks: [],
-      project: {
-        id: 'project-1',
-        members: [{ userId: 'user-1' }],
-      },
+      project: { id: 'project-1', name: 'Project' },
     };
 
     it('should bypass membership for a non-ADMIN role whose resolved permissions include projects:manage_any', async () => {
@@ -326,15 +357,14 @@ describe('EpicsService', () => {
       mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'projects:manage_any',
       ]);
-      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicFull);
       mockPrismaService.epic.update.mockResolvedValue({
-        ...mockEpicWithProject,
+        ...mockEpicFull,
         name: 'Institutional Admin Updated',
       });
 
-      // 'direction-si' is NOT in project.members — the ONLY thing letting the
-      // update through is the manage_any bypass. Pre-fix (role-code check) this
-      // falls through to the membership check and throws ForbiddenException.
+      // 'direction-si' is NOT a project member — the ONLY thing letting the
+      // update through is the manage_any bypass.
       const result = await service.update(
         '1',
         { name: 'Institutional Admin Updated' },
@@ -350,7 +380,8 @@ describe('EpicsService', () => {
 
     it('should throw ForbiddenException for a non-member role without projects:manage_any', async () => {
       mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
-      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicWithProject);
+      mockPrismaService.epic.findUnique.mockResolvedValue(mockEpicSlim);
+      mockPrismaService.projectMember.count.mockResolvedValue(0);
 
       await expect(
         service.update(
@@ -360,6 +391,50 @@ describe('EpicsService', () => {
           'DIRECTION_SI',
         ),
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  // PER-004 — assertProjectMembership must fire a targeted count query rather
+  // than fetching the full members array and filtering in-memory.
+  describe('PER-004 — assertProjectMembership uses projectMember.count not full members include', () => {
+    it('PER-004 — only prisma.projectMember.count fires, never an include:members fetch', async () => {
+      // Non-privileged caller
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+      // Slim epic returned by the targeted findUnique in assertProjectMembership
+      mockPrismaService.epic.findUnique.mockResolvedValueOnce({
+        id: 'epic-1',
+        projectId: 'proj-1',
+      });
+      // count=1 → member found
+      mockPrismaService.projectMember.count.mockResolvedValue(1);
+      // Full epic for findOne (second call)
+      mockPrismaService.epic.findUnique.mockResolvedValueOnce({
+        id: 'epic-1',
+        name: 'Epic',
+        projectId: 'proj-1',
+        project: { id: 'proj-1' },
+        tasks: [],
+      });
+      mockPrismaService.epic.update.mockResolvedValue({
+        id: 'epic-1',
+        name: 'Updated',
+      });
+
+      await service.update(
+        'epic-1',
+        { name: 'Updated' },
+        'user-1',
+        'CONTRIBUTEUR',
+      );
+
+      // projectMember.count must have been called with the targeted where clause
+      expect(mockPrismaService.projectMember.count).toHaveBeenCalledWith({
+        where: { projectId: 'proj-1', userId: 'user-1' },
+      });
+
+      // The assertProjectMembership findUnique must NOT include members
+      const membershipCall = mockPrismaService.epic.findUnique.mock.calls[0][0];
+      expect(membershipCall).not.toHaveProperty('include');
     });
   });
 });

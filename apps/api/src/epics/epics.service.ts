@@ -27,10 +27,31 @@ export class EpicsService {
     });
   }
 
-  async findAll(page = 1, limit = 1000, projectId?: string) {
+  async findAll(
+    page = 1,
+    limit = 1000,
+    projectId?: string,
+    userId?: string,
+    userRole?: string,
+  ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
-    const where = projectId ? { projectId } : {};
+
+    // SEC-006: scope list to projects the caller is a member of, unless the
+    // caller holds projects:manage_any (full visibility, e.g. ADMIN template).
+    const permissions = userRole
+      ? await this.permissionsService.getPermissionsForRole(userRole)
+      : [];
+    const hasFullVisibility = permissions.includes('projects:manage_any');
+    const membershipFilter =
+      !hasFullVisibility && userId
+        ? { project: { members: { some: { userId } } } }
+        : {};
+
+    const where = {
+      ...(projectId ? { projectId } : {}),
+      ...membershipFilter,
+    };
 
     const [data, total] = await Promise.all([
       this.prisma.epic.findMany({
@@ -102,6 +123,9 @@ export class EpicsService {
   /**
    * Verify the current user is a member of the epic's parent project.
    * Holders of the `projects:manage_any` bypass permission skip this check.
+   *
+   * PER-004: uses a targeted projectMember.count query instead of fetching
+   * the full members relation and filtering in-memory.
    */
   private async assertProjectMembership(
     epicId: string,
@@ -112,14 +136,18 @@ export class EpicsService {
       await this.permissionsService.getPermissionsForRole(userRole);
     if (permissions.includes('projects:manage_any')) return;
 
+    // Slim fetch: only the projectId is needed to drive the membership count.
     const epic = await this.prisma.epic.findUnique({
       where: { id: epicId },
-      include: { project: { include: { members: true } } },
+      select: { id: true, projectId: true },
     });
     if (!epic) throw new NotFoundException('Epic introuvable');
 
-    const isMember = epic.project.members.some((m) => m.userId === userId);
-    if (!isMember) {
+    // PER-004: single COUNT query replaces unbounded members include.
+    const memberCount = await this.prisma.projectMember.count({
+      where: { projectId: epic.projectId, userId },
+    });
+    if (memberCount === 0) {
       throw new ForbiddenException('Not a member of this project');
     }
   }

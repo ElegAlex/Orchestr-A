@@ -2047,7 +2047,7 @@ grep -n 'assertCanAccessProject' apps/api/src/clients/clients.service.ts
 
 ### SEC-006 — epics findAll and milestones findAll return all records regardless of project membership
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -3923,7 +3923,7 @@ N/A — manual verification
 
 ### PER-004 — assertProjectMembership in EpicsService fetches all project members (include: { project: { include: { members: true } } })
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only

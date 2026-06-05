@@ -97,7 +97,13 @@ describe('EpicsController', () => {
       const result = await controller.findAll(1, 10);
 
       expect(result).toEqual(paginatedResult);
-      expect(mockEpicsService.findAll).toHaveBeenCalledWith(1, 10, undefined);
+      expect(mockEpicsService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+      );
     });
 
     it('should filter by projectId', async () => {
@@ -114,6 +120,8 @@ describe('EpicsController', () => {
         1,
         10,
         'project-id-1',
+        undefined,
+        undefined,
       );
     });
   });

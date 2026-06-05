@@ -52,8 +52,16 @@ export class EpicsController {
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('projectId') projectId?: string,
+    @CurrentUser('id') userId?: string,
+    @CurrentUserRoleCode() userRole?: string | null,
   ) {
-    return this.epicsService.findAll(page, limit, projectId);
+    return this.epicsService.findAll(
+      page,
+      limit,
+      projectId,
+      userId,
+      userRole ?? undefined,
+    );
   }
 
   @Get(':id')
