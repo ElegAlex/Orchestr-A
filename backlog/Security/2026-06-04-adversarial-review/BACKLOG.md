@@ -577,7 +577,7 @@ grep -n '\$transaction\|count\|MAX_TODOS' apps/api/src/personal-todos/personal-t
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary COR-019 ⇄ sessionA COR-005).
 - Audit note: CLAUDE.md explicitly states 'Personal Todos: hard-coded 20-item limit'. The findByUser() cleanup (cleanupOldCompleted) runs before the count check, which at least reduces the window, but does not close it. Adversarial check: code at lines 31-47 matches exactly; no DB CHECK constraint found in schema.prisma for PersonalTodo count per user; no $transaction wrapping confirmed absent.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f8ef9b67
 
 ---
 
@@ -1653,7 +1653,7 @@ grep -n 'authorization' apps/api/src/metrics/metrics.controller.ts
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary SEC-011 ⇄ sessionA SEC-011).
 - Audit note: safeEqual() is already implemented in main.ts line 34-38 using timingSafeEqual — it just needs to be extracted to a shared utility and used here. Adversarial re-check: code_evidence verified verbatim at lines 30-36 of metrics.controller.ts. No other guard or middleware provides constant-time comparison for this endpoint. The safeEqual helper in main.ts is a local function, not exported, confirming the gap is real.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f8ef9b67
 
 ---
 
@@ -2922,7 +2922,7 @@ grep -n '\$transaction\|deleteMany\|service.update\|service.delete' apps/api/src
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The managerId=null update step (lines 332-337) is entirely redundant before delete — it should be removed along with the transaction wrapping fix. Adversarial check: onDelete: Cascade on UserService.service (schema.prisma line 158) makes step 1 redundant, but the missing transaction is still a real correctness gap — worst case is managerId=null service row surviving if crash between steps 2 and 3.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f8ef9b67
 
 ---
 
@@ -3856,7 +3856,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Same double-query pattern exists in assertCanManageUser (access-scope.service.ts line 282-294) for the users module. canAccessProject confirmed to return early for bypass users (line 74: `if (await this.hasAny(user, bypassPermissions)) return true`), so only non-privileged callers hit the double count.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f8ef9b67
 
 ---
 
@@ -4626,7 +4626,7 @@ grep -n 'IsInt\|IsNumber\|Min\|size' apps/api/src/documents/dto/create-document.
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The service-side check `createDocumentDto.size > MAX_DOCUMENT_SIZE_BYTES` is bypassed by any negative value, and only applies in create(), not in update().
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f8ef9b67
 
 ---
 
@@ -7270,7 +7270,7 @@ grep -n 'routeOptions\|routerPath\|req.path' apps/api/src/metrics/metrics.interc
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: This is an always-on interceptor applied globally (APP_INTERCEPTOR). The leak is continuous and correlates with traffic volume. Verified: line 34 reads `const route = req.path ?? '/';` verbatim. MetricsService.requestCounter and durationSummary are plain Maps with no eviction or size cap.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f8ef9b67
 
 ---
 
@@ -8664,7 +8664,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verbatim confirmed at lines 75-77. The return object at lines 115-124 exposes: onTime, total (=completed+overdue), ratio, completed, overdue, upcoming — so a consumer using total as 'all milestones' gets the wrong denominator.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f8ef9b67
 
 ---
 
