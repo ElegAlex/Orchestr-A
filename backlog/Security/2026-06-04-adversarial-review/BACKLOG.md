@@ -583,7 +583,7 @@ grep -n '\$transaction\|count\|MAX_TODOS' apps/api/src/personal-todos/personal-t
 
 ### PER-001 — analytics.service `getTasks` fetches all Task columns with no `select` projection — over-fetching on large task sets
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** cross-validated
@@ -8670,7 +8670,7 @@ N/A — manual verification
 
 ### COR-005 — taskStatusData and metrics diverge when scope exceeds PROJECT_DETAILS_LIMIT (50)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** primary-only
@@ -9370,7 +9370,7 @@ grep -n 'getSnapshots\|findMany' apps/api/src/projects/projects.service.ts | hea
 
 ### SA-PERF-011 — analytics.getAnalytics fires TWO identical task.groupBy queries per request
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** H
 - **Confidence:** secondary-only
@@ -9422,7 +9422,7 @@ grep -n 'task.groupBy\|groupBy' apps/api/src/analytics/analytics.service.ts
 
 ### SA-PERF-012 — analytics members include: loads ALL project members with full user object — no per-project cap
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** H
 - **Confidence:** secondary-only

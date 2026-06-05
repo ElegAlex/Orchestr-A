@@ -19,6 +19,9 @@ import {
 } from '../projects/dto/archived-filter.dto';
 import { CacheService } from '../common/services/cache.service';
 
+/** Projected task shape — only the fields consumed by analytics calculations. */
+type AnalyticsTask = Pick<Task, 'id' | 'status' | 'endDate' | 'projectId'>;
+
 /** TTL for analytics cache entries (seconds). Balances freshness vs. Prisma load. */
 const ANALYTICS_CACHE_TTL = 60;
 
@@ -26,16 +29,6 @@ const ANALYTICS_CACHE_TTL = 60;
 export const PROJECT_DETAILS_LIMIT = 50;
 
 // Types for analytics data
-interface ProjectMember {
-  role: string;
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    department?: { id: string; name: string } | null;
-  };
-}
-
 interface ProjectWithDetails {
   id: string;
   name: string;
@@ -55,7 +48,6 @@ interface ProjectWithDetails {
     department?: { id: string; name: string } | null;
   } | null;
   _count: { tasks: number };
-  members: ProjectMember[];
   clients?: Array<{ client: { id: string; name: string } }>;
 }
 
@@ -100,22 +92,24 @@ export class AnalyticsService {
       AND: [projectScope, archivedClause],
     };
 
+    // SA-PERF-011 / COR-005: ONE groupBy powers both taskStatusData and project progress.
+    // Uses the same uncapped where as getTasks so taskStatusData and calculateMetrics
+    // are always consistent, even when projects exceed PROJECT_DETAILS_LIMIT (50).
+    // The second identical groupBy that ran inside getProjects has been removed.
+    const taskStatusWhere: Prisma.TaskWhereInput = { project: projectWhere };
+    if (projectId) taskStatusWhere.projectId = projectId;
+    const taskStatusGroupBy = await this.prisma.task.groupBy({
+      by: ['projectId', 'status'],
+      where: taskStatusWhere,
+      _count: { _all: true },
+    });
+
+    // Fetch projects (progress computed from the shared groupBy), tasks, and users in parallel.
     const [projects, tasks, users] = await Promise.all([
-      this.getProjects(projectId, projectWhere),
+      this.getProjects(projectId, projectWhere, taskStatusGroupBy),
       this.getTasks(projectId, projectWhere),
       this.getActiveUsers(projectWhere),
     ]);
-
-    // PER-025: single groupBy replacing O(P×T) JS filters in getProjectProgressData
-    // and 5 separate filter passes in getTaskStatusData. Scoped to the same
-    // project set already resolved above — equivalent to the getTasks relation
-    // filter (orphan tasks excluded since they belong to no project in scope).
-    const projectIds = projects.map((p) => p.id);
-    const taskStatusGroupBy = await this.prisma.task.groupBy({
-      by: ['projectId', 'status'],
-      where: { projectId: { in: projectIds } },
-      _count: { _all: true },
-    });
 
     // Calculate metrics
     const metrics = this.calculateMetrics(projects, tasks, users);
@@ -140,6 +134,12 @@ export class AnalyticsService {
   private async getProjects(
     projectId: string | undefined,
     projectWhere: Prisma.ProjectWhereInput,
+    /** Pre-computed groupBy result (SA-PERF-011: caller owns the single query). */
+    statusGroupBy: Array<{
+      projectId: string | null;
+      status: string;
+      _count: { _all: number };
+    }>,
   ) {
     const where: Prisma.ProjectWhereInput = {
       AND: [projectWhere],
@@ -149,6 +149,8 @@ export class AnalyticsService {
       where.id = projectId;
     }
 
+    // SA-PERF-012: members include removed — not consumed in any analytics
+    // computation or response DTO. Use _count for member counts if needed.
     const projects = await this.prisma.project.findMany({
       where,
       take: PROJECT_DETAILS_LIMIT,
@@ -164,17 +166,6 @@ export class AnalyticsService {
             department: { select: { id: true, name: true } },
           },
         },
-        members: {
-          include: {
-            user: {
-              include: {
-                department: {
-                  select: { id: true, name: true },
-                },
-              },
-            },
-          },
-        },
         clients: {
           select: {
             client: { select: { id: true, name: true } },
@@ -183,20 +174,10 @@ export class AnalyticsService {
       },
     });
 
-    // Batch-compute progress for all projects in a single groupBy query (PER-001 fix).
-    // Replaces the N per-project task.findMany calls with one SQL groupBy.
-    const projectIds = projects.map((p) => p.id);
-    const statusCounts = await this.prisma.task.groupBy({
-      by: ['projectId', 'status'],
-      where: { projectId: { in: projectIds } },
-      _count: { _all: true },
-    });
-
-    // Build a per-project progress map from the grouped counts
-    const progressMap: Record<string, number> = {};
+    // Build per-project progress from the shared groupBy (SA-PERF-011: no second groupBy here).
     const totalMap: Record<string, number> = {};
     const doneMap: Record<string, number> = {};
-    for (const row of statusCounts) {
+    for (const row of statusGroupBy) {
       if (!row.projectId) continue;
       totalMap[row.projectId] =
         (totalMap[row.projectId] ?? 0) + row._count._all;
@@ -205,25 +186,27 @@ export class AnalyticsService {
           (doneMap[row.projectId] ?? 0) + row._count._all;
       }
     }
-    for (const id of projectIds) {
-      const total = totalMap[id] ?? 0;
-      progressMap[id] =
-        total === 0 ? 0 : Math.round(((doneMap[id] ?? 0) / total) * 100);
-    }
 
-    return projects.map((project) => ({
-      ...project,
-      progress: progressMap[project.id] ?? 0,
-      projectManager: project.manager
-        ? `${project.manager.firstName} ${project.manager.lastName}`
-        : null,
-    }));
+    return projects.map((project) => {
+      const total = totalMap[project.id] ?? 0;
+      const progress =
+        total === 0
+          ? 0
+          : Math.round(((doneMap[project.id] ?? 0) / total) * 100);
+      return {
+        ...project,
+        progress,
+        projectManager: project.manager
+          ? `${project.manager.firstName} ${project.manager.lastName}`
+          : null,
+      };
+    });
   }
 
   private async getTasks(
     projectId: string | undefined,
     projectWhere: Prisma.ProjectWhereInput,
-  ): Promise<Task[]> {
+  ): Promise<AnalyticsTask[]> {
     const where: Prisma.TaskWhereInput = {
       project: projectWhere,
     };
@@ -232,7 +215,13 @@ export class AnalyticsService {
       where.projectId = projectId;
     }
 
-    return this.prisma.task.findMany({ where });
+    // PER-001: select only the four fields consumed by analytics (status, endDate,
+    // projectId for metrics/details; id for completeness). Avoids fetching
+    // title, description, assignees, etc. on large task sets.
+    return this.prisma.task.findMany({
+      where,
+      select: { id: true, status: true, endDate: true, projectId: true },
+    });
   }
 
   private async getActiveUsers(
@@ -259,7 +248,7 @@ export class AnalyticsService {
 
   private calculateMetrics(
     projects: ProjectWithDetails[],
-    tasks: Task[],
+    tasks: AnalyticsTask[],
     users: Pick<User, 'id' | 'isActive'>[],
   ): MetricDto[] {
     const totalProjects = projects.length;
@@ -385,7 +374,7 @@ export class AnalyticsService {
 
   private async getProjectDetails(
     projects: ProjectWithDetails[],
-    tasks: Task[],
+    tasks: AnalyticsTask[],
   ): Promise<ProjectDetailDto[]> {
     // Segregate user hours and third-party hours via two parallel groupBy
     // so that workload aggregations never mix them. loggedHours = user hours,

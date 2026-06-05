@@ -738,6 +738,86 @@ describe('AnalyticsService', () => {
       expect(callArgs.take).toBe(50);
     });
 
+    // ─── PER-001 ─────────────────────────────────────────────────────────────
+    // task.findMany must include a select with exactly the four fields consumed
+    // by analytics. Without select, ALL task columns are fetched on every request.
+    // RED before fix: no select passed → undefined ≠ expected object.
+    // GREEN after fix: select present with exactly the projected fields.
+    it('PER-001 — task.findMany is called with a select projection containing {id, status, endDate, projectId}', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+
+      await service.getAnalytics({});
+
+      const callArgs = mockPrismaService.task.findMany.mock.calls[0][0] as {
+        select?: Record<string, unknown>;
+      };
+      expect(callArgs.select).toEqual({
+        id: true,
+        status: true,
+        endDate: true,
+        projectId: true,
+      });
+    });
+
+    // ─── SA-PERF-011 ─────────────────────────────────────────────────────────
+    // task.groupBy must be called exactly ONCE per getAnalytics invocation.
+    // Before fix: called twice (once in getAnalytics, once inside getProjects).
+    // RED before fix: call count is 2. GREEN after fix: call count is 1.
+    it('SA-PERF-011 — task.groupBy is called exactly once per getAnalytics invocation', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+
+      await service.getAnalytics({});
+
+      expect(mockPrismaService.task.groupBy).toHaveBeenCalledTimes(1);
+    });
+
+    // ─── SA-PERF-012 ─────────────────────────────────────────────────────────
+    // project.findMany include must NOT contain a members key — members are not
+    // used in any analytics computation or response DTO.
+    // RED before fix: include.members is present. GREEN after fix: absent.
+    it('SA-PERF-012 — project.findMany include does NOT contain a members key', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+
+      await service.getAnalytics({});
+
+      const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
+        include?: Record<string, unknown>;
+      };
+      expect(callArgs.include).not.toHaveProperty('members');
+    });
+
+    // ─── COR-005 ─────────────────────────────────────────────────────────────
+    // taskStatusGroupBy must use where: { project: projectWhere } (uncapped, same
+    // as getTasks) rather than where: { projectId: { in: projectIds } } (capped
+    // at PROJECT_DETAILS_LIMIT=50). This keeps taskStatusData consistent with
+    // calculateMetrics when scope > 50 projects.
+    // RED before fix: groupBy uses projectId.in (no .project key).
+    // GREEN after fix: groupBy uses where.project.
+    it('COR-005 — task.groupBy where uses project relation filter (not projectId.in)', async () => {
+      mockPrismaService.project.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.groupBy.mockResolvedValue([]);
+
+      await service.getAnalytics({});
+
+      const groupByArgs = mockPrismaService.task.groupBy.mock.calls[0][0] as {
+        where?: Record<string, unknown>;
+      };
+      // Must use relation filter (project key) rather than a list-based filter
+      expect(groupByArgs.where).toHaveProperty('project');
+      expect(groupByArgs.where).not.toHaveProperty('projectId');
+    });
+
     it('should filter dismissed time entries from both user and third-party groupBy (D3)', async () => {
       mockPrismaService.project.findMany.mockResolvedValue([mockProject]);
       mockPrismaService.task.findMany.mockResolvedValue([]);
