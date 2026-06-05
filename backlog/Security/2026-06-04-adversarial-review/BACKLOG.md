@@ -2386,7 +2386,7 @@ grep -n 'assertCanReadTask\|assertCanAccessProject' apps/api/src/third-parties/t
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Confidential tasks (confidential: true) are specifically protected in AccessScopeService.taskReadWhere; this gap bypasses that protection.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d7a2bd76
 
 ---
 
@@ -2444,7 +2444,7 @@ grep -n 'assertCanAccessProject' apps/api/src/third-parties/third-parties.servic
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Same pattern gap as security-S4-1 in the sibling module.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d7a2bd76
 
 ---
 
@@ -3225,7 +3225,7 @@ grep -n '\$transaction\|LEGAL_ENTITY\|contactFirstName' apps/api/src/third-parti
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: This is a true concurrent-write race; under normal single-user traffic it does not manifest. The LEGAL_ENTITY restriction is also only a service-layer invariant — not enforced via a DB CHECK constraint.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d7a2bd76
 
 ---
 
@@ -5829,7 +5829,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code at lines 180-187 matches verbatim. No AuditPersistenceService import or injection found. ThirdPartiesController.remove() does not read @CurrentUser, so actor identity is also absent from the hardDelete flow.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d7a2bd76
 
 ---
 
