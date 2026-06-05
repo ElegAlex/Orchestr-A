@@ -7383,7 +7383,7 @@ grep -n 'labels\|route\|method' apps/api/src/metrics/metrics.service.ts | head -
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial re-check: code_evidence verified verbatim at line 37 of metrics.service.ts. The interceptor (metrics.interceptor.ts line 34) confirms route = req.path with no sanitization. The renderMetrics() method (lines 66-80) interpolates the raw labels string directly into the output. No escaping or normalization layer exists anywhere in the pipeline.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 81149871
 
 ---
 
