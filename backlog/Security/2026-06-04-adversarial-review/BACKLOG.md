@@ -6605,7 +6605,7 @@ SELECT email, COUNT(*) FROM users GROUP BY LOWER(email) HAVING COUNT(*) > 1; -- 
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: CONFIRMED. Migration code evidence is verbatim. auth.service.ts line 80-81: `prisma.user.findUnique({ where: { email: login } })` verified — no toLowerCase on login before call. users.service.ts line 155: `email: createUserDto.email` — stored as-is. Registration path (auth.service.ts line 333) also stores as-is. The migration comment acknowledges 'compatible with the existing @unique Prisma declarations used by findUnique calls in auth.service.ts' but this is the issue — findUnique on email is case-sensitive. The same dual-index pattern is applied to login but login is typically typed exactly … [truncated — full text in findings.json]
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 5043b353
 
 ---
 
