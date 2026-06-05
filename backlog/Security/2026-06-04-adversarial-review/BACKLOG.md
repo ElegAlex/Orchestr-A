@@ -637,7 +637,7 @@ grep -n 'findMany\|select\|Task\[\]' apps/api/src/analytics/analytics.service.ts
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-001 ⇄ sessionA PERF-010).
 - Audit note: The `taskStatusGroupBy` at line 114 was added as PER-025 to avoid O(P×T) JS filters — but `getTasks` is still called and its result used in `getProjectDetails` (tasks per project count, completed count). The groupBy result already covers this; getTasks could be eliminated. Verified verbatim: `return this.prisma.task.findMany({ where });` at line 235 — no select clause.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 52abc47a
 
 ---
 
@@ -8724,7 +8724,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verbatim verified: getProjects uses `take: PROJECT_DETAILS_LIMIT` at line 154; getTasks has no take at line 235; taskStatusGroupBy scoped to projectIds (truncated list) at lines 113-118; calculateMetrics uses unbounded tasks array. The PER-025 comment at line 109 incorrectly states the groupBy is 'equivalent to the getTasks relation filter'. It is equivalent only when projects.length < PROJECT_DETAILS_LIMIT.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 52abc47a
 
 ---
 
@@ -9416,7 +9416,7 @@ grep -n 'task.groupBy\|groupBy' apps/api/src/analytics/analytics.service.ts
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-PERF-011` to avoid ID collision with the primary run; original id `PERF-011` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 52abc47a
 
 ---
 
@@ -9471,7 +9471,7 @@ grep -n -A5 'members.*include\|include.*members' apps/api/src/analytics/analytic
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-PERF-012` to avoid ID collision with the primary run; original id `PERF-012` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 52abc47a
 
 ---
 
