@@ -121,6 +121,9 @@ describe('UsersService', () => {
     taskAssignee: {
       deleteMany: vi.fn(),
     },
+    taskRACI: {
+      deleteMany: vi.fn(),
+    },
     predefinedTaskAssignment: {
       deleteMany: vi.fn(),
     },
@@ -1754,6 +1757,24 @@ describe('UsersService', () => {
         message: 'Utilisateur supprimé définitivement',
       });
       expect(mockPrismaService.$transaction).toHaveBeenCalled();
+    });
+
+    it('DAT-002 — erases owned RACI rows (taskRACI.deleteMany) on hard delete', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+      });
+      // Trail-less user → physical delete path; owned data erased explicitly.
+      mockPrismaService.auditLog.count.mockResolvedValue(0);
+      mockPrismaService.user.delete.mockResolvedValue({ id: 'user-1' });
+
+      await service.hardDelete('user-1', 'admin-1');
+
+      // RACI rows are owned operational data; before DAT-002 they were orphaned
+      // (no FK + not in the owned-set deleteMany list).
+      expect(mockPrismaService.taskRACI.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1' },
+      });
     });
 
     it('should throw NotFoundException when user not found', async () => {

@@ -60,6 +60,7 @@ model User {
   createdProjects                  Project[]                     @relation("ProjectCreator")
   tasks                            Task[] // Tâches où l'user est assigné principal
   taskAssignments                  TaskAssignee[] // Tâches où l'user est co-assigné
+  taskRaci                         TaskRACI[] // DAT-002: lignes RACI où l'user est référencé
   leaves                           Leave[]                       @relation("UserLeaves")
   leavesToValidate                 Leave[]                       @relation("LeaveValidator")
   leavesValidated                  Leave[]                       @relation("LeaveValidatedBy")
@@ -411,6 +412,10 @@ model TaskRACI {
 
   // Relations
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  // DAT-002: FK on userId (was a bare String with no FK) — mirrors TaskAssignee.
+  // Cascade so RACI rows are removed when the referenced user is deleted; the
+  // hardDelete owned-set also deletes them explicitly (DAT-008/026 §2a pattern).
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, userId, role])
   @@map("task_raci")

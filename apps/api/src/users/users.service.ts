@@ -954,6 +954,10 @@ export class UsersService {
       await tx.teleworkRecurringRule.deleteMany({ where: { userId: id } });
       await tx.eventParticipant.deleteMany({ where: { userId: id } });
       await tx.taskAssignee.deleteMany({ where: { userId: id } });
+      // DAT-002 — RACI rows are owned operational data; delete them explicitly
+      // (the new FK Cascade is only a backstop). Without this they orphaned on
+      // user deletion (the bug this finding flagged).
+      await tx.taskRACI.deleteMany({ where: { userId: id } });
       await tx.comment.deleteMany({ where: { authorId: id } });
       await tx.leaveValidationDelegate.deleteMany({
         where: { OR: [{ delegatorId: id }, { delegateId: id }] },

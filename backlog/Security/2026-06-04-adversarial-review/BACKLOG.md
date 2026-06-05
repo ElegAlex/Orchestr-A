@@ -131,7 +131,7 @@ npx jest --testPathPattern leaves.service.spec --no-coverage 2>&1 | grep -E 'PAS
 
 ### DAT-002 — TaskRACI.userId has no FK relation — orphaned RACI rows, no cascade on user deletion
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** I
 - **Confidence:** cross-validated
