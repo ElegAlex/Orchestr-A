@@ -2553,7 +2553,7 @@ grep -n 'leave.userId === user' apps/web/app/\[locale\]/leaves/page.tsx
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code confirmed verbatim at lines 776-786. The API enforces the actual permission, so this is primarily an architectural inconsistency rather than an exploitable vulnerability. Severity is 'important' rather than 'blocking'.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 36e5e291
 
 ---
 
@@ -7158,7 +7158,7 @@ N/A — manual verification: note displayed date, reload page, confirm it does N
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at profile/page.tsx lines 344-356. Additionally confirmed that `lastLoginAt` does not exist in the Prisma schema (packages/database/prisma/schema.prisma) or in packages/types/, so even if the code were fixed, the backend field does not exist yet either. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 36e5e291
 
 ---
 
@@ -7815,7 +7815,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && npx eslint apps/web/app/\[locale\]/tas
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: usePermissions wraps hasPermission in useCallback([permissions]) — stable unless permissions array changes. When permissions DO change, fetchData dep array [user, assigneeMeFilter] does not include hasPermission, so the callback retains the stale closure. Confirmed real.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 36e5e291
 
 ---
 
@@ -7922,7 +7922,7 @@ find apps/web/app/\[locale\]/{leaves,telework,time-tracking,clients,third-partie
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Filesystem check confirmed 0 error.tsx files in all 6 directories. This finding covers all 6 route segments under the shard.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 36e5e291
 
 ---
 
@@ -8146,7 +8146,7 @@ grep -n 'getAll(1, 1000)' apps/web/app/\[locale\]/tasks/page.tsx
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: confirmed verbatim at tasks/page.tsx:88. No server-side filtering in the call. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 36e5e291
 
 ---
 
