@@ -1386,7 +1386,7 @@ grep -n 'USER_CREATED\|auditPersistence\|auditService' apps/api/src/users/users.
 
 ### PER-035 — TaskDependency.dependsOnTaskId has no index — reverse dependency lookups in checkCircularDependency are slow
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** cross-validated
@@ -1443,7 +1443,7 @@ docker exec orchestr-a-db psql -U postgres -d orchestra -c "EXPLAIN SELECT * FRO
 
 ### PER-036 — TaskRACI has no index on userId — per-user RACI lookups require seq-scan
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** cross-validated
@@ -6611,7 +6611,7 @@ SELECT email, COUNT(*) FROM users GROUP BY LOWER(email) HAVING COUNT(*) > 1; -- 
 
 ### DAT-017 — TaskDependency.dependsOnTaskId has no index — cascade delete on Task triggers seq-scan
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -6674,7 +6674,7 @@ psql $DATABASE_URL -c "SELECT indexname FROM pg_indexes WHERE tablename = 'task_
 
 ### DAT-018 — UserSkill.skillId has no standalone index — cascade delete on Skill triggers seq-scan
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** I
 - **Confidence:** primary-only

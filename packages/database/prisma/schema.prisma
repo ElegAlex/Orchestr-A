@@ -400,6 +400,7 @@ model TaskDependency {
   dependsOnTask Task @relation("DependentTasks", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, dependsOnTaskId])
+  @@index([dependsOnTaskId]) // PER-035/DAT-017: reverse-dependency lookups + Task cascade-delete path
   @@map("task_dependencies")
 }
 
@@ -418,6 +419,7 @@ model TaskRACI {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, userId, role])
+  @@index([userId]) // PER-036: per-user RACI lookups + FK reverse-scan
   @@map("task_raci")
 }
 
@@ -778,6 +780,7 @@ model UserSkill {
   skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   @@id([userId, skillId])
+  @@index([skillId]) // DAT-018: 'all users with skill X' reverse-lookup + Skill cascade-delete path
   @@map("user_skills")
 }
 
