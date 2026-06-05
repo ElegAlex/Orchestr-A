@@ -79,4 +79,14 @@ describe('audit_logs immutability trigger (real DB)', () => {
     expect(survivor).not.toBeNull();
     expect(survivor?.action).toBe('LOGIN_SUCCESS');
   });
+
+  it('DAT-013 — blocks TRUNCATE and the row survives', async () => {
+    const id = await seedRow();
+    await expect(
+      prisma.$executeRawUnsafe('TRUNCATE audit_logs'),
+    ).rejects.toThrow(/append-only/i);
+
+    const survivor = await prisma.auditLog.findUnique({ where: { id } });
+    expect(survivor).not.toBeNull();
+  });
 });

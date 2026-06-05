@@ -5954,7 +5954,7 @@ pnpm test:integration -- --testPathPattern audit-persistence; also: insert a row
 
 ### DAT-013 — audit_logs immutability trigger does not cover TRUNCATE — entire ledger can be wiped silently
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** H
 - **Confidence:** primary-only
