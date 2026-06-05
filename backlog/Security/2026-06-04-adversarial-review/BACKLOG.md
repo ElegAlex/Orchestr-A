@@ -256,7 +256,7 @@ grep -n 'prisma.task.create\|prisma.subtask.create\|\$transaction' apps/api/src/
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: validateImport() (dry-run) does not have this issue as it does not write. Verified at lines 1451-1482: no $transaction wrapping.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** cc51aaf4
 
 ---
 
