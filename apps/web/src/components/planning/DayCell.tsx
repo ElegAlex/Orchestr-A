@@ -165,6 +165,19 @@ export const DayCell = React.memo(({
   // moitié libre pour les tâches/événements.
   const fullDayLeaveVisible = leaveVisible && !isHalfDayLeave;
 
+  // Cas rare : deux congés demi-journée le même jour (ex. CP matin + RTT après-midi).
+  // On rend chacun dans sa moitié. `leave` (cell.leaves[0]) couvre la 1re moitié ;
+  // on cherche un second congé visible de la demi-journée opposée.
+  const otherHalfLeave = isHalfDayLeave
+    ? cell.leaves.find(
+        (l) =>
+          l !== leave &&
+          l.halfDay &&
+          l.halfDay !== leaveHalfDay &&
+          (l.status === "PENDING" ? showLeavePending : true),
+      )
+    : undefined;
+
   // Résoudre l'icône et la couleur depuis le leaveType config (custom ou défaut)
   const leaveIcon = leave?.leaveType?.icon ?? "🌴";
   const leaveColor = leave?.leaveType?.color ?? "#10B981";
@@ -284,6 +297,43 @@ export const DayCell = React.memo(({
         </div>
       )}
 
+      {otherHalfLeave && (
+        <div
+          className={`absolute inset-x-0 ${otherHalfLeave.halfDay === HalfDay.MORNING ? "top-0" : "bottom-0"} h-1/2 flex flex-col items-center justify-center z-20 border-2`}
+          style={{
+            backgroundColor:
+              otherHalfLeave.status === "PENDING"
+                ? `${otherHalfLeave.leaveType?.color ?? "#10B981"}26`
+                : `${otherHalfLeave.leaveType?.color ?? "#10B981"}4D`,
+            borderColor: otherHalfLeave.leaveType?.color ?? "#10B981",
+            borderStyle: otherHalfLeave.status === "PENDING" ? "dashed" : "solid",
+          }}
+        >
+          <span className={`${viewMode === "month" ? "text-base" : "text-xl"}`}>
+            {otherHalfLeave.leaveType?.icon ?? "🌴"}
+          </span>
+          {viewMode === "week" && (
+            <>
+              <span
+                className="font-medium text-[11px] leading-tight"
+                style={{ color: otherHalfLeave.leaveType?.color ?? "#10B981" }}
+              >
+                {otherHalfLeave.leaveType?.name ??
+                  t(`leaveTypes.${otherHalfLeave.type ?? "OTHER"}`)}
+              </span>
+              <span
+                className="text-[9px] italic leading-tight"
+                style={{ color: otherHalfLeave.leaveType?.color ?? "#10B981" }}
+              >
+                {otherHalfLeave.halfDay === HalfDay.MORNING
+                  ? t("dayCell.halfDayMorning")
+                  : t("dayCell.halfDayAfternoon")}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
       {/* External Intervention Background Overlay */}
       {cell.isExternalIntervention &&
         showExternalIntervention &&
@@ -318,6 +368,7 @@ export const DayCell = React.memo(({
         {/* Telework toggle - visible uniquement si pas de congé, jour férié, ni événement toute la journée.
             Le glyphe 🏠 (TT) est gouverné par showTelework, le glyphe 🏢 (bureau) par showOffice. */}
         {!fullDayLeaveVisible &&
+          !otherHalfLeave &&
           !cell.isHoliday &&
           !hasAllDayEvent &&
           canToggleTelework &&
@@ -345,6 +396,7 @@ export const DayCell = React.memo(({
           )}
         {/* Telework indicator (read-only) for users without toggle permission */}
         {!fullDayLeaveVisible &&
+          !otherHalfLeave &&
           !cell.isHoliday &&
           !hasAllDayEvent &&
           !canToggleTelework &&
@@ -368,6 +420,7 @@ export const DayCell = React.memo(({
         {/* Tasks - masquées si congé, jour férié, ou événement toute la journée.
             Chaque tâche est filtrée par son statut, son type (projet/orphan) et son caractère externe. */}
         {!fullDayLeaveVisible &&
+          !otherHalfLeave &&
           !cell.isHoliday &&
           !hasAllDayEvent &&
           cell.tasks.filter(isTaskVisible).map((task) => {
@@ -449,6 +502,7 @@ export const DayCell = React.memo(({
         {/* Predefined Task Assignments - masquées si congé, jour férié, ou événement toute la journée.
             Les assignations externes sont filtrées par showExternalIntervention. */}
         {!fullDayLeaveVisible &&
+          !otherHalfLeave &&
           !cell.isHoliday &&
           !hasAllDayEvent &&
           cell.predefinedTaskAssignments
@@ -538,6 +592,7 @@ export const DayCell = React.memo(({
         {/* Events - visible uniquement si pas de congé ni jour férié.
             Filtrés : événements standards par showEvent, interventions externes par showExternalIntervention. */}
         {!fullDayLeaveVisible &&
+          !otherHalfLeave &&
           !cell.isHoliday &&
           cell.events
             .filter((event) =>
