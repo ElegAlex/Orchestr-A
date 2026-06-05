@@ -4098,7 +4098,7 @@ N/A — manual verification
 
 ### PER-011 — ICS import: sequential `event.create` per VEVENT — up to 5MB/N-event sequential writes with no count cap
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -6880,7 +6880,7 @@ N/A — manual verification: create leave with endHalfDay, then call GET /leaves
 
 ### COR-020 — ICS export silently drops leaves that span the requested date window (startDate before and endDate after the range)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** J
 - **Confidence:** primary-only

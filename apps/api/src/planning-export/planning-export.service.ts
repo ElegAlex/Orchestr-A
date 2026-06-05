@@ -96,14 +96,29 @@ export class PlanningExportService {
       });
     }
 
-    // Approved leaves for user
+    // COR-020 — use interval-overlap predicate so leaves that span the entire
+    // requested window (startDate < window.start AND endDate > window.end) are
+    // no longer silently dropped.  The three cases covered:
+    //   • leave starts in window  (startDate ≥ start AND startDate ≤ end)
+    //   • leave ends in window    (endDate   ≥ start AND endDate   ≤ end)
+    //   • leave spans the window  (startDate ≤ start AND endDate   ≥ end)
+    // Standard intervals-overlap: A.start ≤ B.end AND A.end ≥ B.start
+    // When only one bound is supplied we apply a half-open variant.
+    const leaveOverlapFilter: Record<string, unknown> = {};
+    if (start && end) {
+      leaveOverlapFilter['startDate'] = { lte: new Date(end) };
+      leaveOverlapFilter['endDate'] = { gte: new Date(start) };
+    } else if (start) {
+      leaveOverlapFilter['endDate'] = { gte: new Date(start) };
+    } else if (end) {
+      leaveOverlapFilter['startDate'] = { lte: new Date(end) };
+    }
+
     const leaves = await this.prisma.leave.findMany({
       where: {
         userId,
         status: 'APPROVED',
-        ...(start || end
-          ? { OR: [{ startDate: dateFilter }, { endDate: dateFilter }] }
-          : {}),
+        ...(start || end ? leaveOverlapFilter : {}),
       },
       include: { leaveType: true },
     });
@@ -208,12 +223,41 @@ export class PlanningExportService {
     return results;
   }
 
+  // PER-011 — upper bound on the number of VEVENTs accepted in one import
+  // request.  A 5 MB ICS can hold several thousand minimal events; without a
+  // cap the sequential-create loop becomes a multi-thousand round-trip DoS
+  // vector on the HTTP path.
+  private static readonly MAX_IMPORT_EVENTS = 500;
+
   async importIcs(
     icsContent: string,
     userId: string,
   ): Promise<{ imported: number; skipped: number }> {
     const parsed = nodeIcal.sync.parseICS(icsContent);
-    let imported = 0;
+
+    // PER-011 — count total VEVENTs before any work; reject the entire request
+    // if it exceeds MAX_IMPORT_EVENTS so the HTTP handler returns quickly.
+    const totalVevents = Object.values(parsed).filter(
+      (c) => c && c.type === 'VEVENT',
+    ).length;
+    if (totalVevents > PlanningExportService.MAX_IMPORT_EVENTS) {
+      return { imported: 0, skipped: totalVevents };
+    }
+
+    // Build a batch of valid event data objects, collecting transformation
+    // errors as skipped rows.  A single createMany replaces N sequential
+    // awaited creates (PER-011).
+    type EventData = {
+      title: string;
+      description: string | null;
+      date: Date;
+      startTime: string | null;
+      endTime: string | null;
+      isAllDay: boolean;
+      createdById: string;
+    };
+
+    const batch: EventData[] = [];
     let skipped = 0;
 
     for (const key of Object.keys(parsed)) {
@@ -248,24 +292,34 @@ export class PlanningExportService {
           }
         }
 
-        await this.prisma.event.create({
-          data: {
-            title: stripHtml(strVal(vevent.summary)) || 'Evenement importe',
-            description: stripHtml(strVal(vevent.description)) || null,
-            date: start,
-            startTime: startTime ?? null,
-            endTime: endTime ?? null,
-            isAllDay,
-            createdById: userId,
-          },
+        batch.push({
+          title: stripHtml(strVal(vevent.summary)) || 'Evenement importe',
+          description: stripHtml(strVal(vevent.description)) || null,
+          date: start,
+          startTime: startTime ?? null,
+          endTime: endTime ?? null,
+          isAllDay,
+          createdById: userId,
         });
-
-        imported++;
       } catch {
         skipped++;
       }
     }
 
-    return { imported, skipped };
+    if (batch.length === 0) {
+      return { imported: 0, skipped };
+    }
+
+    try {
+      // PER-011 — single createMany replaces N sequential awaited creates
+      const result = await this.prisma.event.createMany({
+        data: batch,
+        skipDuplicates: true,
+      });
+      return { imported: result.count, skipped };
+    } catch {
+      // Batch write failed entirely; count all batch rows as skipped
+      return { imported: 0, skipped: skipped + batch.length };
+    }
   }
 }

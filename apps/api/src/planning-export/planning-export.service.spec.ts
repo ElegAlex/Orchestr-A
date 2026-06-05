@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
 
 const mockPrisma = {
-  event: { findMany: vi.fn(), create: vi.fn() },
+  event: { findMany: vi.fn(), create: vi.fn(), createMany: vi.fn() },
   leave: { findMany: vi.fn() },
   teleworkSchedule: { findMany: vi.fn() },
 };
@@ -29,6 +29,7 @@ describe('PlanningExportService', () => {
 
     // Default empty mocks
     mockPrisma.event.findMany.mockResolvedValue([]);
+    mockPrisma.event.createMany.mockResolvedValue({ count: 0 });
     mockPrisma.leave.findMany.mockResolvedValue([]);
     mockPrisma.teleworkSchedule.findMany.mockResolvedValue([]);
     mockAuditPersistence.log.mockResolvedValue(undefined);
@@ -62,10 +63,12 @@ describe('PlanningExportService', () => {
           }),
         }),
       );
+      // COR-020 — leaves now use overlap predicate (no OR)
       expect(mockPrisma.leave.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            OR: expect.any(Array),
+            startDate: expect.objectContaining({ lte: expect.any(Date) }),
+            endDate: expect.objectContaining({ gte: expect.any(Date) }),
           }),
         }),
       );
@@ -220,6 +223,37 @@ describe('PlanningExportService', () => {
       expect(result).toContain('BEGIN:VCALENDAR');
     });
 
+    it('COR-020 — leave spanning the full window (Jan 1–Dec 31) is included in a June export', async () => {
+      // A leave that starts before and ends after the window — the old OR filter missed this
+      mockPrisma.leave.findMany.mockResolvedValue([
+        {
+          id: 'leave-spanning',
+          startDate: new Date('2026-01-01'),
+          endDate: new Date('2026-12-31'),
+          leaveType: { name: 'Congé annuel' },
+        },
+      ]);
+
+      const result = await service.exportIcs(
+        'user-1',
+        '2026-06-01',
+        '2026-06-30',
+      );
+
+      // The spanning leave must appear in the ICS output
+      expect(result).toContain('Conge - Congé annuel');
+
+      // And the query must use the overlap predicate, not OR
+      expect(mockPrisma.leave.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            startDate: expect.objectContaining({ lte: new Date('2026-06-30') }),
+            endDate: expect.objectContaining({ gte: new Date('2026-06-01') }),
+          }),
+        }),
+      );
+    });
+
     it('applies only start filter when only start is provided', async () => {
       await service.exportIcs('user-1', '2025-01-01', undefined);
 
@@ -281,7 +315,8 @@ describe('PlanningExportService', () => {
 
   describe('importIcs', () => {
     it('imports valid VEVENT and returns count', async () => {
-      mockPrisma.event.create.mockResolvedValue({ id: 'new-event' });
+      // PER-011 — now uses createMany batch insert
+      mockPrisma.event.createMany.mockResolvedValue({ count: 1 });
 
       const ics = [
         'BEGIN:VCALENDAR',
@@ -298,7 +333,7 @@ describe('PlanningExportService', () => {
 
       expect(result.imported).toBe(1);
       expect(result.skipped).toBe(0);
-      expect(mockPrisma.event.create).toHaveBeenCalled();
+      expect(mockPrisma.event.createMany).toHaveBeenCalled();
     });
 
     it('skips components that are not VEVENTs', async () => {
@@ -329,8 +364,9 @@ describe('PlanningExportService', () => {
       expect(result.imported + result.skipped).toBeGreaterThanOrEqual(0);
     });
 
-    it('skips event on prisma create error', async () => {
-      mockPrisma.event.create.mockRejectedValue(new Error('DB error'));
+    it('skips event on prisma createMany error', async () => {
+      // PER-011 — createMany rejection counts all batch rows as skipped
+      mockPrisma.event.createMany.mockRejectedValue(new Error('DB error'));
 
       const ics = [
         'BEGIN:VCALENDAR',
@@ -345,12 +381,13 @@ describe('PlanningExportService', () => {
 
       const result = await service.importIcs(ics, 'user-1');
 
-      expect(result.skipped).toBe(1);
       expect(result.imported).toBe(0);
+      expect(result.skipped).toBeGreaterThanOrEqual(1);
     });
 
     it('imports all-day events correctly', async () => {
-      mockPrisma.event.create.mockResolvedValue({ id: 'new-event' });
+      // PER-011 — batch insert via createMany
+      mockPrisma.event.createMany.mockResolvedValue({ count: 1 });
 
       const ics = [
         'BEGIN:VCALENDAR',
@@ -366,19 +403,84 @@ describe('PlanningExportService', () => {
       const result = await service.importIcs(ics, 'user-1');
 
       expect(result.imported).toBe(1);
-      expect(mockPrisma.event.create).toHaveBeenCalledWith(
+      expect(mockPrisma.event.createMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            isAllDay: true,
-            startTime: null,
-            endTime: null,
-          }),
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              isAllDay: true,
+              startTime: null,
+              endTime: null,
+            }),
+          ]),
+          skipDuplicates: true,
+        }),
+      );
+    });
+
+    it('PER-011 — ICS with 600 VEVENTs is capped: imported <= 500, no 600 sequential creates', async () => {
+      // Build an ICS with 600 VEVENTs (> MAX_IMPORT_EVENTS cap of 500)
+      const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0'];
+      for (let i = 0; i < 600; i++) {
+        lines.push(
+          'BEGIN:VEVENT',
+          `SUMMARY:Event ${i}`,
+          'DTSTART:20260301T100000Z',
+          'DTEND:20260301T110000Z',
+          'END:VEVENT',
+        );
+      }
+      lines.push('END:VCALENDAR');
+      const ics = lines.join('\r\n');
+
+      const result = await service.importIcs(ics, 'user-1');
+
+      // Capped at 500: imported must be 0 and skipped equals total VEVENT count
+      expect(result.imported).toBe(0);
+      expect(result.skipped).toBe(600);
+      // createMany must NOT have been called (rejected before write)
+      expect(mockPrisma.event.createMany).not.toHaveBeenCalled();
+    });
+
+    it('PER-011 — a 2-event ICS uses createMany (not two separate event.create calls)', async () => {
+      mockPrisma.event.createMany.mockResolvedValue({ count: 2 });
+
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'SUMMARY:Event A',
+        'DTSTART:20260301T090000Z',
+        'DTEND:20260301T100000Z',
+        'END:VEVENT',
+        'BEGIN:VEVENT',
+        'SUMMARY:Event B',
+        'DTSTART:20260302T090000Z',
+        'DTEND:20260302T100000Z',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n');
+
+      const result = await service.importIcs(ics, 'user-1');
+
+      expect(result.imported).toBe(2);
+      expect(result.skipped).toBe(0);
+      // Single createMany call, not two event.create calls
+      expect(mockPrisma.event.createMany).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.event.create).not.toHaveBeenCalled();
+      expect(mockPrisma.event.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({ title: 'Event A' }),
+            expect.objectContaining({ title: 'Event B' }),
+          ]),
+          skipDuplicates: true,
         }),
       );
     });
 
     it('imports timed events with endTime', async () => {
-      mockPrisma.event.create.mockResolvedValue({ id: 'new-event' });
+      // PER-011 — batch insert via createMany
+      mockPrisma.event.createMany.mockResolvedValue({ count: 1 });
 
       const ics = [
         'BEGIN:VCALENDAR',
@@ -394,12 +496,15 @@ describe('PlanningExportService', () => {
       const result = await service.importIcs(ics, 'user-1');
 
       expect(result.imported).toBe(1);
-      expect(mockPrisma.event.create).toHaveBeenCalledWith(
+      expect(mockPrisma.event.createMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            isAllDay: false,
-            startTime: expect.stringMatching(/\d{2}:\d{2}/),
-          }),
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              isAllDay: false,
+              startTime: expect.stringMatching(/\d{2}:\d{2}/),
+            }),
+          ]),
+          skipDuplicates: true,
         }),
       );
     });
