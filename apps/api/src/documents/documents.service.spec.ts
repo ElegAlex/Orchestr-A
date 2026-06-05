@@ -9,6 +9,7 @@ import {
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { AccessScopeService } from '../common/services/access-scope.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { Prisma } from 'database';
 
 describe('DocumentsService', () => {
   let service: DocumentsService;
@@ -238,6 +239,116 @@ describe('DocumentsService', () => {
       const result = await service.update('doc-1', updateDto);
 
       expect(result.name).toBe('Updated Document');
+    });
+  });
+
+  // COR-009 — update() must guard against race-window mutation of a soft-deleted
+  // document. The prisma.document.update WHERE clause must include deletedAt: null
+  // so a concurrent soft-delete between findOne and update does not resurrect the
+  // tombstone. When Prisma returns P2025 (record-not-found with that compound WHERE),
+  // the service must translate it to a NotFoundException.
+  describe('update (COR-009: soft-delete race-window guard)', () => {
+    it('COR-009 — update() returns NotFoundException when prisma.document.update does not match (P2025, deletedAt filter)', async () => {
+      // Simulate: findOne passes (document not yet soft-deleted at read time),
+      // but by the time update runs, the document has been soft-deleted and
+      // Prisma returns P2025 because the WHERE id + deletedAt:null finds no row.
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+      const p2025 = new Prisma.PrismaClientKnownRequestError(
+        'An operation failed because it depends on one or more records that were required but not found.',
+        { code: 'P2025', clientVersion: 'test' },
+      );
+      mockPrismaService.document.update.mockRejectedValueOnce(p2025);
+
+      await expect(service.update('doc-1', { name: 'x' })).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('COR-009 — update() WHERE clause includes deletedAt: null to prevent mutating soft-deleted rows', async () => {
+      const updateDto = { name: 'Updated' };
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+      mockPrismaService.document.update.mockResolvedValue({
+        ...mockDocument,
+        ...updateDto,
+      });
+
+      await service.update('doc-1', updateDto);
+
+      // The WHERE clause must include deletedAt: null — not just { id }
+      expect(mockPrismaService.document.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ deletedAt: null }) as object,
+        }),
+      );
+    });
+  });
+
+  // COR-010 — update() must check caller access to the new projectId when the
+  // payload includes a projectId that differs from the document's current one.
+  // Without this check a document owner can move their document to any project,
+  // bypassing the access scope enforced on create().
+  describe('update (COR-010: projectId access check on reassignment)', () => {
+    it('COR-010 — update() with a different projectId calls assertCanAccessProject for the new project', async () => {
+      const caller = { id: 'user-1', role: 'CONTRIBUTEUR' };
+      const updateDto = { projectId: 'project-2' }; // different from mockDocument.projectId = 'project-1'
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+      mockPrismaService.document.update.mockResolvedValue({
+        ...mockDocument,
+        ...updateDto,
+      });
+
+      await service.update('doc-1', updateDto, caller);
+
+      expect(accessScope.assertCanAccessProject).toHaveBeenCalledWith(
+        'project-2',
+        caller,
+        expect.any(Array),
+      );
+    });
+
+    it('COR-010 — update() with the same projectId does NOT call assertCanAccessProject (no move)', async () => {
+      const caller = { id: 'user-1', role: 'CONTRIBUTEUR' };
+      // Same projectId as existing document
+      const updateDto = { projectId: 'project-1', name: 'Renamed' };
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+      mockPrismaService.document.update.mockResolvedValue({
+        ...mockDocument,
+        ...updateDto,
+      });
+
+      await service.update('doc-1', updateDto, caller);
+
+      expect(accessScope.assertCanAccessProject).not.toHaveBeenCalled();
+    });
+
+    it('COR-010 — update() without currentUser skips assertCanAccessProject even if projectId changes', async () => {
+      const updateDto = { projectId: 'project-2' };
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+      mockPrismaService.document.update.mockResolvedValue({
+        ...mockDocument,
+        ...updateDto,
+      });
+
+      // No currentUser supplied — backward-compat path (internal calls)
+      await service.update('doc-1', updateDto);
+
+      expect(accessScope.assertCanAccessProject).not.toHaveBeenCalled();
+    });
+
+    it('COR-010 — update() throws ForbiddenException when assertCanAccessProject rejects on new projectId', async () => {
+      const caller = { id: 'user-1', role: 'CONTRIBUTEUR' };
+      const updateDto = { projectId: 'project-restricted' };
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+      accessScope.assertCanAccessProject.mockRejectedValueOnce(
+        new ForbiddenException('Accès projet non autorisé'),
+      );
+
+      await expect(service.update('doc-1', updateDto, caller)).rejects.toThrow(
+        ForbiddenException,
+      );
+
+      // prisma.update must NOT have been called — check happens before the write
+      expect(mockPrismaService.document.update).not.toHaveBeenCalled();
     });
   });
 

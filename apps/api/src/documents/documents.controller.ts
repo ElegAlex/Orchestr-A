@@ -114,8 +114,12 @@ export class DocumentsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDocumentDto: UpdateDocumentDto,
+    @CurrentUser() user: { id: string; role?: { code: string } | null },
   ) {
-    return this.documentsService.update(id, updateDocumentDto);
+    return this.documentsService.update(id, updateDocumentDto, {
+      id: user.id,
+      role: user.role?.code ?? null,
+    });
   }
 
   @Delete(':id')

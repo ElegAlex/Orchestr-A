@@ -169,15 +169,50 @@ export class DocumentsService {
     return document;
   }
 
-  async update(id: string, updateDocumentDto: UpdateDocumentDto) {
-    await this.findOne(id);
-    return this.prisma.document.update({
-      where: { id },
-      data: updateDocumentDto,
-      include: {
-        project: { select: { id: true, name: true } },
-      },
-    });
+  async update(
+    id: string,
+    updateDocumentDto: UpdateDocumentDto,
+    currentUser?: AccessUser,
+  ) {
+    const existing = await this.findOne(id);
+
+    // COR-010 — if the caller is moving the document to a different project,
+    // assert they have access to the destination project. Mirrors the create()
+    // assertCanAccessProject guard (line 57-62). Skip when no currentUser is
+    // supplied (backward-compat / internal callers).
+    if (
+      currentUser &&
+      updateDocumentDto.projectId !== undefined &&
+      updateDocumentDto.projectId !== existing.projectId
+    ) {
+      await this.accessScope.assertCanAccessProject(
+        updateDocumentDto.projectId,
+        currentUser,
+        ['documents:manage_any', 'projects:manage_any'],
+      );
+    }
+
+    // COR-009 — include deletedAt: null in the WHERE clause so a concurrent
+    // soft-delete between findOne and update does not silently succeed on a
+    // logically-deleted document. Prisma returns P2025 when no live row matches;
+    // we translate that to NotFoundException for consistent HTTP semantics.
+    try {
+      return await this.prisma.document.update({
+        where: { id, deletedAt: null },
+        data: updateDocumentDto,
+        include: {
+          project: { select: { id: true, name: true } },
+        },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025'
+      ) {
+        throw new NotFoundException('Document introuvable');
+      }
+      throw err;
+    }
   }
 
   async remove(id: string, currentUser?: AccessUser) {

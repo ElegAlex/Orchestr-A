@@ -188,18 +188,26 @@ describe('DocumentsController', () => {
       name: 'Requirements_v2.pdf',
       description: 'Updated project requirements',
     };
+    // COR-010 — update() now receives the @CurrentUser to scope the projectId
+    // reassignment access check.
+    const currentUser = { id: 'user-1', role: { code: 'ADMIN' } };
 
     it('should update a document successfully', async () => {
       const updatedDocument = { ...mockDocument, ...updateDocumentDto };
       mockDocumentsService.update.mockResolvedValue(updatedDocument);
 
-      const result = await controller.update('doc-id-1', updateDocumentDto);
+      const result = await controller.update(
+        'doc-id-1',
+        updateDocumentDto,
+        currentUser,
+      );
 
       expect(result.name).toBe('Requirements_v2.pdf');
       expect(result.description).toBe('Updated project requirements');
       expect(mockDocumentsService.update).toHaveBeenCalledWith(
         'doc-id-1',
         updateDocumentDto,
+        { id: 'user-1', role: 'ADMIN' },
       );
     });
 
@@ -209,7 +217,7 @@ describe('DocumentsController', () => {
       );
 
       await expect(
-        controller.update('nonexistent', updateDocumentDto),
+        controller.update('nonexistent', updateDocumentDto, currentUser),
       ).rejects.toThrow(NotFoundException);
     });
   });

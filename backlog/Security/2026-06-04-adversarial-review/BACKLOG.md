@@ -1764,7 +1764,7 @@ grep -n 'bumpUser' apps/api/src/users/users.service.ts
 
 ### COR-009 — documents.update: prisma.document.update has no deletedAt filter — can mutate soft-deleted document in race window
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -1819,7 +1819,7 @@ grep -n 'deletedAt' apps/api/src/documents/documents.service.ts
 
 ### COR-010 — documents.update accepts projectId change without checking user access to the new project
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
