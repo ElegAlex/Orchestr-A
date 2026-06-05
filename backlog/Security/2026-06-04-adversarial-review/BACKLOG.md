@@ -323,7 +323,7 @@ grep -n 'expandRecurringRulesForRange' apps/api/src/telework/telework.service.ts
 - Related (same run): COR-032, COR-033.
 - Audit note: ADVERSARIAL REVIEW: CONFIRMED. Verbatim code verified at lines 164-182. The `expandRecurringRulesForRange` signature at line 292-295 shows `filterUserId?: string` — when undefined, the `ruleWhere.userId` filter is not applied (line 308: `if (filterUserId) { ruleWhere.userId = filterUserId; }`), causing all active rules to be expanded. No mitigating guard exists between the scope decision at line 167-171 and the expansion call at line 181. findForPlanningOverview (line 246) has the same pattern — see correctness-S6-2.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** f86b28ff
 
 ---
 
