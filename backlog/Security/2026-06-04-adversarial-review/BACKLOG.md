@@ -6340,7 +6340,7 @@ SELECT COUNT(*) FROM project_third_party_members WHERE allocation < 0 OR allocat
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence VERBATIM confirmed at line 109 of the migration. Exhaustive search across all migrations confirms: project_members gets allocation CHECK in 20260527120000 (line 66: 'project_members_allocation_ck'), but project_third_party_members gets NO CHECK anywhere in the entire migration history. Current schema gap — not a historical window issue.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f5b715a
 
 ---
 
@@ -6550,7 +6550,7 @@ SELECT conname, consrc FROM pg_constraint WHERE conrelid = 'project_snapshots'::
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: CONFIRMED. COR-014 migration code evidence is verbatim. Full grep of all migrations confirms zero CHECK constraints on project_snapshots. DAT-003/004 migration (20260527120000_dat003_dat004_business_invariants/migration.sql) confirmed to add CHECK constraints for tasks.progress, epics.progress, predefined_tasks.weight, project_members.allocation, leaves.days, leave_balances.totalDays, documents.size — but project_snapshots is explicitly absent. Schema.prisma comment says '0.00 – 100.00' but this is documentation only, not enforced at the DB level.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f5b715a
 
 ---
 
