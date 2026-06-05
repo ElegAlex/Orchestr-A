@@ -214,11 +214,17 @@ describe('MilestonesController', () => {
       const completedMilestone = { ...mockMilestone, status: 'COMPLETED' };
       mockMilestonesService.complete.mockResolvedValue(completedMilestone);
 
-      const result = await controller.complete('milestone-id-1');
+      const result = await controller.complete(
+        'milestone-id-1',
+        'user-1',
+        'ADMIN',
+      );
 
       expect(result.status).toBe('COMPLETED');
       expect(mockMilestonesService.complete).toHaveBeenCalledWith(
         'milestone-id-1',
+        'user-1',
+        'ADMIN',
       );
     });
 

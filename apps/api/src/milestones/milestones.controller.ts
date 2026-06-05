@@ -113,8 +113,12 @@ export class MilestonesController {
   @RequirePermissions('milestones:update')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Marquer un milestone comme complété' })
-  complete(@Param('id', ParseUUIDPipe) id: string) {
-    return this.milestonesService.complete(id);
+  complete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
+  ) {
+    return this.milestonesService.complete(id, currentUserId, currentUserRole);
   }
 
   @Delete(':id')

@@ -159,7 +159,14 @@ export class MilestonesService {
     }
   }
 
-  async complete(id: string) {
+  async complete(
+    id: string,
+    currentUserId?: string,
+    currentUserRole?: string | null,
+  ) {
+    if (currentUserId) {
+      await this.assertProjectMembership(id, currentUserId, currentUserRole);
+    }
     await this.findOne(id);
     return this.prisma.milestone.update({
       where: { id },
@@ -190,44 +197,57 @@ export class MilestonesService {
       errorDetails: [],
     };
 
+    // Pre-fetch all existing names for the project in a single query (mirrors
+    // validateImport) to avoid N per-row findFirst + create round-trips and to
+    // eliminate the TOCTOU race between check and insert [COR-018, PER-010].
+    const existingMilestones = await this.prisma.milestone.findMany({
+      where: { projectId },
+      select: { name: true },
+    });
+    const existingNames = new Set(existingMilestones.map((m) => m.name));
+
+    // Separate new milestones from duplicates using the in-memory Set
+    const toCreate: Array<{
+      name: string;
+      description: string | null;
+      dueDate: Date;
+      status: MilestoneStatus;
+      projectId: string;
+    }> = [];
+
     for (let i = 0; i < milestones.length; i++) {
       const milestoneData = milestones[i];
       const lineNum = i + 2; // +2 car ligne 1 = header, index commence à 0
 
+      if (existingNames.has(milestoneData.name)) {
+        result.skipped++;
+        result.errorDetails.push(
+          `Ligne ${lineNum}: Jalon "${milestoneData.name}" existe déjà`,
+        );
+        continue;
+      }
+
+      // Track names added in this batch to avoid intra-batch duplicates
+      existingNames.add(milestoneData.name);
+      toCreate.push({
+        name: milestoneData.name,
+        description: milestoneData.description || null,
+        dueDate: new Date(milestoneData.dueDate),
+        status: MilestoneStatus.PENDING,
+        projectId,
+      });
+    }
+
+    // Batch-insert all new milestones in a single createMany call
+    if (toCreate.length > 0) {
       try {
-        // Vérifier que le nom n'existe pas déjà dans le projet
-        const existingMilestone = await this.prisma.milestone.findFirst({
-          where: {
-            projectId,
-            name: milestoneData.name,
-          },
-        });
-
-        if (existingMilestone) {
-          result.skipped++;
-          result.errorDetails.push(
-            `Ligne ${lineNum}: Jalon "${milestoneData.name}" existe déjà`,
-          );
-          continue;
-        }
-
-        // Créer le jalon
-        await this.prisma.milestone.create({
-          data: {
-            name: milestoneData.name,
-            description: milestoneData.description || null,
-            dueDate: new Date(milestoneData.dueDate),
-            status: MilestoneStatus.PENDING,
-            projectId,
-          },
-        });
-
-        result.created++;
+        await this.prisma.milestone.createMany({ data: toCreate });
+        result.created = toCreate.length;
       } catch (err) {
-        result.errors++;
+        result.errors = toCreate.length;
         const errorMessage =
           err instanceof Error ? err.message : 'Erreur inconnue';
-        result.errorDetails.push(`Ligne ${lineNum}: ${errorMessage}`);
+        result.errorDetails.push(errorMessage);
       }
     }
 

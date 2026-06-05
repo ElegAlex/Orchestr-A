@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsArray,
   ValidateNested,
+  ArrayMaxSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -32,8 +33,10 @@ export class ImportMilestonesDto {
   @ApiProperty({
     description: 'Liste des jalons à importer',
     type: [ImportMilestoneDto],
+    maxItems: 500,
   })
   @IsArray()
+  @ArrayMaxSize(500)
   @ValidateNested({ each: true })
   @Type(() => ImportMilestoneDto)
   milestones: ImportMilestoneDto[];

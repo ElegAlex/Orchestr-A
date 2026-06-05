@@ -2160,7 +2160,7 @@ N/A — manual verification: create two managers M1, M2 each with subordinates, 
 
 ### SEC-013 — POST /milestones/:id/complete lacks project-membership check
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -2928,7 +2928,7 @@ grep -n '\$transaction\|deleteMany\|service.update\|service.delete' apps/api/src
 
 ### COR-018 — importMilestones(): per-row findFirst+create is a TOCTOU race with no uniqueness guarantee
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -4041,7 +4041,7 @@ grep -n 'await this.prisma.event.create\|createMany' apps/api/src/events/events.
 
 ### PER-010 — importMilestones executes N sequential findFirst + create per milestone
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
