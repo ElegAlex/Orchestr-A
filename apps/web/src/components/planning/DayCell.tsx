@@ -169,13 +169,14 @@ export const DayCell = React.memo(({
   // On rend chacun dans sa moitié. `leave` (cell.leaves[0]) couvre la 1re moitié ;
   // on cherche un second congé visible de la demi-journée opposée.
   const otherHalfLeave = isHalfDayLeave
-    ? cell.leaves.find(
-        (l) =>
-          l !== leave &&
-          l.halfDay &&
-          l.halfDay !== leaveHalfDay &&
-          (l.status === "PENDING" ? showLeavePending : true),
-      )
+    ? cell.leaves.find((l) => {
+        if (l === leave) return false;
+        if (!l.halfDay || l.halfDay === leaveHalfDay) return false;
+        if (l.status === "PENDING" && !showLeavePending) return false;
+        const code = l.leaveType?.code ?? l.type ?? null;
+        if (code !== null && !(leaveTypeFilters[code] ?? true)) return false;
+        return true;
+      })
     : undefined;
 
   // Résoudre l'icône et la couleur depuis le leaveType config (custom ou défaut)
@@ -308,6 +309,11 @@ export const DayCell = React.memo(({
             borderColor: otherHalfLeave.leaveType?.color ?? "#10B981",
             borderStyle: otherHalfLeave.status === "PENDING" ? "dashed" : "solid",
           }}
+          title={`${otherHalfLeave.leaveType?.name ?? t(`leaveTypes.${otherHalfLeave.type ?? "OTHER"}`)} — ${
+            otherHalfLeave.halfDay === HalfDay.MORNING
+              ? t("dayCell.halfDayMorning")
+              : t("dayCell.halfDayAfternoon")
+          }${otherHalfLeave.status === "PENDING" ? ` (${t("dayCell.pendingValidation")})` : ` (${t("dayCell.validated")})`}`}
         >
           <span className={`${viewMode === "month" ? "text-base" : "text-xl"}`}>
             {otherHalfLeave.leaveType?.icon ?? "🌴"}
@@ -335,6 +341,7 @@ export const DayCell = React.memo(({
       )}
 
       {/* External Intervention Background Overlay */}
+      {/* Intentionally !leaveVisible (not !fullDayLeaveVisible): these full-cell background overlays would clash with a half-day leave overlay, so suppress them entirely under any leave. */}
       {cell.isExternalIntervention &&
         showExternalIntervention &&
         !leaveVisible &&
@@ -347,6 +354,7 @@ export const DayCell = React.memo(({
 
       {/* Telework Background Overlay - en arrière-plan pour que les tâches restent visibles.
           Masqué si le bg Intervention extérieure occupe déjà la cellule, pour préserver l'exclusivité visuelle actuelle. */}
+      {/* Intentionally !leaveVisible (not !fullDayLeaveVisible): these full-cell background overlays would clash with a half-day leave overlay, so suppress them entirely under any leave. */}
       {cell.isTelework &&
         showTelework &&
         !leaveVisible &&
@@ -358,13 +366,16 @@ export const DayCell = React.memo(({
           />
         )}
 
-      <div
-        className={
-          isHalfDayLeave
-            ? `absolute inset-x-1 ${leaveHalfDay === HalfDay.MORNING ? "bottom-0 top-1/2" : "top-0 bottom-1/2"} z-10 space-y-1 overflow-y-auto`
-            : `relative z-10 space-y-1 ${viewMode === "month" ? "min-h-[40px]" : "min-h-[60px]"}`
-        }
-      >
+      {/* Contenu de la cellule (télétravail, tâches, événements) - masqué si les
+          deux demi-journées sont des congés (pas de moitié libre). */}
+      {!otherHalfLeave && (
+        <div
+          className={
+            isHalfDayLeave
+              ? `absolute inset-x-1 ${leaveHalfDay === HalfDay.MORNING ? "bottom-0 top-1/2" : "top-0 bottom-1/2"} z-10 space-y-1 overflow-y-auto`
+              : `relative z-10 space-y-1 ${viewMode === "month" ? "min-h-[40px]" : "min-h-[60px]"}`
+          }
+        >
         {/* Telework toggle - visible uniquement si pas de congé, jour férié, ni événement toute la journée.
             Le glyphe 🏠 (TT) est gouverné par showTelework, le glyphe 🏢 (bureau) par showOffice. */}
         {!fullDayLeaveVisible &&
@@ -577,17 +588,20 @@ export const DayCell = React.memo(({
             })}
 
         {/* Bouton ajout tâche prédéfinie */}
-        {!leaveVisible && !cell.isHoliday && canAssignPredefinedTask && (
-          <div className="flex items-center justify-center">
-            <button
-              onClick={() => onAddPredefinedTask(userId, cell.date)}
-              className={`${viewMode === "month" ? "text-[8px] w-4 h-4" : "text-xs px-1.5 py-0.5"} text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition border border-transparent hover:border-blue-300`}
-              title="Assigner une tâche prédéfinie"
-            >
-              {viewMode === "month" ? "+" : "+ Tâche"}
-            </button>
-          </div>
-        )}
+        {!fullDayLeaveVisible &&
+          !otherHalfLeave &&
+          !cell.isHoliday &&
+          canAssignPredefinedTask && (
+            <div className="flex items-center justify-center">
+              <button
+                onClick={() => onAddPredefinedTask(userId, cell.date)}
+                className={`${viewMode === "month" ? "text-[8px] w-4 h-4" : "text-xs px-1.5 py-0.5"} text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition border border-transparent hover:border-blue-300`}
+                title="Assigner une tâche prédéfinie"
+              >
+                {viewMode === "month" ? "+" : "+ Tâche"}
+              </button>
+            </div>
+          )}
 
         {/* Events - visible uniquement si pas de congé ni jour férié.
             Filtrés : événements standards par showEvent, interventions externes par showExternalIntervention. */}
@@ -652,7 +666,8 @@ export const DayCell = React.memo(({
                 </div>
               );
             })}
-      </div>
+        </div>
+      )}
     </div>
   );
 });
