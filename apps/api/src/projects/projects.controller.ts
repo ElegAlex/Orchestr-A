@@ -184,7 +184,7 @@ export class ProjectsController {
   @RequirePermissions('reports:view')
   @ApiOperation({ summary: 'Get progress snapshots for a project' })
   async getSnapshots(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string, // SEC-015 — validate the projectId is a UUID
     @CurrentUser() currentUser: AuthenticatedUser,
     @Query('from') from?: string,
     @Query('to') to?: string,

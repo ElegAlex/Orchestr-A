@@ -4741,7 +4741,7 @@ N/A — manual verification: craft a body with large userIds/dates arrays, confi
 
 ### SEC-015 — GET /projects/:id/snapshots uses @Param('id') without ParseUUIDPipe
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** primary-only
