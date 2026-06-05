@@ -378,7 +378,7 @@ SELECT COUNT(*) FROM audit_logs WHERE "actorId" IS NULL AND "createdAt" < '2026-
 
 ### COR-007 — auth.service resetPassword(): token validity check and usedAt marking are not atomic — concurrent reset with the same token succeeds twice
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** B
 - **Confidence:** cross-validated

@@ -544,6 +544,11 @@ export class AuthService {
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Validate the token BEFORE entering the transaction: these checks rely only
+    // on the persisted row (not on any write) and produce distinct error messages
+    // that the caller depends on. The TOCTOU window that COR-007 targets is the
+    // usedAt marking + user.update sequence, not the read-only validation.
     const resetToken = await this.prisma.passwordResetToken.findUnique({
       where: { token: tokenHash },
     });
@@ -564,15 +569,36 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
-    await this.prisma.user.update({
-      where: { id: resetToken.userId },
-      data: { passwordHash },
-    });
+    // COR-007 — Wrap the CAS + password update in a serializable transaction to
+    // prevent the TOCTOU race where two concurrent requests both pass the read
+    // validation above and both proceed to update the user's password.
+    //
+    // The atomic compare-and-swap uses updateMany with the predicate
+    // `usedAt: null`: if another concurrent request already won the race, the
+    // DB row will have usedAt≠null and count will be 0 — we throw before
+    // touching the user's password. This mirrors the pattern in rotate() in
+    // refresh-token.service.ts.
+    await this.prisma.$transaction(
+      async (tx) => {
+        const cas = await tx.passwordResetToken.updateMany({
+          where: { token: tokenHash, usedAt: null },
+          data: { usedAt: new Date() },
+        });
 
-    await this.prisma.passwordResetToken.update({
-      where: { token: tokenHash },
-      data: { usedAt: new Date() },
-    });
+        if (cas.count === 0) {
+          // Race lost: another concurrent reset already consumed this token.
+          throw new UnauthorizedException(
+            'Ce token de réinitialisation a déjà été utilisé',
+          );
+        }
+
+        await tx.user.update({
+          where: { id: resetToken.userId },
+          data: { passwordHash },
+        });
+      },
+      { isolationLevel: 'Serializable' },
+    );
 
     // Revoke all refresh tokens so existing sessions are invalidated after password reset
     await this.refreshTokenService.revokeAllForUser(resetToken.userId);

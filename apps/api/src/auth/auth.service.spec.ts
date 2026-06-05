@@ -103,6 +103,10 @@ describe('AuthService', () => {
       findFirst: vi.fn(),
       findUnique: vi.fn(),
     },
+    // COR-007: $transaction used by resetPassword to make the CAS atomic
+    $transaction: vi.fn(async (cb: (tx: unknown) => Promise<unknown>) =>
+      cb(mockPrismaService),
+    ),
   };
 
   const mockJwtService = {
@@ -1021,32 +1025,38 @@ describe('AuthService', () => {
     };
 
     it('should update password and mark token as used for a valid token', async () => {
-      const tokenHash = crypto
-        .createHash('sha256')
-        .update('valid-token-uuid')
-        .digest('hex');
       mockPrismaService.passwordResetToken.findUnique.mockResolvedValue(
         validToken,
       );
+      // COR-007: the CAS (updateMany where usedAt IS NULL) succeeds → count:1
+      mockPrismaService.passwordResetToken.updateMany.mockResolvedValue({
+        count: 1,
+      });
       vi.mocked(bcrypt.hash).mockResolvedValue(
         '$2b$12$newhashedpassword' as never,
       );
       mockPrismaService.user.update.mockResolvedValue({});
-      mockPrismaService.passwordResetToken.update.mockResolvedValue({});
 
       await service.resetPassword('valid-token-uuid', 'NewPassword1!');
 
       expect(bcrypt.hash).toHaveBeenCalledWith('NewPassword1!', 12);
+      // COR-007: token is marked used via atomic CAS (updateMany, usedAt: null predicate)
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update('valid-token-uuid')
+        .digest('hex');
+      expect(
+        mockPrismaService.passwordResetToken.updateMany,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { token: tokenHash, usedAt: null },
+          data: expect.objectContaining({ usedAt: expect.any(Date) }),
+        }),
+      );
       expect(mockPrismaService.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: validToken.userId },
           data: { passwordHash: '$2b$12$newhashedpassword' },
-        }),
-      );
-      expect(mockPrismaService.passwordResetToken.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { token: tokenHash },
-          data: expect.objectContaining({ usedAt: expect.any(Date) }),
         }),
       );
       // TST-011 — PASSWORD_CHANGED audit emission (reset via token). Subject is
@@ -1105,6 +1115,52 @@ describe('AuthService', () => {
       ).rejects.toThrow('Ce token de réinitialisation a déjà été utilisé');
       // TST-011 — no-op negative: an already-used token emits nothing.
       expect(mockAuditService.log).not.toHaveBeenCalled();
+    });
+
+    // COR-007 — TOCTOU race: two concurrent reset requests with the same valid
+    // token. The first wins the atomic CAS (updateMany where usedAt IS NULL →
+    // count:1). The second loses (count:0) and must be rejected with 401 WITHOUT
+    // proceeding to update the user's password. Pre-fix: the non-transactional
+    // read-then-write allowed both calls to see usedAt=null and both to call
+    // user.update. Post-fix: count=0 triggers UnauthorizedException BEFORE
+    // user.update, so the loser never overwrites the password.
+    it('COR-007 — concurrent reset with same token: second call throws 401 and does NOT update password', async () => {
+      // Both calls see the token as valid (findUnique: usedAt=null, future expiry)
+      mockPrismaService.passwordResetToken.findUnique.mockResolvedValue(
+        validToken,
+      );
+      vi.mocked(bcrypt.hash).mockResolvedValue(
+        '$2b$12$newhashedpassword' as never,
+      );
+
+      // First call wins the CAS: updateMany returns count:1
+      mockPrismaService.passwordResetToken.updateMany.mockResolvedValueOnce({
+        count: 1,
+      });
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      await service.resetPassword('valid-token-uuid', 'NewPassword1!');
+      expect(mockPrismaService.user.update).toHaveBeenCalledTimes(1);
+
+      // Second call loses the CAS: updateMany returns count:0 (token already marked)
+      vi.clearAllMocks();
+      mockPrismaService.passwordResetToken.findUnique.mockResolvedValue(
+        validToken,
+      );
+      mockPrismaService.passwordResetToken.updateMany.mockResolvedValueOnce({
+        count: 0,
+      });
+      // COR-007: $transaction must be re-registered after clearAllMocks
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: unknown) => Promise<unknown>) => cb(mockPrismaService),
+      );
+
+      await expect(
+        service.resetPassword('valid-token-uuid', 'NewPassword1!'),
+      ).rejects.toThrow(UnauthorizedException);
+
+      // The loser must NEVER call user.update — this is the key discriminator
+      expect(mockPrismaService.user.update).not.toHaveBeenCalled();
     });
   });
 
