@@ -54,7 +54,7 @@ Each task: `Status` (TODO→IN_PROGRESS→DONE→VERIFIED), `Phase` (priority ba
 
 ### COR-001 — canValidate: delegation check is not scoped to the leave's assigned validator — any delegate can approve any leave
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** A
 - **Confidence:** cross-validated

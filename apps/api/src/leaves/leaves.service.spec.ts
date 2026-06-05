@@ -23,7 +23,16 @@ const mockGetPermissionsForRole = vi.fn().mockImplementation((role: string) => {
     'telework:readAll',
     'events:readAll',
   ];
-  if (role === 'ADMIN' || role === 'RESPONSABLE' || role === 'MANAGER') {
+  if (role === 'ADMIN') {
+    // Only ADMIN holds leaves:manage_any (global validation scope bypass).
+    return Promise.resolve([
+      ...base,
+      'leaves:delete',
+      'leaves:approve',
+      'leaves:manage_any',
+    ]);
+  }
+  if (role === 'RESPONSABLE' || role === 'MANAGER') {
     return Promise.resolve([...base, 'leaves:delete', 'leaves:approve']);
   }
   return Promise.resolve(base);
@@ -2462,23 +2471,43 @@ describe('LeavesService', () => {
   // CAN VALIDATE
   // ============================================
   describe('canValidate', () => {
-    it('should return true for ADMIN', async () => {
+    it('should return true for ADMIN (leaves:manage_any)', async () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(mockLeave);
+      // canValidate resolves perms via getPermissionsForRole(validator.role.code);
+      // the role must carry the production { code } shape (not a bare string).
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        id: 'admin-1',
+        role: { code: 'ADMIN' },
       });
+      // A holder of leaves:manage_any bypasses scope and validates any leave.
+      mockGetPermissionsForRole.mockResolvedValue([
+        'leaves:read',
+        'leaves:approve',
+        'leaves:manage_any',
+      ]);
 
       const result = await service.canValidate('leave-1', 'admin-1');
 
       expect(result).toBe(true);
     });
 
-    it('should return true for RESPONSABLE', async () => {
-      mockPrismaService.leave.findUnique.mockResolvedValue(mockLeave);
+    it('should return true for RESPONSABLE validating a leave within its service scope', async () => {
+      // RESPONSABLE is NOT manage_any — it validates via the APPROVE_LEAVES
+      // service-scope branch (memory: only ADMIN holds leaves:manage_any).
+      mockPrismaService.leave.findUnique.mockResolvedValue(mockLeave); // author user-1
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.RESPONSABLE,
+        id: 'responsable-1',
+        role: { code: 'RESPONSABLE' },
+      });
+      // The RESPONSABLE manages service-1; the leave's author belongs to it.
+      mockPrismaService.service.findMany.mockResolvedValue([
+        { id: 'service-1' },
+      ]);
+      mockPrismaService.userService.findFirst.mockResolvedValue({
+        userId: 'user-1',
+        serviceId: 'service-1',
       });
 
       const result = await service.canValidate('leave-1', 'responsable-1');
@@ -2552,6 +2581,123 @@ describe('LeavesService', () => {
 
       expect(result).toBe(false);
     });
+
+    it('COR-001 — a delegate of manager-B cannot validate a leave whose validator is manager-A', async () => {
+      // Leave is assigned to manager-A as its validator.
+      mockPrismaService.leave.findUnique.mockResolvedValue({
+        ...mockLeave,
+        validatorId: 'manager-A',
+      });
+      // The caller delegate-B holds an active delegation, but from manager-B
+      // (a different department's manager), NOT from manager-A.
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        id: 'delegate-B',
+        role: Role.CONTRIBUTEUR,
+      });
+      mockGetPermissionsForRole.mockResolvedValue(['leaves:read']);
+      const today = new Date();
+      // Simulate the DB: the ONLY delegation row is manager-B → delegate-B.
+      mockPrismaService.leaveValidationDelegate.findFirst.mockImplementation(
+        (
+          args: { where?: { delegatorId?: string; delegateId?: string } } = {},
+        ) => {
+          const w = args?.where ?? {};
+          const delegatorOk =
+            w.delegatorId === undefined || w.delegatorId === 'manager-B';
+          const delegateOk =
+            w.delegateId === undefined || w.delegateId === 'delegate-B';
+          return Promise.resolve(
+            delegatorOk && delegateOk
+              ? {
+                  id: 'deleg-B',
+                  delegatorId: 'manager-B',
+                  delegateId: 'delegate-B',
+                  isActive: true,
+                  startDate: new Date(today.getTime() - 86400000),
+                  endDate: new Date(today.getTime() + 86400000),
+                }
+              : null,
+          );
+        },
+      );
+
+      const result = await service.canValidate('leave-1', 'delegate-B');
+
+      // Buggy code queries by delegateId only → finds manager-B's delegation → true.
+      // Fixed code scopes the query by delegatorId = leave.validatorId (manager-A)
+      // → no matching delegation → false.
+      expect(result).toBe(false);
+    });
+
+    it('COR-001 — a delegate of the leave validator (manager-A) CAN validate that leave', async () => {
+      mockPrismaService.leave.findUnique.mockResolvedValue({
+        ...mockLeave,
+        validatorId: 'manager-A',
+      });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        id: 'delegate-A',
+        role: Role.CONTRIBUTEUR,
+      });
+      mockGetPermissionsForRole.mockResolvedValue(['leaves:read']);
+      const today = new Date();
+      mockPrismaService.leaveValidationDelegate.findFirst.mockImplementation(
+        (
+          args: { where?: { delegatorId?: string; delegateId?: string } } = {},
+        ) => {
+          const w = args?.where ?? {};
+          const delegatorOk =
+            w.delegatorId === undefined || w.delegatorId === 'manager-A';
+          const delegateOk =
+            w.delegateId === undefined || w.delegateId === 'delegate-A';
+          return Promise.resolve(
+            delegatorOk && delegateOk
+              ? {
+                  id: 'deleg-A',
+                  delegatorId: 'manager-A',
+                  delegateId: 'delegate-A',
+                  isActive: true,
+                  startDate: new Date(today.getTime() - 86400000),
+                  endDate: new Date(today.getTime() + 86400000),
+                }
+              : null,
+          );
+        },
+      );
+
+      const result = await service.canValidate('leave-1', 'delegate-A');
+
+      expect(result).toBe(true);
+    });
+
+    it('COR-001 — delegation fallback is inert when the leave has no assigned validator', async () => {
+      mockPrismaService.leave.findUnique.mockResolvedValue({
+        ...mockLeave,
+        validatorId: null,
+      });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        id: 'delegate-X',
+        role: Role.CONTRIBUTEUR,
+      });
+      mockGetPermissionsForRole.mockResolvedValue(['leaves:read']);
+      const today = new Date();
+      // An active delegation exists for the caller, but the leave has no
+      // validator to scope it to → fallback must return false.
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue({
+        id: 'deleg-X',
+        delegatorId: 'manager-Z',
+        delegateId: 'delegate-X',
+        isActive: true,
+        startDate: new Date(today.getTime() - 86400000),
+        endDate: new Date(today.getTime() + 86400000),
+      });
+
+      const result = await service.canValidate('leave-1', 'delegate-X');
+
+      expect(result).toBe(false);
+    });
   });
 
   // ============================================
@@ -2565,7 +2711,7 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
       mockPrismaService.leave.update.mockResolvedValue(approvedLeave);
 
@@ -2585,7 +2731,7 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
       mockPrismaService.leave.update.mockResolvedValue(approvedLeave);
 
@@ -2653,7 +2799,7 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
       mockPrismaService.leave.update.mockResolvedValue(approvedLeave);
 
@@ -2703,7 +2849,7 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
       mockPrismaService.leave.update.mockResolvedValue(approvedLeave);
 
@@ -2761,7 +2907,7 @@ describe('LeavesService', () => {
         .mockResolvedValueOnce(approvedInsideTx);
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
 
       await expect(service.approve('leave-1', 'admin-1')).rejects.toThrow(
@@ -2788,7 +2934,7 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
       mockPrismaService.leave.update.mockRejectedValue(
         new Error(
@@ -2834,7 +2980,7 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
 
       // leaveBalance.findUnique mock sequence (consumed in order):
@@ -2878,7 +3024,7 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
       mockPrismaService.leave.update.mockResolvedValue(rejectedLeave);
 
@@ -2946,7 +3092,7 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
       mockPrismaService.leave.update.mockResolvedValue(rejectedLeave);
 
@@ -2991,7 +3137,7 @@ describe('LeavesService', () => {
       mockPrismaService.leave.findUnique.mockResolvedValue(pendingLeave);
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        role: Role.ADMIN,
+        role: { code: Role.ADMIN },
       });
       mockPrismaService.leave.update.mockResolvedValue(rejectedLeave);
 

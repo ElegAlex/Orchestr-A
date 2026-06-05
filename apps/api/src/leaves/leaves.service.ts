@@ -1635,19 +1635,28 @@ export class LeavesService {
       }
     }
 
-    // Vérifier les délégations actives
-    const today = new Date();
-    const activeDelegation =
-      await this.prisma.leaveValidationDelegate.findFirst({
-        where: {
-          delegateId: validatorId,
-          isActive: true,
-          startDate: { lte: today },
-          endDate: { gte: today },
-        },
-      });
+    // Vérifier les délégations actives — COR-001 : la délégation ne vaut que si
+    // elle émane du validateur assigné DU congé (delegatorId = leave.validatorId).
+    // Sans ce filtre, n'importe quel délégué actif pouvait valider n'importe quel
+    // congé, contournant les trois contrôles précédents. Si le congé n'a pas de
+    // validateur assigné, le repli par délégation est inerte (return false).
+    if (leave.validatorId) {
+      const today = new Date();
+      const activeDelegation =
+        await this.prisma.leaveValidationDelegate.findFirst({
+          where: {
+            delegatorId: leave.validatorId,
+            delegateId: validatorId,
+            isActive: true,
+            startDate: { lte: today },
+            endDate: { gte: today },
+          },
+        });
 
-    return activeDelegation !== null;
+      if (activeDelegation) return true;
+    }
+
+    return false;
   }
 
   /**
