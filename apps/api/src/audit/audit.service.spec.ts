@@ -4,6 +4,7 @@ import { Logger } from '@nestjs/common';
 import { createHmac } from 'node:crypto';
 import { AuditService, AuditAction } from './audit.service';
 import { AuditPersistenceService } from './audit-persistence.service';
+import { runWithRequestId } from '../common/fastify/request-id.context';
 
 describe('AuditService', () => {
   let service: AuditService;
@@ -368,6 +369,68 @@ describe('AuditService', () => {
           }),
         }),
       );
+    });
+
+    // COR-006 — ip and details must be absent from the payload when undefined,
+    // so that computeRowHash(storedRow) === storedRow.rowHash. PostgreSQL JSONB
+    // drops undefined-valued keys (JSON.stringify semantics) while stableStringify
+    // maps them to 'null', causing a hash divergence. Conditional-spread prevents
+    // the key from entering the in-memory object in the first place.
+    it('COR-006 — payload omits ip and details keys when event carries no ip/details', () => {
+      vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+
+      service.log({
+        action: AuditAction.LEAVE_APPROVED,
+        userId: 'actor-1',
+        targetId: 'leave-1',
+        success: true,
+        // ip and details intentionally absent (undefined)
+      });
+
+      const call = persistence.log.mock.calls[0];
+      expect(call).toBeDefined();
+      const { payload } = call[0] as { payload: Record<string, unknown> };
+      // Key must be completely absent, not present with value undefined.
+      expect(payload).not.toHaveProperty('ip');
+      expect(payload).not.toHaveProperty('details');
+    });
+
+    // OBS-002 — requestId must be injected into the persisted payload from the
+    // ALS context (getRequestId). Rows written outside an HTTP request have no
+    // requestId key (field absent). runWithRequestId() establishes the scope.
+    it('OBS-002 — payload carries requestId from ALS context when inside an HTTP request scope', () => {
+      vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+
+      runWithRequestId('req-test-123', () => {
+        service.log({
+          action: AuditAction.LOGIN_SUCCESS,
+          userId: 'user-1',
+          ip: '10.0.0.1',
+          success: true,
+        });
+      });
+
+      expect(persistence.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({ requestId: 'req-test-123' }),
+        }),
+      );
+    });
+
+    it('OBS-002 — payload has no requestId key outside an HTTP request scope', () => {
+      vi.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+
+      // Called without runWithRequestId — getRequestId() returns undefined.
+      service.log({
+        action: AuditAction.LOGIN_SUCCESS,
+        userId: 'user-2',
+        success: true,
+      });
+
+      const call = persistence.log.mock.calls[0];
+      expect(call).toBeDefined();
+      const { payload } = call[0] as { payload: Record<string, unknown> };
+      expect(payload).not.toHaveProperty('requestId');
     });
 
     // OBS-001 design decision #2 — the mapping MUST never write a bcrypt-shaped

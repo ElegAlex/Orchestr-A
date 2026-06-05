@@ -5128,7 +5128,7 @@ N/A — manual verification: call POST /leaves/:id/reject-cancellation then SELE
 
 ### OBS-002 — requestId never populated in persisted audit-log payload despite declared schema field and ALS infrastructure
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -5892,7 +5892,7 @@ curl -s -H 'Authorization: Bearer <TOKEN>' -X DELETE http://localhost:3000/time-
 
 ### COR-006 — AuditService.log passes undefined-valued payload keys to computeRowHash; stored JSONB normalizes them differently, risking hash divergence on external recompute
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** H
 - **Confidence:** primary-only

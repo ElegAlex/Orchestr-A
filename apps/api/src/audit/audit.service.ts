@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createHash, createHmac } from 'node:crypto';
 import { AuditPersistenceService } from './audit-persistence.service';
 import { AuditAction } from './audit-action.enum';
+import { getRequestId } from '../common/fastify/request-id.context';
 
 // OBS-024 — AuditAction is the single source of truth for audit action codes;
 // it lives in `audit-action.enum.ts` so AuditPersistenceService can type its
@@ -188,14 +189,26 @@ export class AuditService {
         entityId: this.resolveEntityId(event),
         actorId: event.userId ?? null,
         payload: {
-          ip: event.ip,
-          details: event.details,
+          // COR-006 — guard ip/details with the same conditional-spread pattern
+          // used for ua/reason/before/after: undefined-valued keys must not enter
+          // the in-memory object. PostgreSQL JSONB drops them on INSERT
+          // (JSON.stringify semantics) while stableStringify maps them to 'null',
+          // so an unconditional key would cause hash-at-write ≠ hash-from-stored.
+          ...(event.ip !== undefined ? { ip: event.ip } : {}),
+          ...(event.details !== undefined ? { details: event.details } : {}),
           success: event.success,
           timestamp: entry.timestamp,
           ...(event.ua !== undefined ? { ua: event.ua } : {}),
           ...(event.reason !== undefined ? { reason: event.reason } : {}),
           ...(event.before !== undefined ? { before: event.before } : {}),
           ...(event.after !== undefined ? { after: event.after } : {}),
+          // OBS-002 — thread the HTTP correlation id into the persisted row so
+          // an SRE can stitch a security-envelope audit row back to the originating
+          // request. getRequestId() returns undefined outside an HTTP context
+          // (background jobs, scripts), so the key is absent on those rows.
+          ...(getRequestId() !== undefined
+            ? { requestId: getRequestId() }
+            : {}),
         },
       })
       .catch((err) => {
