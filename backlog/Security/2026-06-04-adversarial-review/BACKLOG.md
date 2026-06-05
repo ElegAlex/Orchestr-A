@@ -1813,7 +1813,7 @@ grep -n 'deletedAt' apps/api/src/documents/documents.service.ts
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The same TOCTOU is present for the remove() → findOne() → update({deletedAt: new Date()}) pattern, though its impact is lower: double-soft-delete is idempotent.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** a2f9ba00
 
 ---
 
@@ -1868,7 +1868,7 @@ grep -n 'projectId\|assertCanAccessProject' apps/api/src/documents/documents.ser
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The create() method correctly enforces this check at line 57-62, but update() has no equivalent.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** a2f9ba00
 
 ---
 
