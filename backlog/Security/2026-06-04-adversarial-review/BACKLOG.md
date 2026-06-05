@@ -923,7 +923,7 @@ N/A — manual verification
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-007 ⇄ sessionA COR-007).
 - Audit note: Code evidence verified verbatim at lines 3558-3575. The comment 'Lecture par ligne (volume d'import modéré)' explicitly acknowledges the pattern without enforcing a row cap. The CSV import DTO has no @Max() on the array length.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 0ed06468
 
 ---
 
@@ -1546,7 +1546,7 @@ N/A — manual verification: mock Date to 2026-12-31T23:30:00Z and call getLeave
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary COR-016 ⇄ sessionA COR-006).
 - Audit note: Low probability (1 hour per year) but year-end is exactly when HR teams query balances for statutory reporting. Adversarial check: parisYearWindow confirmed to use fromZonedTime with Europe/Paris (leave-year-window.ts lines 52-55). The acceptance criteria example in the original finding had UTC/Paris direction reversed; corrected here — the bug manifests when UTC is still in year N but Paris has crossed to year N+1 (i.e., 23:xx UTC on Dec 31 = 00:xx Paris on Jan 1). Code verbatim confirmed at line 2635.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 0ed06468
 
 ---
 
@@ -2154,7 +2154,7 @@ N/A — manual verification: create two managers M1, M2 each with subordinates, 
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The comment at line 712 acknowledges the correct scope ('COR-005: scope the delegation lookup to the user's own department manager') for findValidatorForUser, but canValidate does not apply the same discipline. Adversarial review confirmed: the approve() method at line 1704 calls canValidate(), and the delegation check at lines 1638-1650 has no delegatorId filter. findValidatorForUser() at lines 712-735 correctly scopes to `delegatorId: managerId` — the asymmetry is real and exploitable.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 0ed06468
 
 ---
 
@@ -2792,7 +2792,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The acknowledged trade-off (audit uses its own Prisma client) is documented in the remove() method. deleteBalance should at minimum match that level of coupling. Adversarial check: code verbatim confirmed at lines 2989-3010. No transaction wrapper present. The remove() method does wrap in $transaction. Finding stands.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 0ed06468
 
 ---
 
@@ -3473,7 +3473,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Both the hasManageAny branch (line 896) and the hasApprove branch (line 965) are unbounded. Controller at leaves.controller.ts:263 passes no limit. No interceptor or guard caps the output.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 0ed06468
 
 ---
 
@@ -5122,7 +5122,7 @@ N/A — manual verification: call POST /leaves/:id/reject-cancellation then SELE
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: All other six status-transition methods have audit writes; this one is the sole exception. Adversarial check: read requestCancel() (lines 2220-2233) and cancel() (lines 2112-2135) — both have auditPersistence.log inside the $transaction. rejectCancellation transaction (lines 2283-2319) returns immediately after tx.leave.update with no audit call. Confirmed verbatim.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 0ed06468
 
 ---
 
@@ -5411,7 +5411,7 @@ grep -n 'rejectCancellation\|auditPersistence' apps/api/src/leaves/leaves.servic
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verified: leaves.service.ts lines 2278-2319 confirmed verbatim. Full grep of audit calls in the file shows none in range 2280-2320. All other status-transition methods (approve at 1834, reject at 1981, cancel at 2112, requestCancel at 2220) have auditPersistence.log() calls; rejectCancellation uniquely lacks one. Finding confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 0ed06468
 
 ---
 
