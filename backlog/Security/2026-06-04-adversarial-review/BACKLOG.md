@@ -4789,7 +4789,7 @@ grep -n 'getSnapshots\|ParseUUIDPipe' apps/api/src/projects/projects.controller.
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: controller lines 183-196 verbatim confirmed. @Param('id') with no pipe present. All sibling handlers verified to use @Param('id', ParseUUIDPipe). Missing pipe is a real inconsistency.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7b0d2a2b
 
 ---
 
