@@ -6738,7 +6738,7 @@ psql $DATABASE_URL -c "SELECT indexname FROM pg_indexes WHERE tablename = 'user_
 
 ### COR-013 — countWorkingDays: local-TZ setDate/getDate arithmetic causes DST off-by-one — one day may be counted twice or skipped
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** J
 - **Confidence:** primary-only
@@ -9757,7 +9757,7 @@ grep -rn 'getRequestId()' /home/alex/Documents/REPO/ORCHESTRA/apps/api/src --inc
 
 ### SA-OBS-008 — In-memory Prometheus metrics are fully reset on every container restart
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** N
 - **Confidence:** secondary-only
@@ -9812,7 +9812,7 @@ curl -s http://localhost:4000/api/metrics | grep http_requests_total
 
 ### SA-OBS-009 — No database connection-pool metrics or Redis latency metrics exposed at /api/metrics
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** N
 - **Confidence:** secondary-only
@@ -10356,7 +10356,7 @@ grep -rn 'useQuery\|useMutation' apps/web/src/ apps/web/app/ | grep -v node_modu
 
 ### SA-DAT-003 — LeaveTypeConfig.remove() checks only leaves count — silently cascade-deletes LeaveBalance rows
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** secondary-only

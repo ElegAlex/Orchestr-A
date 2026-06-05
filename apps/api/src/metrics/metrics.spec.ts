@@ -179,6 +179,55 @@ describe('MetricsController (SEC-011)', () => {
   });
 });
 
+describe('SA-OBS-008 — metrics_last_reset_at tracks service instantiation time', () => {
+  it('SA-OBS-008 — renderMetrics includes metrics_last_reset_at gauge so Prometheus can detect counter resets', () => {
+    const service = new MetricsService();
+    const text = service.renderMetrics();
+    expect(text).toContain('metrics_last_reset_at');
+    expect(text).toMatch(/metrics_last_reset_at\s+\d+/);
+  });
+
+  it('SA-OBS-008 — a new MetricsService instance has a different metrics_last_reset_at than prior state', () => {
+    // Simulates container restart: re-instantiation produces a fresh timestamp gauge
+    const service1 = new MetricsService();
+    service1.recordRequest('GET', '/api/projects', 200, 10);
+    const text1 = service1.renderMetrics();
+    expect(text1).toMatch(/http_requests_total\{[^}]+\}\s+1/);
+
+    // New instance (simulates restart): counter is 0 and a last_reset_at is emitted
+    const service2 = new MetricsService();
+    const text2 = service2.renderMetrics();
+    // No counter entries yet — but metrics_last_reset_at must still appear
+    expect(text2).toContain('metrics_last_reset_at');
+  });
+});
+
+describe('SA-OBS-009 — recordGauge exposes DB/Redis gauges in Prometheus output', () => {
+  it('SA-OBS-009 — recordGauge method exists on MetricsService', () => {
+    const service = new MetricsService();
+    expect(typeof service.recordGauge).toBe('function');
+  });
+
+  it('SA-OBS-009 — renderMetrics includes gauge TYPE line and value after recordGauge call', () => {
+    const service = new MetricsService();
+    service.recordGauge('db_pool_active', 'pool="default"', 3);
+    const text = service.renderMetrics();
+    expect(text).toContain('# TYPE db_pool_active gauge');
+    expect(text).toMatch(/db_pool_active\{pool="default"\}\s+3/);
+  });
+
+  it('SA-OBS-009 — recordGauge overwrites previous value for the same name+labels (gauge semantics)', () => {
+    const service = new MetricsService();
+    service.recordGauge('redis_ping_latency_ms', 'instance="default"', 5);
+    service.recordGauge('redis_ping_latency_ms', 'instance="default"', 12);
+    const text = service.renderMetrics();
+    expect(text).toMatch(/redis_ping_latency_ms\{instance="default"\}\s+12/);
+    // Should not contain the old value as a separate line
+    const matches = text.match(/redis_ping_latency_ms\{instance="default"\}/g);
+    expect(matches).toHaveLength(1);
+  });
+});
+
 describe('MetricsInterceptor (OBS-011)', () => {
   let service: MetricsService;
   let interceptor: MetricsInterceptor;

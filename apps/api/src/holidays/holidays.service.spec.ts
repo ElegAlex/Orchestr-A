@@ -562,6 +562,47 @@ describe('HolidaysService', () => {
     });
   });
 
+  describe('countWorkingDays — DST loop arithmetic (COR-013)', () => {
+    // Force Europe/Paris so the DST fall-back transition is observable.
+    // Node's `process.env.TZ` assignment triggers tzset() and propagates to
+    // subsequent Date operations, which is the standard vitest pattern for
+    // timezone-sensitive unit tests.
+    const originalTZ = process.env.TZ;
+
+    beforeEach(() => {
+      process.env.TZ = 'Europe/Paris';
+      mockPrismaService.holiday.findMany.mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+      if (originalTZ === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = originalTZ;
+      }
+    });
+
+    it('COR-013 — DST fall-back: countWorkingDays 2025-10-24→2025-10-27 must return 2 (Fri+Mon)', async () => {
+      // 2025-10-26 is the DST fall-back Sunday in Europe/Paris (02:00→01:00).
+      // Range: Fri 24, Sat 25, Sun 26 (DST), Mon 27 — 2 working days expected.
+      //
+      // Buggy path: the Sun→Mon increment via setDate(getDate()+1) adds 25 UTC
+      // hours (local clock goes back an hour).  current after the Sunday
+      // iteration becomes 2025-10-27T01:00Z, which is > endDate (00:00Z), so
+      // Monday is never counted → returns 1.
+      //
+      // Fixed path: setUTCDate(getUTCDate()+1) always advances exactly 24 UTC
+      // hours → current becomes 2025-10-27T00:00Z ≤ endDate → Monday is
+      // counted → returns 2.
+      const result = await service.countWorkingDays(
+        new Date('2025-10-24'), // ISO date-only → parsed as UTC midnight
+        new Date('2025-10-27'), // ISO date-only → parsed as UTC midnight
+      );
+
+      expect(result).toBe(2);
+    });
+  });
+
   describe('autoImportHolidaysOnBoot (DAT-031)', () => {
     it('should call importFrenchHolidays for currentYear and currentYear+1 when an admin user exists', async () => {
       const adminUser = { id: 'admin-user-id' };

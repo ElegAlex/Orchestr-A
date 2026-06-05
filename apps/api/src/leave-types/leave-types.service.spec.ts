@@ -37,7 +37,7 @@ describe('LeaveTypesService', () => {
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
-    _count: { leaves: 0 },
+    _count: { leaves: 0, leaveBalances: 0 },
     ...overrides,
   });
 
@@ -229,6 +229,25 @@ describe('LeaveTypesService', () => {
       await expect(service.remove('ghost')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+
+    it('SA-DAT-003 — should deactivate (not delete) when type has 0 leaves but non-zero leaveBalances', async () => {
+      // LeaveBalance has onDelete:Cascade — a hard delete would silently wipe balance rows
+      const typeWithBalances = makeLeaveType({
+        _count: { leaves: 0, leaveBalances: 2 },
+      });
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        typeWithBalances,
+      );
+      mockPrismaService.leaveTypeConfig.update.mockResolvedValue({
+        ...typeWithBalances,
+        isActive: false,
+      });
+
+      const result = await service.remove('lt-1');
+
+      expect(result.deactivated).toBe(true);
+      expect(mockPrismaService.leaveTypeConfig.delete).not.toHaveBeenCalled();
     });
   });
 });

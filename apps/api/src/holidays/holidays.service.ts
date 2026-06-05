@@ -461,7 +461,12 @@ export class HolidaysService implements OnApplicationBootstrap {
     const current = new Date(startDate);
 
     while (current <= endDate) {
-      const dayOfWeek = current.getDay();
+      // Use UTC accessors to stay consistent with toISOString() (UTC) and to
+      // avoid DST-induced off-by-one errors: setDate(getDate()+1) on a
+      // Europe/Paris host advances by only 23 h on the spring-forward day
+      // (double-counting) or 25 h on the fall-back day (skipping the last day).
+      // setUTCDate/getUTCDate always advance by exactly 24 h. [closes COR-013]
+      const dayOfWeek = current.getUTCDay();
       const dateStr = current.toISOString().split('T')[0];
 
       // Exclut samedi (6) et dimanche (0) et jours fériés non ouvrés
@@ -473,7 +478,7 @@ export class HolidaysService implements OnApplicationBootstrap {
         count++;
       }
 
-      current.setDate(current.getDate() + 1);
+      current.setUTCDate(current.getUTCDate() + 1);
     }
 
     return count;

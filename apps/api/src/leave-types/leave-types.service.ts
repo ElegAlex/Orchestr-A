@@ -150,7 +150,7 @@ export class LeaveTypesService {
       where: { id },
       include: {
         _count: {
-          select: { leaves: true },
+          select: { leaves: true, leaveBalances: true },
         },
       },
     });
@@ -166,14 +166,16 @@ export class LeaveTypesService {
       );
     }
 
-    // Si des congés utilisent ce type, on le désactive plutôt que de le supprimer
-    if (existing._count.leaves > 0) {
+    // Si des congés ou des soldes de congés référencent ce type, on le désactive
+    // plutôt que de le supprimer (LeaveBalance.leaveTypeId a onDelete:Cascade —
+    // une suppression physique effacerait silencieusement tous les soldes associés)
+    if (existing._count.leaves > 0 || existing._count.leaveBalances > 0) {
       await this.prisma.leaveTypeConfig.update({
         where: { id },
         data: { isActive: false },
       });
       return {
-        message: `Type de congé désactivé (${existing._count.leaves} congé(s) l'utilisent)`,
+        message: `Type de congé désactivé (${existing._count.leaves} congé(s), ${existing._count.leaveBalances} solde(s) l'utilisent)`,
         deactivated: true,
       };
     }
