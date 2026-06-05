@@ -3231,7 +3231,7 @@ grep -n '\$transaction\|LEGAL_ENTITY\|contactFirstName' apps/api/src/third-parti
 
 ### COR-037 — upsertDismissal findFirst→create inside $transaction does not prevent duplicate dismissal rows under READ COMMITTED
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -3293,7 +3293,7 @@ grep -n 'isDismissal\|partial\|unique' packages/database/prisma/schema.prisma | 
 
 ### COR-038 — ensureDailyCapNotExceeded is non-transactional: concurrent same-day creates can both pass the 24h cap and collectively exceed it
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** C
 - **Confidence:** primary-only

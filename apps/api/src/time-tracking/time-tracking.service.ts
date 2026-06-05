@@ -77,9 +77,13 @@ export class TimeTrackingService {
    * DAT-034: extended to accept either dimension via the `actor` parameter.
    * Behavior matches COR-022 verbatim for the user case; the thirdParty case
    * sums entries WHERE thirdPartyId = X with the same isDismissal/date filters.
-   * Carries the same non-transactional TOCTOU residual COR-022 documented —
-   * the per-row CHECK (DAT-033) does not close the aggregate race in either
-   * dimension.
+   *
+   * COR-038: the create() caller now wraps this method + timeEntry.create inside
+   * a SERIALIZABLE $transaction, closing the aggregate TOCTOU race. The update()
+   * path still calls this without a transaction (the update already operates on a
+   * known, owned row, limiting the concurrent-insert risk). An optional `tx`
+   * parameter allows the create() path to pass the active tx client so the
+   * aggregate runs inside the same SERIALIZABLE boundary as the insert.
    */
   private async ensureDailyCapNotExceeded(
     actor:
@@ -88,6 +92,7 @@ export class TimeTrackingService {
     date: Date,
     newHours: number,
     excludeEntryId?: string,
+    tx?: Prisma.TransactionClient,
   ): Promise<void> {
     const startOfDay = new Date(
       Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
@@ -100,7 +105,10 @@ export class TimeTrackingService {
         ? { userId: actor.userId }
         : { thirdPartyId: actor.thirdPartyId };
 
-    const aggregate = await this.prisma.timeEntry.aggregate({
+    // Use the supplied transaction client when available (COR-038 SERIALIZABLE
+    // context); fall back to the service-level prisma client for the update path.
+    const db = tx ?? this.prisma;
+    const aggregate = await db.timeEntry.aggregate({
       _sum: { hours: true },
       where: {
         ...actorWhere,
@@ -198,55 +206,80 @@ export class TimeTrackingService {
       projectId: effectiveProjectId ?? undefined,
     });
 
-    // Per-day hours cap (COR-022 user path + DAT-034 third-party path) —
-    // guards both actor dimensions. The TOCTOU residual (non-transactional
-    // read-then-write race; concurrent same-day declarations can both pass
-    // the cap and both commit past 24h) remains unaddressed — same caveat as
-    // COR-022. DAT-033's per-row CHECK does not close aggregate races.
-    await this.ensureDailyCapNotExceeded(actor, new Date(date), hours);
-
-    return this.prisma.timeEntry.create({
-      data: {
-        userId: actor.kind === 'user' ? actor.userId : null,
-        thirdPartyId: actor.kind === 'thirdParty' ? actor.thirdPartyId : null,
-        declaredById: currentUser.id,
-        date: new Date(date),
+    // COR-038 — wrap cap-check + insert in a SERIALIZABLE $transaction so that
+    // concurrent same-(actor, date) creates cannot both pass the 24h cap and
+    // both commit rows that collectively exceed it. Under SERIALIZABLE, Postgres
+    // detects the write-skew and aborts one transaction (P2034); we retry once
+    // (same DAT-024 pattern as leaves.service.ts). The per-row @Max(24) CHECK
+    // (DAT-033) remains a defense-in-depth guard but does not close the aggregate
+    // race — only the SERIALIZABLE tx does.
+    const txBody = async (tx: Prisma.TransactionClient) => {
+      await this.ensureDailyCapNotExceeded(
+        actor,
+        new Date(date),
         hours,
-        activityType,
-        taskId,
-        projectId: effectiveProjectId,
-        description,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-          },
+        undefined,
+        tx,
+      );
+      return tx.timeEntry.create({
+        data: {
+          userId: actor.kind === 'user' ? actor.userId : null,
+          thirdPartyId: actor.kind === 'thirdParty' ? actor.thirdPartyId : null,
+          declaredById: currentUser.id,
+          date: new Date(date),
+          hours,
+          activityType,
+          taskId,
+          projectId: effectiveProjectId,
+          description,
         },
-        thirdParty: {
-          select: {
-            id: true,
-            organizationName: true,
-            type: true,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
-        },
-        declaredBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
+          thirdParty: {
+            select: {
+              id: true,
+              organizationName: true,
+              type: true,
+            },
           },
+          declaredBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
+          },
+          task: { select: { id: true, title: true } },
+          project: { select: { id: true, name: true } },
         },
-        task: { select: { id: true, title: true } },
-        project: { select: { id: true, name: true } },
-      },
-    });
+      });
+    };
+
+    try {
+      return await this.prisma.$transaction(txBody, {
+        isolationLevel: 'Serializable',
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2034'
+      ) {
+        return this.prisma.$transaction(txBody, {
+          isolationLevel: 'Serializable',
+        });
+      }
+      throw err;
+    }
   }
 
   private async resolveActor(
@@ -279,8 +312,13 @@ export class TimeTrackingService {
   /**
    * Upsert idempotent d'un dismissal pour la clé logique
    * (userId, taskId, isDismissal=true). Prisma ne supporte pas d'upsert sur
-   * clé composite non-unique : on passe par findFirst + update/create dans
-   * une transaction courte (D9).
+   * clé composite non-unique : on passe par findFirst + update/create.
+   *
+   * COR-037 — la transaction est promue en SERIALIZABLE pour éliminer le race
+   * READ COMMITTED où deux requêtes concurrentes voient toutes les deux
+   * findFirst=null et tentent toutes les deux un create. Sous SERIALIZABLE,
+   * Postgres détecte le conflit d'écriture et rejette l'une d'elles (P2034) ;
+   * on retry une fois (D9 retry pattern, cf. leaves.service.ts ligne 657).
    */
   private async upsertDismissal(
     currentUser: { id: string; role: string | null },
@@ -293,7 +331,7 @@ export class TimeTrackingService {
     ]);
 
     const userId = currentUser.id;
-    return this.prisma.$transaction(async (tx) => {
+    const txBody = async (tx: Prisma.TransactionClient) => {
       const existing = await tx.timeEntry.findFirst({
         where: { userId, taskId, isDismissal: true },
         select: { id: true },
@@ -326,7 +364,26 @@ export class TimeTrackingService {
         },
         include: { task: true, project: true },
       });
-    });
+    };
+
+    // COR-037 — SERIALIZABLE prevents the concurrent-findFirst-null → dual-create
+    // race under READ COMMITTED. One-shot P2034 retry in case of serialization
+    // failure (same pattern as leaves.service.ts DAT-024).
+    try {
+      return await this.prisma.$transaction(txBody, {
+        isolationLevel: 'Serializable',
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2034'
+      ) {
+        return this.prisma.$transaction(txBody, {
+          isolationLevel: 'Serializable',
+        });
+      }
+      throw err;
+    }
   }
 
   /**

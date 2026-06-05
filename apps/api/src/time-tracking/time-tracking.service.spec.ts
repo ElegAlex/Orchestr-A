@@ -80,6 +80,15 @@ describe('TimeTrackingService', () => {
     mockPrismaService.timeEntry.aggregate.mockResolvedValue({
       _sum: { hours: 0 },
     });
+    // Default $transaction implementation: forwards to the callback using the
+    // same mock prisma so regular create/dismissal paths resolve without extra
+    // per-test setup. COR-037/COR-038: the callback receives the mock tx client.
+    mockPrismaService.$transaction.mockImplementation(
+      async (
+        cb: (tx: typeof mockPrismaService) => Promise<unknown>,
+        _opts?: unknown,
+      ) => cb(mockPrismaService),
+    );
   });
 
   afterEach(() => {
@@ -1389,6 +1398,106 @@ describe('TimeTrackingService', () => {
       );
       const callArg = mockPrismaService.timeEntry.findMany.mock.calls[0][0];
       expect(callArg.where).not.toHaveProperty('isDismissal');
+    });
+  });
+
+  // ── COR-037 — upsertDismissal TOCTOU: SERIALIZABLE isolation ─────────────
+  describe('upsertDismissal — SERIALIZABLE isolation (COR-037)', () => {
+    const dismissalDto = {
+      date: '2025-01-01',
+      hours: 0,
+      activityType: 'OTHER' as const,
+      taskId: 'task-1',
+      isDismissal: true,
+    };
+
+    beforeEach(() => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+    });
+
+    it('COR-037 — upsertDismissal runs inside a SERIALIZABLE $transaction to prevent duplicate dismissal rows', async () => {
+      mockPrismaService.timeEntry.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-1',
+      });
+      mockPrismaService.timeEntry.create.mockResolvedValue({
+        id: 'new-dismissal',
+        isDismissal: true,
+      });
+
+      await service.create(currentUser, dismissalDto);
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({ isolationLevel: 'Serializable' }),
+      );
+    });
+
+    it('COR-037 — upsertDismissal (update path) uses SERIALIZABLE $transaction', async () => {
+      mockPrismaService.timeEntry.findFirst.mockResolvedValue({
+        id: 'existing-dismissal',
+      });
+      mockPrismaService.timeEntry.update.mockResolvedValue({
+        id: 'existing-dismissal',
+        isDismissal: true,
+      });
+
+      await service.create(currentUser, dismissalDto);
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({ isolationLevel: 'Serializable' }),
+      );
+    });
+  });
+
+  // ── COR-038 — ensureDailyCapNotExceeded TOCTOU: SERIALIZABLE isolation ───
+  describe('per-day cap create — SERIALIZABLE isolation (COR-038)', () => {
+    const dto = {
+      date: '2025-01-01',
+      hours: 4,
+      activityType: 'DEVELOPMENT' as const,
+      taskId: 'task-1',
+      projectId: 'project-1',
+      description: 'cap race fix',
+    };
+
+    beforeEach(() => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-1',
+      });
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+      });
+    });
+
+    it('COR-038 — create() wraps cap-check+insert in a SERIALIZABLE $transaction to prevent daily-cap races', async () => {
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: 0 },
+      });
+      mockPrismaService.timeEntry.create.mockResolvedValue({ id: '1' });
+
+      await service.create(currentUser, dto);
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({ isolationLevel: 'Serializable' }),
+      );
+    });
+
+    it('COR-038 — cap still rejects when sum exceeds 24h inside the SERIALIZABLE tx', async () => {
+      // 20h existing + 4h new = 24h exactly allowed; 21h existing + 4h = 25h rejected
+      mockPrismaService.timeEntry.aggregate.mockResolvedValue({
+        _sum: { hours: 21 },
+      });
+
+      await expect(service.create(currentUser, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockPrismaService.timeEntry.create).not.toHaveBeenCalled();
     });
   });
 
