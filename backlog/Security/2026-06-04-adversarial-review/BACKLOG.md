@@ -203,7 +203,7 @@ psql $DATABASE_URL -c "SELECT COUNT(*) FROM information_schema.referential_const
 
 ### COR-002 — importTasks: task created but subtasks written outside transaction — partial failure leaves orphaned task row
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 1
 - **Cluster:** B
 - **Confidence:** primary-only

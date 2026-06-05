@@ -1451,39 +1451,45 @@ export class TasksService {
           }
         }
 
-        // Créer la tâche
-        const createdTask = await this.prisma.task.create({
-          data: {
-            title: taskData.title,
-            description: taskData.description || null,
-            status,
-            priority,
-            projectId,
-            assigneeId: assigneeId || null,
-            milestoneId: milestoneId || null,
-            estimatedHours: taskData.estimatedHours || null,
-            startDate: taskData.startDate ? new Date(taskData.startDate) : null,
-            endDate: taskData.endDate ? new Date(taskData.endDate) : null,
-          },
-        });
+        // COR-002 — la tâche et ses sous-tâches sont écrites dans une seule
+        // transaction : si une sous-tâche échoue en cours de boucle, la tâche
+        // parente est annulée (plus de ligne orpheline committée).
+        await this.prisma.$transaction(async (tx) => {
+          const createdTask = await tx.task.create({
+            data: {
+              title: taskData.title,
+              description: taskData.description || null,
+              status,
+              priority,
+              projectId,
+              assigneeId: assigneeId || null,
+              milestoneId: milestoneId || null,
+              estimatedHours: taskData.estimatedHours || null,
+              startDate: taskData.startDate
+                ? new Date(taskData.startDate)
+                : null,
+              endDate: taskData.endDate ? new Date(taskData.endDate) : null,
+            },
+          });
 
-        // Créer les sous-tâches si présentes (séparées par |)
-        if (taskData.subtasks) {
-          const subtaskTitles = taskData.subtasks
-            .split('|')
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0);
+          // Créer les sous-tâches si présentes (séparées par |)
+          if (taskData.subtasks) {
+            const subtaskTitles = taskData.subtasks
+              .split('|')
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0);
 
-          for (let j = 0; j < subtaskTitles.length; j++) {
-            await this.prisma.subtask.create({
-              data: {
-                title: subtaskTitles[j],
-                taskId: createdTask.id,
-                position: j,
-              },
-            });
+            for (let j = 0; j < subtaskTitles.length; j++) {
+              await tx.subtask.create({
+                data: {
+                  title: subtaskTitles[j],
+                  taskId: createdTask.id,
+                  position: j,
+                },
+              });
+            }
           }
-        }
+        });
 
         result.created++;
       } catch (err) {

@@ -58,6 +58,7 @@ describe('TasksService', () => {
     },
     subtask: {
       count: vi.fn().mockResolvedValue(0),
+      create: vi.fn().mockResolvedValue({}),
       update: vi.fn().mockResolvedValue({}),
       findMany: vi.fn().mockResolvedValue([]),
     },
@@ -1141,6 +1142,27 @@ describe('TasksService', () => {
           }) as object,
         }),
       );
+    });
+
+    it('COR-002 — writes each task and its subtasks atomically in one $transaction', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+      mockPrismaService.task.create.mockResolvedValue({ id: 'new-task-1' });
+      mockPrismaService.subtask.create.mockResolvedValue({ id: 'sub-1' });
+
+      const tasks = [{ title: 'Parent', subtasks: 'Sub A | Sub B' }];
+
+      const result = await service.importTasks(projectId, tasks as any);
+
+      expect(result.created).toBe(1);
+      // The parent task row and its subtasks must be written inside a single
+      // transaction so a mid-loop subtask failure rolls the task back (no
+      // orphaned task row). Pre-fix there is no $transaction wrapping.
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
+      expect(mockPrismaService.task.create).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.subtask.create).toHaveBeenCalledTimes(2);
     });
 
     it('should skip tasks that already exist in the project', async () => {
