@@ -1264,7 +1264,7 @@ curl -s -X POST http://localhost:3000/api/tasks -H 'Authorization: Bearer <token
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary SEC-019 ⇄ sessionA SEC-007).
 - Audit note: Adversarial review: code evidence verbatim confirmed. HOWEVER: `tags` has no corresponding column in the Prisma Task model (schema.prisma lines 313-357 confirmed). The `...taskData` spread in tasks.service.ts:225 would include `tags`, but Prisma 6 would either throw a type error at compile time or silently ignore the unknown field at runtime. The stored XSS impact claim is therefore invalid as-is — data cannot be persisted. The finding is downgraded from high to medium confidence: the missing validators are a real gap that will matter the moment a `tags String[]` column is added to the schema, … [truncated — full text in findings.json]
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** c8d7bbf8
 
 ---
 
@@ -2496,7 +2496,7 @@ grep -rn "users:reset_password\|users:manage_roles" apps/api/src/users/users.con
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: users.controller.ts line 431 confirmed `@RequirePermissions('users:manage_roles')`. auth.controller.ts line 314 uses `@RequirePermissions('users:reset_password')` for the token-path — the mismatch is real. Both endpoints still enforce hierarchy in the service layer via roleHierarchy.assertCanAssignRole, so there is no privilege escalation, but the permission surface inconsistency is confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** c8d7bbf8
 
 ---
 
@@ -4681,7 +4681,7 @@ N/A — manual verification: POST /leaves/import with payload {"leaves": [... 50
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The body limit of 1 MiB (SEC-025) mitigates extreme cases but does not prevent the hundreds-of-rows scenario. Adversarial review confirmed: import-leaves.dto.ts lines 61-70 verbatim, no @ArrayMaxSize present. No compensating per-request row limit found elsewhere in the controller or service.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** c8d7bbf8
 
 ---
 
@@ -7331,7 +7331,7 @@ N/A — manual verification: inspect main.ts line 198-200
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial review confirmed: main.ts lines 198-200 code evidence matches verbatim. The `.split(':')` without limit is confirmed. safeEqual() in main.ts (lines 34-38) uses timingSafeEqual correctly but operates on an already-truncated `pass` value when the password contains colons. The finding correctly characterizes the RFC 7617 violation. Low probability in practice (passwords containing ':' are unusual) but the parser is structurally incorrect.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** c8d7bbf8
 
 ---
 
