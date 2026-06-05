@@ -6007,7 +6007,7 @@ psql $DATABASE_URL -c "TRUNCATE audit_logs;" 2>&1 | grep 'audit_logs is append-o
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: PostgreSQL docs: 'Row-level triggers fired for TRUNCATE are a PostgreSQL extension. They are not part of the SQL standard.' In practice, TRUNCATE simply does not fire FOR EACH ROW triggers at all. Code evidence verbatim confirmed at lines 120-122. No TRUNCATE trigger found in any migration file (grep across all migrations returned zero results). init-roles.sql line 57 does REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM app_user — this partially mitigates the runtime path but the schema-owning role retains full privilege. The statement-level trigger gap remains unaddressed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** edbe5b64
 
 ---
 
