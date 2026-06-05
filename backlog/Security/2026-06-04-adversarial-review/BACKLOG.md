@@ -4155,7 +4155,7 @@ grep -n 'await this.prisma.event.create\|createMany\|MAX_IMPORT' apps/api/src/pl
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The 5MB MaxLength was presumably set to limit payload size; it does not prevent high event count since ICS events are small. A dedicated `@Max()` on event count is needed. Verified: line 251 has `await this.prisma.event.create(...)` inside the for loop with no count accumulator or cap.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 95ea1d6f
 
 ---
 
@@ -6930,7 +6930,7 @@ grep -n 'startDate\|endDate\|dateFilter' apps/api/src/planning-export/planning-e
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Events and telework use a single date point so they are unaffected. Only the leaves query has this spanning-overlap gap. Adversarial check: dateFilter = { gte: new Date(start), lte: new Date(end) } (lines 55-57). Applied as OR: [{startDate: dateFilter}, {endDate: dateFilter}] — confirmed spans are missed. No secondary filter or post-query correction found. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 95ea1d6f
 
 ---
 
