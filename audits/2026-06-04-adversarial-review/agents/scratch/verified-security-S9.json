@@ -1,0 +1,106 @@
+{
+  "dimension": "security",
+  "shard": "S9",
+  "confirmed": [
+    {
+      "id": "security-S9-1",
+      "severity": "important",
+      "category": "security",
+      "subcategory": "input-validation / DoS",
+      "title": "ImportSkillsDto.skills array has no @ArrayMaxSize — sequential DB writes enable per-request DoS",
+      "file": "apps/api/src/skills/dto/import-skills.dto.ts",
+      "line": "46-55",
+      "code_evidence": "export class ImportSkillsDto {\n  @ApiProperty({\n    description: 'Liste des compétences à importer',\n    type: [ImportSkillDto],\n  })\n  @IsArray()\n  @ValidateNested({ each: true })\n  @Type(() => ImportSkillDto)\n  skills: ImportSkillDto[];\n}",
+      "description": "The `skills` array in `ImportSkillsDto` is validated with `@IsArray()` and `@ValidateNested()` but has no `@ArrayMaxSize()` constraint. The global body limit is 1 MiB. A minimal valid skill entry (`{\"name\":\"a\",\"category\":\"TECHNICAL\"}`) is ~35 bytes, allowing approximately 30,000 entries per request. `importSkills()` in `skills.service.ts` processes each item in a sequential `for` loop, performing one `prisma.skill.create()` call per entry (plus an initial `prisma.skill.findMany()`). `validateImport()` similarly iterates with per-item logic. Both endpoints require `skills:create` permission (legitimate users only), but any user holding that role can trigger thousands of DB writes per HTTP request.",
+      "root_cause": "No `@ArrayMaxSize()` decorator on `ImportSkillsDto.skills`, combined with a sequential per-item DB write loop in the service, means a single large payload causes unbounded database load.",
+      "impact": "An authenticated user with `skills:create` permission can submit a 1 MiB array of ~30,000 skills and cause thousands of sequential Prisma `create` calls per request, potentially saturating the database connection pool and degrading service for all other users.",
+      "suggested_fix": "Add `@ArrayMaxSize(500)` (or a similarly small bound) from `class-validator` to the `skills` field in `ImportSkillsDto`. Also convert the sequential loop in `importSkills()` to use `prisma.skill.createMany()` or a batched `$transaction` for efficiency.",
+      "acceptance_criteria": [
+        "POST /api/skills/import with skills array > 500 items returns HTTP 400",
+        "POST /api/skills/import/validate with skills array > 500 items returns HTTP 400",
+        "POST /api/skills/import with exactly 500 items succeeds (if authorized)"
+      ],
+      "verification_command": "curl -s -X POST http://localhost:4000/api/skills/import -H 'Authorization: Bearer <token>' -H 'Content-Type: application/json' -d '{\"skills\":[{\"name\":\"s\",\"category\":\"TECHNICAL\"}]}' | jq .  # then repeat with 501 items and expect 400",
+      "related_findings": ["security-S9-2"],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Both POST /skills/import and POST /skills/import/validate are affected. Verified: ImportSkillsDto at lines 46-54 has no @ArrayMaxSize. importSkills() service method (skills.service.ts lines 693-730) uses a sequential for loop with prisma.skill.create() per item — no batching, no size guard."
+    },
+    {
+      "id": "security-S9-2",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "input-validation / missing MaxLength",
+      "title": "ImportSkillDto.name and .description lack @MaxLength — inconsistent with CreateSkillDto which enforces @MaxLength(100)",
+      "file": "apps/api/src/skills/dto/import-skills.dto.ts",
+      "line": "15-44",
+      "code_evidence": "export class ImportSkillDto {\n  @ApiProperty({\n    description: 'Nom de la compétence',\n    example: 'React',\n  })\n  @IsString()\n  @IsNotEmpty()\n  name: string;\n\n  @ApiProperty({ description: 'Description', required: false })\n  @IsString()\n  @IsOptional()\n  description?: string;",
+      "description": "The `ImportSkillDto` used for bulk import accepts `name` without `@MaxLength` (nor `@MinLength`), and `description` without `@MaxLength`. By contrast, `CreateSkillDto` enforces `@MinLength(2)` and `@MaxLength(100)` on `name`. A caller can embed a `name` of arbitrary length (up to the 1 MiB body limit) in each array element. The service-side validation in `validateImport()` does check `skillData.name.length < 2 || skillData.name.length > 100` and emits an error line — but the DTO itself is the correct place to enforce this, and the `importSkills()` path trusts the data without that same service-level check.",
+      "root_cause": "The `ImportSkillDto` was not aligned with `CreateSkillDto` when the bulk import feature was added; length constraints were omitted from the import DTO.",
+      "impact": "Very large `name` or `description` values (up to body limit) are accepted by `importSkills()` and written to the database without length validation, potentially storing oversized data that could break downstream display logic. Risk is bounded by the 1 MiB global body limit.",
+      "suggested_fix": "Add `@MinLength(2)` and `@MaxLength(100)` to `name`, and `@MaxLength(500)` to `description` in `ImportSkillDto`, matching the constraints in `CreateSkillDto`.",
+      "acceptance_criteria": [
+        "POST /api/skills/import with a skill name > 100 chars returns 400",
+        "POST /api/skills/import/validate with a skill name < 2 chars returns an error in the response preview"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": ["security-S9-1"],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "The service-side validateImport() catches the length issue in the preview path (skills.service.ts lines 597-605), but importSkills() (lines 693-730) does not perform the same check — confirmed by direct reading. The importSkills() path writes to DB with name directly from skillData.name with no length guard."
+    },
+    {
+      "id": "security-S9-3",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "input-validation / missing MaxLength",
+      "title": "description fields in CreateSkillDto, CreateDepartmentDto, CreateServiceDto have no @MaxLength",
+      "file": "apps/api/src/skills/dto/create-skill.dto.ts",
+      "line": "27-35",
+      "code_evidence": "  @IsString()\n  @IsOptional()\n  description?: string;",
+      "description": "The optional `description` field in `CreateSkillDto`, `CreateDepartmentDto`, and `CreateServiceDto` has `@IsString()` and `@IsOptional()` but no `@MaxLength()`. Any authenticated user with the appropriate create/update permission can submit a description of up to 1 MiB. While the global body limit (1 MiB) provides an outer bound, there is no DTO-level constraint preventing storage of a very large description string that could degrade rendering or storage.",
+      "root_cause": "No `@MaxLength()` decorator was applied to optional free-text description fields in these DTOs.",
+      "impact": "Low direct security impact (bounded by 1 MiB body limit and requires authenticated access), but inconsistent with defence-in-depth and could facilitate large data storage per record.",
+      "suggested_fix": "Add `@MaxLength(1000)` (or a business-appropriate limit) to `description` in `CreateSkillDto`, `CreateDepartmentDto`, and `CreateServiceDto`.",
+      "acceptance_criteria": [
+        "POST /api/skills with description > 1000 chars returns HTTP 400",
+        "POST /api/departments with description > 1000 chars returns HTTP 400",
+        "POST /api/services with description > 1000 chars returns HTTP 400"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Verified in all three DTOs: create-skill.dto.ts lines 33-35, create-department.dto.ts lines 29-31, create-service.dto.ts lines 31-32 — all have @IsString() @IsOptional() only on description, no @MaxLength."
+    },
+    {
+      "id": "security-S9-4",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "input-validation / missing UUID pipe on query param",
+      "title": "departmentId query parameter in GET /services and GET /skills/matrix is not validated as UUID — invalid values cause DB-level errors surfaced as 500",
+      "file": "apps/api/src/services/services.controller.ts",
+      "line": "59-75",
+      "code_evidence": "  findAll(\n    @Query('page', new ParseIntPipe({ optional: true })) page?: number,\n    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,\n    @Query('departmentId') departmentId?: string,\n  ) {\n    return this.servicesService.findAll(page, limit, departmentId);\n  }",
+      "description": "The `departmentId` query parameter in `GET /api/services` (and `GET /api/skills/matrix` in skills.controller.ts line 92) is accepted as a raw string without a `ParseUUIDPipe`. The value is passed directly to Prisma as a `where.departmentId` filter. If the value is not a valid UUID, the PostgreSQL driver raises an `invalid_text_representation` error (PrismaClientKnownRequestError P2023), which propagates as an HTTP 500. The global `AllExceptionsFilter` masks the stack trace in the response, but generates a 500 log entry instead of a clean 400 validation error.",
+      "root_cause": "Missing `ParseUUIDPipe` (with `optional: true`) on the `departmentId` query parameter in both controller methods.",
+      "impact": "Any authenticated user with `services:read` or `skills:manage_matrix` permission can trigger repeated 500 error log entries by passing a malformed `departmentId`. This is not exploitable for data leakage (the error is masked), but degrades observability and could obscure real errors in logs.",
+      "suggested_fix": "Apply `@Query('departmentId', new ParseUUIDPipe({ optional: true })) departmentId?: string` in both `ServicesController.findAll()` and `SkillsController.getMatrix()`. The same pattern is already used for path params (e.g., `@Param('departmentId', ParseUUIDPipe)`).",
+      "acceptance_criteria": [
+        "GET /api/services?departmentId=not-a-uuid returns HTTP 400 (not 500)",
+        "GET /api/skills/matrix?departmentId=not-a-uuid returns HTTP 400 (not 500)",
+        "GET /api/services?departmentId=<valid-uuid> continues to work correctly"
+      ],
+      "verification_command": "curl -s -o /dev/null -w '%{http_code}' 'http://localhost:4000/api/services?departmentId=not-a-uuid' -H 'Authorization: Bearer <token>'  # expect 400, currently returns 500",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Verified: services.controller.ts line 72 has bare @Query('departmentId') with no pipe. skills.controller.ts line 92 has bare @Query('departmentId') with no pipe. skills.service.ts line 365 assigns departmentId directly to whereUser.departmentId and passes to Prisma — no service-level UUID validation. The pattern with ParseUUIDPipe is already used for path params in both files (e.g., services.controller.ts line 89, skills.controller.ts line 114)."
+    }
+  ],
+  "refuted": []
+}

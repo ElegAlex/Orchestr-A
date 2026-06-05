@@ -1,0 +1,151 @@
+{
+  "dimension": "correctness",
+  "shard": "S8",
+  "confirmed": [
+    {
+      "id": "correctness-S8-1",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "data_inconsistency",
+      "title": "taskStatusData and metrics diverge when scope exceeds PROJECT_DETAILS_LIMIT (50)",
+      "file": "apps/api/src/analytics/analytics.service.ts",
+      "line": "103-127",
+      "code_evidence": "    const [projects, tasks, users] = await Promise.all([\n      this.getProjects(projectId, projectWhere),\n      this.getTasks(projectId, projectWhere),\n      this.getActiveUsers(projectWhere),\n    ]);\n\n    const projectIds = projects.map((p) => p.id);\n    const taskStatusGroupBy = await this.prisma.task.groupBy({\n      by: ['projectId', 'status'],\n      where: { projectId: { in: projectIds } },\n      _count: { _all: true },\n    });\n\n    const metrics = this.calculateMetrics(projects, tasks, users);\n    const taskStatusData = this.getTaskStatusData(taskStatusGroupBy);",
+      "description": "`getProjects` applies `take: PROJECT_DETAILS_LIMIT` (50), truncating the project list. `getTasks` is scoped by `projectWhere` (no limit), so it can return tasks from all projects in scope (e.g. 200). `taskStatusGroupBy` is then built from only the 50 returned project IDs. As a result, `calculateMetrics` (consuming the full `tasks` array) counts all tasks across all projects, while `getTaskStatusData` (consuming `taskStatusGroupBy`) only covers the 50-project subset. The two panels on the analytics dashboard will show contradictory numbers: the overall 'Taux de Completion' metric counts tasks from projects 51-N, but the per-status breakdown chart silently omits them.",
+      "root_cause": "`getProjects` hard-caps at 50 rows but `getTasks` has no corresponding cap; the shared `taskStatusGroupBy` is then scoped to only the 50 returned project IDs instead of using the same unrestricted scope.",
+      "impact": "Analytics dashboard shows inconsistent KPIs: the completion-rate metric reflects a larger task set than the status-breakdown chart. The discrepancy grows with the number of projects in scope. Users with >50 projects in scope will see a completion rate that does not match the sum of the status chart values.",
+      "suggested_fix": "Either (a) apply no `take` limit in `getProjects` for analytics (use a paginated or export path for the details table separately), or (b) derive `taskStatusGroupBy` from the same `projectWhere` clause as `getTasks` rather than from the post-truncated `projectIds`. If the 50-project cap must be kept for payload size, apply it consistently to `tasks` as well and document the sampling clearly.",
+      "acceptance_criteria": [
+        "When a user has 60 projects in scope, sum(taskStatusData[].value) equals metrics[1].change numerator (completedTasks count)",
+        "Integration test: seed 60 projects, call GET /analytics, verify taskStatusData sums == metrics totalTasks"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Verbatim verified: getProjects uses `take: PROJECT_DETAILS_LIMIT` at line 154; getTasks has no take at line 235; taskStatusGroupBy scoped to projectIds (truncated list) at lines 113-118; calculateMetrics uses unbounded tasks array. The PER-025 comment at line 109 incorrectly states the groupBy is 'equivalent to the getTasks relation filter'. It is equivalent only when projects.length < PROJECT_DETAILS_LIMIT."
+    },
+    {
+      "id": "correctness-S8-2",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "misleading_semantics",
+      "title": "MilestonesCompletionResponseDto.total means 'due milestones' not 'all milestones'",
+      "file": "apps/api/src/analytics/advanced/services/milestones-completion.service.ts",
+      "line": "75-77",
+      "code_evidence": "    const total = completed + overdue;\n    const onTime = completed;\n    const ratio = total > 0 ? onTime / total : 0;\n",
+      "description": "`total` is computed as `completed + overdue`, deliberately excluding `upcoming` milestones. Yet the returned DTO also exposes `upcoming` as a peer field alongside `total`. Any consumer that interprets `total` as 'total milestones in scope' (the natural reading of the field name) will derive a wrong ratio manually (e.g. `completed / total` is not the same as `completed / (completed + overdue + upcoming)`). The `ratio` itself is correct given its definition, but the `total` field is misleading and can cause bugs in UI layers or downstream integrations that compute secondary metrics from the raw fields.",
+      "root_cause": "The variable named `total` is assigned `completed + overdue` rather than the actual total count of all milestones; the naming is ambiguous and conflicts with the natural meaning of 'total'.",
+      "impact": "Consumers computing their own ratios from `total` will get inflated percentages (e.g. 5 completed / 7 total instead of 5 / 10 when 3 are upcoming). Dashboard secondary metrics or exports could misreport milestone health.",
+      "suggested_fix": "Rename the field to `due` (or `dueTotal`) in the DTO and return object to reflect its actual semantics. Keep `total` as `completed + overdue + upcoming` if a true total is needed. Update `ratio` documentation to clarify it is `completed / (completed + overdue)`.",
+      "acceptance_criteria": [
+        "DTO field name unambiguously conveys 'milestones that have passed their due date or are completed'",
+        "Consumers cannot derive a wrong ratio by using the wrong denominator"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Verbatim confirmed at lines 75-77. The return object at lines 115-124 exposes: onTime, total (=completed+overdue), ratio, completed, overdue, upcoming — so a consumer using total as 'all milestones' gets the wrong denominator."
+    },
+    {
+      "id": "correctness-S8-3",
+      "severity": "nit",
+      "category": "correctness",
+      "subcategory": "dst_sensitivity",
+      "title": "daysFromNow in MilestonesCompletionService uses fixed MS_PER_DAY, off-by-one across DST transitions",
+      "file": "apps/api/src/analytics/advanced/services/milestones-completion.service.ts",
+      "line": "20-98",
+      "code_evidence": "const MS_PER_DAY = 1000 * 60 * 60 * 24;\n...\n      const dayMs = milestone.dueDate.getTime() - now.getTime();\n      const daysFromNow = Math.round(dayMs / MS_PER_DAY);",
+      "description": "Dividing a millisecond delta by a fixed `MS_PER_DAY` (86400000 ms) is incorrect across DST boundaries. On the Europe/Paris clock (used by the scheduler) the spring-forward transition produces a 23-hour day and the fall-back transition a 25-hour day. A milestone due exactly at midnight on the day after DST change can produce `daysFromNow = 0` when it should be `1` (or vice-versa). `Math.round` mitigates but does not fully eliminate the issue for milestones due within the transition hour.",
+      "root_cause": "Using a fixed millisecond constant for 'one day' ignores DST; the correct approach is calendar-aware date arithmetic (e.g. UTC midnight difference).",
+      "impact": "Off-by-one on `daysFromNow` near DST transitions (twice a year). A milestone 1 day away could display as 0 (today/overdue) or 2, misleading users. Only affects the `details` array, not the aggregate counts.",
+      "suggested_fix": "Compute `daysFromNow` using UTC midnight differences: `const nowMidnightUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()); const dueMidnightUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); const daysFromNow = Math.round((dueMidnightUTC - nowMidnightUTC) / MS_PER_DAY);`",
+      "acceptance_criteria": [
+        "daysFromNow is correct on both sides of a Europe/Paris DST boundary",
+        "Unit test with mocked 'now' at a DST transition date verifies correct daysFromNow value"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "medium",
+      "notes": "Verbatim confirmed: MS_PER_DAY at line 20, daysFromNow computation at lines 97-98. Low blast radius — affects display only. The aggregate overdue/completed/upcoming counts use direct date comparison (milestone.dueDate < now) which is unaffected by this issue."
+    },
+    {
+      "id": "correctness-S8-4",
+      "severity": "nit",
+      "category": "correctness",
+      "subcategory": "unguarded_delete",
+      "title": "SettingsService.remove throws unhandled Prisma P2025 for non-existent non-default keys",
+      "file": "apps/api/src/settings/settings.service.ts",
+      "line": "310-321",
+      "code_evidence": "  async remove(key: string) {\n    // Ne pas supprimer les paramètres par défaut\n    if (DEFAULT_SETTINGS[key]) {\n      return this.resetToDefault(key);\n    }\n\n    await this.prisma.appSettings.delete({\n      where: { key },\n    });\n\n    return { message: 'Paramètre supprimé' };\n  }",
+      "description": "When `remove(key)` is called with a key that is neither in `DEFAULT_SETTINGS` nor stored in the database, `prisma.appSettings.delete()` throws Prisma error P2025 (`An operation failed because it depends on one or more records that were required but not found`). This error is unhandled and bubbles up as an uncaught exception, resulting in a generic 500 response rather than an appropriate 404. Because `update()` already validates `isKnownKey()`, only unknown (non-default, non-stored) keys can reach this code path, but the controller does not pre-validate the key before calling `remove()`.",
+      "root_cause": "`prisma.delete()` throws on missing record; the method does not check existence before deleting and does not catch the P2025 error.",
+      "impact": "DELETE /settings/:key with an unknown key returns 500 instead of 404, hiding the root cause and potentially masking application errors in monitoring.",
+      "suggested_fix": "Add existence check before delete, or catch PrismaClientKnownRequestError with code P2025 and throw NotFoundException. Example:\n```ts\nconst existing = await this.prisma.appSettings.findUnique({ where: { key } });\nif (!existing) throw new NotFoundException(`Setting '${key}' not found`);\nawait this.prisma.appSettings.delete({ where: { key } });\n```",
+      "acceptance_criteria": [
+        "DELETE /settings/nonexistent-key returns 404 with a descriptive message",
+        "DELETE /settings/:known-key still returns 200 and deletes the record"
+      ],
+      "verification_command": "curl -s -o /dev/null -w '%{http_code}' -X DELETE http://localhost:3000/api/settings/nonexistent-key -H 'Authorization: Bearer <token>'",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Verbatim confirmed at lines 310-321. Controller (settings.controller.ts line 108) calls settingsService.remove(key) with no pre-validation. The ALLOWED_KEYS guard lives only in update(), not in remove(). No global Prisma exception filter was found to convert P2025 to 404."
+    },
+    {
+      "id": "correctness-S8-5",
+      "severity": "nit",
+      "category": "correctness",
+      "subcategory": "resource_leak",
+      "title": "SnapshotSchedulerService creates a Redis connection in constructor with no shutdown hook",
+      "file": "apps/api/src/analytics/advanced/snapshot-scheduler.service.ts",
+      "line": "32-45",
+      "code_evidence": "  constructor(\n    private readonly projectsService: ProjectsService,\n    private readonly configService: ConfigService,\n  ) {\n    const redisUrl = this.configService.get<string>('REDIS_URL');\n    if (redisUrl) {\n      this.redis = new Redis(redisUrl);\n    } else {\n      const host = this.configService.get<string>('REDIS_HOST', 'localhost');\n      const port = this.configService.get<number>('REDIS_PORT', 6379);\n      const password = this.configService.get<string>('REDIS_PASSWORD');\n      this.redis = new Redis({ host, port, password: password || undefined });\n    }\n  }",
+      "description": "A new `ioredis` client is instantiated directly in the constructor, creating an additional Redis TCP connection on top of any existing CacheService or Bull connections. There is no `onApplicationShutdown()` or `onModuleDestroy()` lifecycle hook that calls `this.redis.disconnect()` or `this.redis.quit()`. During graceful shutdown or in test environments that create/destroy NestJS modules, the connection is left open, preventing the process from exiting cleanly. In tests, this can cause 'open handles' warnings and hang the test runner.",
+      "root_cause": "Raw `ioredis` client is created in-constructor without registering a shutdown hook to close it; NestJS lifecycle cleanup is never invoked.",
+      "impact": "Unclosed Redis connection on module teardown; process may not exit cleanly in prod restarts or in test suites, potentially causing port exhaustion under frequent restart scenarios.",
+      "suggested_fix": "Implement `OnModuleDestroy` and call `await this.redis.quit()` in `onModuleDestroy()`. Alternatively, inject a shared Redis client via a NestJS provider so the connection lifecycle is managed centrally.",
+      "acceptance_criteria": [
+        "Jest/Vitest test runner exits without 'open handles' warning when SnapshotSchedulerService is included in test module",
+        "Redis connection is closed on NestJS graceful shutdown"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Verbatim confirmed at lines 32-45. The service implements OnModuleInit (line 28, 47-51) but only for logging — no OnModuleDestroy or onApplicationShutdown. The redis field is typed as `private readonly redis: Redis` with no teardown. This is a correctness/resource-management issue rather than a functional bug. The cron job itself works correctly."
+    },
+    {
+      "id": "correctness-S8-6",
+      "severity": "nit",
+      "category": "correctness",
+      "subcategory": "non_atomic_bulk_write",
+      "title": "SettingsService.bulkUpdate performs sequential un-transacted upserts — partial failure leaves inconsistent state",
+      "file": "apps/api/src/settings/settings.service.ts",
+      "line": "270-279",
+      "code_evidence": "  async bulkUpdate(settings: Record<string, unknown>) {\n    const results: ParsedSetting[] = [];\n\n    for (const [key, value] of Object.entries(settings)) {\n      const result = await this.update(key, value);\n      results.push(result);\n    }\n\n    return results;\n  }",
+      "description": "Each iteration calls `this.update(key, value)` sequentially with an individual `prisma.appSettings.upsert()`. If the N-th key triggers a `BadRequestException` (unknown key) or a DB error, keys 1..N-1 are already committed while keys N..end are not applied. The caller receives an error but has no way to know which keys were applied. This violates the expected atomicity of a 'bulk update' endpoint.",
+      "root_cause": "No `$transaction` wrapper around the loop; each `upsert` is committed immediately with no rollback on partial failure.",
+      "impact": "A bulk update with a mix of valid and invalid keys silently persists partial state changes. For example, updating `appName` and `invalidKey` in one call would persist `appName` and fail on `invalidKey`, leaving the settings in an inconsistent partially-updated state. Severity is reduced because the key allowlist blocks truly unknown keys, but a DB error mid-loop still causes the same issue.",
+      "suggested_fix": "Wrap the loop in a Prisma interactive transaction (`this.prisma.$transaction(async (tx) => { ... })`) so all-or-nothing semantics are enforced. The inner `update()` should accept an optional `tx` context.",
+      "acceptance_criteria": [
+        "POST /settings/bulk with [validKey, invalidKey] does not persist validKey if the call as a whole fails",
+        "POST /settings/bulk with all valid keys persists all updates atomically"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Verbatim confirmed at lines 270-279. Currently the ALLOWED_KEYS guard in update() makes the invalid-key path the most likely trigger of partial failure."
+    }
+  ],
+  "refuted": []
+}

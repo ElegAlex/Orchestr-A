@@ -1,0 +1,106 @@
+{
+  "dimension": "security",
+  "shard": "S7",
+  "confirmed": [
+    {
+      "id": "security-S7-1",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "input-validation",
+      "title": "CreateEventDto.description has no @MaxLength — unbounded DB write",
+      "file": "apps/api/src/events/dto/create-event.dto.ts",
+      "line": "36-38",
+      "code_evidence": "  @IsString()\n  @IsOptional()\n  description?: string;",
+      "description": "The `description` field has `@IsString()` and `@IsOptional()` but no `@MaxLength`. The global ValidationPipe(whitelist:true, forbidNonWhitelisted:true) does not bound the value length. A caller can POST an arbitrarily large string (limited only by network/body size) which gets inserted into PostgreSQL. The Event.description column in schema.prisma is typed as `String?` with no length constraint. The title field correctly has @MaxLength(200).",
+      "root_cause": "Missing @MaxLength decorator on the optional description field in CreateEventDto.",
+      "impact": "An authenticated user with events:create permission can insert very large strings into the events table, potentially consuming disk space or causing downstream rendering issues.",
+      "suggested_fix": "Add `@MaxLength(5000)` (or an appropriate project-wide limit) to the description field, matching any similar DTO convention in the codebase.",
+      "acceptance_criteria": [
+        "POST /events with description longer than the configured max returns HTTP 400",
+        "POST /events with description within the limit succeeds"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "UpdateEventDto extends PartialType(CreateEventDto) so it inherits the same gap. Adversarial verification: lines 36-38 of create-event.dto.ts confirmed verbatim — @IsString() + @IsOptional() with no @MaxLength. Title has @MaxLength(200) at line 28, confirming the pattern gap is real.",
+      "adversarial_verdict": "CONFIRMED — code evidence verbatim present; no compensating guard found elsewhere (checked controller, service, no body-size limit targeting description specifically)"
+    },
+    {
+      "id": "security-S7-2",
+      "severity": "suggestion",
+      "category": "security",
+      "subcategory": "resource-exhaustion",
+      "title": "ICS import processes unbounded VEVENT count with sequential DB writes and no per-field length cap",
+      "file": "apps/api/src/planning-export/planning-export.service.ts",
+      "line": "211-269",
+      "code_evidence": "  async importIcs(\n    icsContent: string,\n    userId: string,\n  ): Promise<{ imported: number; skipped: number }> {\n    const parsed = nodeIcal.sync.parseICS(icsContent);\n    let imported = 0;\n    let skipped = 0;\n\n    for (const key of Object.keys(parsed)) {",
+      "description": "The `importIcs` function iterates over all VEVENTs in a parsed ICS file without any count cap. ImportIcsDto allows up to 5 MB of ICS content, which can contain thousands of VEVENT entries. Each event triggers a sequential `prisma.event.create` call. Additionally, the title (line 253) and description (line 254) extracted from VEVENT fields are truncated by `stripHtml` for HTML tags but are not length-capped before being written to the DB. The global throttle (30 req/s, 600 req/min) limits repeated calls but a single 5MB ICS can still cause a long-running sequential DB write loop.",
+      "root_cause": "No maximum VEVENT count guard and no per-field @MaxLength truncation on ICS-extracted data before DB insert.",
+      "impact": "A user with leaves:create permission can upload a large ICS file to trigger a long-running series of DB inserts, degrading API responsiveness. Also allows arbitrarily large title/description strings to be inserted from ICS (bypassing CreateEventDto validators since this path does not go through the DTO).",
+      "suggested_fix": "Add a MAX_VEVENT_IMPORT constant (e.g. 500) and break early once exceeded. Truncate title to 200 chars and description to 5000 chars after stripHtml. Consider using createMany in a single transaction instead of sequential creates.",
+      "acceptance_criteria": [
+        "POST /planning-export/ics/import with ICS containing >500 VEVENTs returns HTTP 422 or imports only the first 500",
+        "ICS VEVENT titles longer than 200 chars are truncated on import"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": ["security-S7-1"],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "previewImport (line 172-209) has the same no-count-cap issue but is read-only so impact is lower.",
+      "adversarial_verdict": "CONFIRMED — importIcs lines 211-269 confirmed verbatim; lines 251-261 confirm sequential prisma.event.create per VEVENT with no count guard; lines 253-254 confirm stripHtml applied but no .substring(0, N) truncation; ImportIcsDto enforces @MaxLength(5MB) on the whole payload but no per-event field cap"
+    },
+    {
+      "id": "security-S7-3",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "input-validation",
+      "title": "Unvalidated date query strings passed to new Date() in exportIcs — possible HTTP 500 instead of 400",
+      "file": "apps/api/src/planning-export/planning-export.service.ts",
+      "line": "56-57",
+      "code_evidence": "    const dateFilter: Record<string, unknown> = {};\n    if (start) dateFilter['gte'] = new Date(start);\n    if (end) dateFilter['lte'] = new Date(end);",
+      "description": "The `start` and `end` query parameters in GET /planning-export/ics are accepted as raw strings from the controller with no @IsISO8601 or @IsDateString validation. They are passed directly to `new Date()`. If the string is not a valid date (e.g. 'foobar'), `new Date('foobar')` produces `Invalid Date`, and passing NaN to Prisma's date filter will likely cause a runtime error (HTTP 500) rather than a clean HTTP 400 Bad Request. The PlanningOverviewQueryDto (planning module) correctly uses @IsISO8601, demonstrating the right pattern. Note: GET /events/range (getEventsByRange) DOES have an isNaN guard at lines 663-665 catching the Invalid Date and returning HTTP 400 — making that endpoint safe. The vulnerability is isolated to exportIcs.",
+      "root_cause": "No DTO with @IsDateString/@IsISO8601 validation wrapping the date query parameters in exportIcs; no isNaN guard in service method.",
+      "impact": "An authenticated user can trigger HTTP 500 responses by sending malformed date strings to GET /planning-export/ics?start=notadate, leaking internal error information and impacting observability signal quality.",
+      "suggested_fix": "Create a typed query DTO for GET /planning-export/ics using @IsISO8601 + @IsOptional on the date parameters, matching the PlanningOverviewQueryDto pattern.",
+      "acceptance_criteria": [
+        "GET /planning-export/ics?start=notadate returns HTTP 400 with a validation error message"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "events.service.ts:getEventsByRange lines 660-665 has isNaN checks — that endpoint is safe. The original finding's title has been narrowed to exportIcs only. Confidence remains high for that specific path.",
+      "adversarial_verdict": "CONFIRMED (scope narrowed) — exportIcs lines 56-57 confirmed verbatim: no isNaN check before Prisma call. getEventsByRange (events.service.ts:663-665) is correctly guarded — that part of the original claim was overstated but noted in the finding's own notes. The vulnerability in exportIcs is real."
+    },
+    {
+      "id": "security-S7-4",
+      "severity": "suggestion",
+      "category": "security",
+      "subcategory": "defense-in-depth",
+      "title": "getEventsByRange and findOne RBAC filter defaults to unscoped on null role — inconsistent with findAll",
+      "file": "apps/api/src/events/events.service.ts",
+      "line": "681-690",
+      "code_evidence": "    // Scope events for non-management users: only their own or participated\n    if (currentUserId && currentUserRole) {\n      const permissions =\n        await this.permissionsService.getPermissionsForRole(currentUserRole);\n      if (!permissions.includes('events:readAll')) {\n        where.OR = [\n          { participants: { some: { userId: currentUserId } } },\n          { createdById: currentUserId },\n        ];\n      }\n    }",
+      "description": "In `getEventsByRange` (lines 681-690) and `findOne` (line 390-403), the RBAC scope filter is applied only when `currentUserId && currentUserRole` are both truthy. If `currentUserRole` is null, the filter block is skipped and the query is unscoped (returns all events). By contrast, `findAll` (lines 277-290) calls `getPermissionsForRole(null)` which correctly returns `[]`, and applies the scope filter because `!permissions.includes('events:readAll')` is true. Today, PermissionsGuardV2 (global APP_GUARD, enforce mode) rejects all null-role callers before reaching the controller, so this code path is unreachable in normal operation. However, the default-open pattern is fragile: if the guard configuration changes, or if these service methods are called internally with null roles, the scope filter would silently be omitted.",
+      "root_cause": "Defensive RBAC filter uses `if (currentUserId && currentUserRole)` (default-open) instead of unconditionally calling `getPermissionsForRole` (which safely returns [] for null role), inconsistent with the findAll pattern.",
+      "impact": "Not currently exploitable (blocked by PermissionsGuardV2). If guard configuration changes or internal callers pass null roles, would expose all events without scope filter.",
+      "suggested_fix": "Replace `if (currentUserId && currentUserRole)` with unconditional `getPermissionsForRole(currentUserRole)` call (handles null safely), matching the findAll pattern.",
+      "acceptance_criteria": [
+        "getEventsByRange applies scope filter even when currentUserRole is null",
+        "findOne applies IDOR check even when currentUserRole is null"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "medium",
+      "notes": "Confidence downgraded from high to medium: currently not exploitable due to PermissionsGuardV2 enforcement. findOne IDOR check at line 390: `if (currentUserId && currentUserRole && !(await this.hasManagementAccess(currentUserRole)))` — same default-open pattern confirmed verbatim. The inconsistency with findAll (lines 277-278 unconditionally calls getPermissionsForRole) is real and confirmed.",
+      "adversarial_verdict": "CONFIRMED (confidence downgraded to medium) — both code patterns confirmed verbatim. The default-open vs default-closed inconsistency between getEventsByRange/findOne and findAll is real. However, current exploitability is zero due to PermissionsGuardV2 as APP_GUARD. Keeping as a defense-in-depth finding with reduced confidence."
+    }
+  ],
+  "refuted": []
+}

@@ -1,0 +1,49 @@
+{
+  "report_date": "2026-06-04",
+  "repo_commit": "0997b30e2d44289239d5ba5d8f4f463d58748ad0",
+  "verdict": "needs-attention",
+  "verdict_rationale": "No unauthenticated auth-bypass or unguarded in-flight data-loss was found; the global RBAC guard is fail-closed and 94/94 permission decorators are matrix-covered. But 1 blocking correctness bug and 55 important findings cluster around non-atomic writes, timezone drift, unbounded queries, audit-trail gaps and stubbed observability. The sole blocking item (COR-001) is masked on the current UTC prod host but corrupts snapshots on any non-UTC deploy.",
+  "totals": {
+    "findings": 99,
+    "blocking": 1,
+    "important": 55,
+    "nit": 33,
+    "suggestion": 10,
+    "by_category": {
+      "security": 18,
+      "correctness": 10,
+      "data_integrity": 12,
+      "performance": 25,
+      "observability": 15,
+      "tests": 19
+    }
+  },
+  "top_10_blocking": [
+    "COR-001",
+    "SEC-001",
+    "SEC-002",
+    "SEC-003",
+    "COR-002",
+    "COR-003",
+    "COR-010",
+    "DAT-003",
+    "DAT-004",
+    "DAT-001"
+  ],
+  "key_metrics": {
+    "clusters": 20,
+    "unclustered_findings": 5,
+    "controllers_without_spec": 13,
+    "unbounded_query_endpoints": 12,
+    "sensitive_actions_missing_audit": 6,
+    "dto_validation_gaps": 8,
+    "permission_decorator_matrix_parity": "94/94 (0 gap)",
+    "high_confidence_findings": 94
+  },
+  "coverage_assertion": {
+    "controllers_scanned": 35,
+    "migrations_scanned": 73,
+    "test_files_scanned": 227,
+    "untracked_files_included": 3
+  }
+}

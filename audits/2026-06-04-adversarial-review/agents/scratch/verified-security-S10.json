@@ -1,0 +1,84 @@
+{
+  "dimension": "security",
+  "shard": "S10",
+  "confirmed": [
+    {
+      "id": "security-S10-1",
+      "severity": "important",
+      "category": "security",
+      "subcategory": "information-disclosure",
+      "title": "Unauthenticated health endpoint reveals per-component infrastructure status (DB/Redis) to any caller",
+      "file": "apps/api/src/health/health.service.ts",
+      "line": "78-86",
+      "code_evidence": "    if (dbStatus === 'down' || redisStatus === 'down') {\n      throw new ServiceUnavailableException({\n        status: 'degraded',\n        db: dbStatus,\n        redis: redisStatus,\n      });\n    }\n\n    return { status: 'ok', db: dbStatus, redis: redisStatus };",
+      "description": "The /health endpoint is decorated @Public() and returns per-component status: { status, db, redis } in every response. On 200, it confirms both DB and Redis are reachable. On 503, it reveals exactly which dependency (db vs redis) is down. This endpoint is not rate-limited beyond the global defaults (30/s per IP) and requires no authentication. An attacker can infer infrastructure topology (what backing services are present) and monitor for partial outages in real time, which aids targeted timing attacks during degraded states.",
+      "root_cause": "HealthStatus interface exposes named component fields ('db', 'redis') directly in the HTTP body returned to any caller, with no authentication requirement.",
+      "impact": "Persistent attacker reconnaissance: confirms the tech stack uses PostgreSQL and Redis, monitors per-component availability without authentication. During a DB outage, attacker learns the DB is down (not Redis) — informing timing of follow-up attack vectors that exploit degraded state.",
+      "suggested_fix": "Return only { status: 'ok' | 'degraded' } to unauthenticated callers. Log per-component detail server-side only, or gate the granular payload behind a @Roles([ADMIN]) authenticated endpoint. Alternatively, return a minimal { ok: boolean } and rely on Prometheus metrics for operator drill-down.",
+      "acceptance_criteria": [
+        "GET /api/health returns at most { status: 'ok' | 'degraded' } to unauthenticated callers — no 'db' or 'redis' fields",
+        "Per-component detail is logged server-side and/or exposed on an authenticated /api/health/detail endpoint",
+        "E2E smoke test verifies 200 body does not contain 'db' or 'redis' keys"
+      ],
+      "verification_command": "curl -s http://localhost:4000/api/health | jq 'keys'",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Code evidence verified verbatim in health.service.ts lines 78-86. health.controller.ts confirms @Public() decorator with no auth guard. The comment 'Does NOT expose process.uptime, NODE_ENV, or any internal process info' is accurate for those specific fields but db/redis component names ARE infrastructure detail and are exposed. Finding confirmed as-is.",
+      "adversarial_verdict": "CONFIRMED — code evidence verbatim, @Public() confirmed in controller, no guard or filtering mitigates the disclosure."
+    },
+    {
+      "id": "security-S10-2",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "information-disclosure",
+      "title": "Stdout audit log uses unkeyed plain SHA256 (8 chars) for attempted-login identifier — rainbow-table reversible for common emails",
+      "file": "apps/api/src/audit/audit.service.ts",
+      "line": "103-104",
+      "code_evidence": "const hashAttemptedLogin = (value: string): string =>\n  createHash('sha256').update(value).digest('hex').slice(0, 8);",
+      "description": "For the stdout security log entry, attempted login emails are hashed with plain SHA256 (no HMAC key, no salt). The 8-character hex truncation reduces brute-force space but SHA256 is publicly computable and preimage-computable for any email in a dictionary. Server logs are 'broadly shipped' (per comments) to log aggregators like CloudWatch/ELK. An attacker with read access to logs can rainbow-table-reverse the 8-char hash against a list of known usernames/emails for the organization. Note: the persisted DB value uses a proper HMAC-keyed hash (hashAttemptedSubject) — only the stdout path is affected.",
+      "root_cause": "hashAttemptedLogin uses createHash('sha256') without a secret key, making it dictionary-reversible unlike the keyed HMAC used for DB persistence.",
+      "impact": "An attacker with read access to server logs (log aggregator breach, misconfigured S3 bucket) can recover attempted login targets for accounts with predictable email patterns, enabling targeted spear-phishing or account enumeration.",
+      "suggested_fix": "Use the same HMAC key (AUDIT_HASH_KEY) for the stdout digest as for DB persistence: createHmac('sha256', process.env.AUDIT_HASH_KEY).update(value.trim().toLowerCase()).digest('hex').slice(0, 8). This makes the stdout hash correlation-usable without being dictionary-reversible.",
+      "acceptance_criteria": [
+        "hashAttemptedLogin is replaced with a keyed HMAC using AUDIT_HASH_KEY",
+        "Unit test verifies the stdout digest is not equal to unkeyed sha256 of the same input",
+        "AUDIT_HASH_KEY validation at boot (assertAuditHashKey) already covers this — no new boot assertion needed"
+      ],
+      "verification_command": "N/A — manual verification: inspect audit.service.ts hashAttemptedLogin implementation",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Code evidence verbatim confirmed at lines 103-104. DB persistence path at line 255 correctly uses createHmac. The asymmetry between stdout (unkeyed SHA256) and DB (HMAC) paths is real. Attempts to disprove: no wrapper or key injection surrounds hashAttemptedLogin — it is called directly at line 142 with attemptedEmail. No mitigating guard found.",
+      "adversarial_verdict": "CONFIRMED — verbatim code present, asymmetry with DB path verified, no compensating control found."
+    },
+    {
+      "id": "security-S10-3",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "unsafe-api-usage",
+      "title": "$executeRawUnsafe used with string-interpolated constant for DDL trigger name — unsafe API pattern in maintenance scripts",
+      "file": "apps/api/src/scripts/normalize-action-codes.ts",
+      "line": "143-145",
+      "code_evidence": "      await tx.$executeRawUnsafe(\n        `ALTER TABLE audit_logs DISABLE TRIGGER ${IMMUTABILITY_TRIGGER}`,\n      );",
+      "description": "Two maintenance scripts (normalize-action-codes.ts, recompute-chain-on-schema-bump.ts) use $executeRawUnsafe with string interpolation of the IMMUTABILITY_TRIGGER constant ('audit_logs_no_update_delete'). While IMMUTABILITY_TRIGGER is a compile-time string constant — never user-supplied — using $executeRawUnsafe establishes a pattern that would immediately become a SQL injection sink if the trigger name were ever refactored to accept a parameter. Prisma $executeRaw tagged template cannot be used for DDL identifier interpolation (PostgreSQL does not support parameterized identifiers), so the safer long-term fix is format_ident() via a separate helper or a hardcoded non-parameterized string.",
+      "root_cause": "Prisma's $executeRaw tagged template cannot parameterize SQL identifiers (table/trigger names); the developer correctly chose $executeRawUnsafe but the string-interpolation pattern is risky if the constant is ever made dynamic.",
+      "impact": "No current impact since IMMUTABILITY_TRIGGER is a hardcoded string constant. Risk materializes only if a future refactor passes a caller-controlled trigger name to the function — which would become a full DDL injection.",
+      "suggested_fix": "Use a hardcoded string literal directly instead of interpolating the constant: `ALTER TABLE audit_logs DISABLE TRIGGER audit_logs_no_update_delete` — makes it obvious there is no dynamic component. Alternatively, add an allowlist assertion: if (IMMUTABILITY_TRIGGER !== 'audit_logs_no_update_delete') throw new Error('unexpected trigger name').",
+      "acceptance_criteria": [
+        "DDL string in $executeRawUnsafe does not use string interpolation of any variable",
+        "Static analysis (eslint no-restricted-syntax or custom rule) flags $executeRawUnsafe with template literals"
+      ],
+      "verification_command": "grep -n 'executeRawUnsafe' apps/api/src/scripts/normalize-action-codes.ts apps/api/src/scripts/recompute-chain-on-schema-bump.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "medium",
+      "notes": "Code evidence verbatim confirmed at lines 143-145 of normalize-action-codes.ts, and at lines 121-123 and 129-131 of recompute-chain-on-schema-bump.ts. IMMUTABILITY_TRIGGER is a module-level const string — no dynamic input path found. Both scripts require DATABASE_MIGRATION_URL, operator-only access. Impact correctly assessed as latent/future risk only. Confidence maintained at medium given compile-time constant safety.",
+      "adversarial_verdict": "CONFIRMED at medium confidence — pattern is real and present in both scripts, but no current exploitability given the compile-time constant and operator-only access requirement."
+    }
+  ],
+  "refuted": []
+}

@@ -1,0 +1,32 @@
+{
+  "dimension": "correctness",
+  "shard": "S10",
+  "confirmed": [
+    {
+      "id": "correctness-S10-1",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "hash-chain integrity",
+      "title": "AuditService.log passes undefined-valued payload keys to computeRowHash; stored JSONB normalizes them differently, risking hash divergence on external recompute",
+      "file": "apps/api/src/audit/audit.service.ts",
+      "line": "190-199",
+      "code_evidence": "      payload: {\n          ip: event.ip,\n          details: event.details,\n          success: event.success,\n          timestamp: entry.timestamp,\n          ...(event.ua !== undefined ? { ua: event.ua } : {}),\n          ...(event.reason !== undefined ? { reason: event.reason } : {}),\n          ...(event.before !== undefined ? { before: event.before } : {}),\n          ...(event.after !== undefined ? { after: event.after } : {}),\n        },",
+      "description": "AuditService.log always includes `ip: event.ip` and `details: event.details` in the payload object, even when those values are `undefined`. The payload is then passed to AuditPersistenceService.log, which calls computeRowHash → stableStringify(payload). In stableStringify, Object.keys() includes keys with undefined values, and stableStringify(undefined) returns 'null'. So the hash is computed over a payload like {\"details\":null,\"ip\":null,\"success\":true,\"timestamp\":\"...\"}.\n\nHowever, when this payload is stored in PostgreSQL JSONB via Prisma, undefined-valued keys are dropped (JSON.stringify behavior), so the stored JSONB becomes {\"success\":true,\"timestamp\":\"...\"}. When an external recompute reads the stored row and calls computeRowHash(storedRow), stableStringify produces {\"success\":true,\"timestamp\":\"...\"}, which differs from the original canonical string. The stored rowHash cannot be reproduced from the stored data.\n\nThis divergence is NOT assumption-dependent: empirical verification (node -e) confirms that JSON.stringify({ip: undefined, success: true}) = '{\"success\":true}' (drops undefined), while stableStringify({ip: undefined, success: true}) = '{\"ip\":null,\"success\":true}' (includes as null). Prisma uses JSON.stringify semantics for JSONB, so the divergence is real.\n\nSecondary vector (same root cause, assumption-free): the payload-schemas.ts comment states snapshots carry 'Dates, Prisma.Decimal, nested rows' (z.unknown() fields). stableStringify(new Date()) returns '{}' (no enumerable own keys on a Date), but PostgreSQL JSONB stores a Date as an ISO string. On read-back the stored form is a string, and stableStringify('2026-...')  returns '\"2026-...\"'. These are different canonical forms for the same logical value, breaking recompute for any row whose before/after/snapshot contained a JS Date object.",
+      "root_cause": "computeRowHash canonicalizes the in-memory JS object (where undefined stays and Date has no enumerable keys) while PostgreSQL JSONB normalizes the stored form (undefined dropped, Date coerced to ISO string), so the hash input at write time and the hash input at re-read time can diverge.",
+      "impact": "An external or maintenance recompute of the audit hash chain (e.g. recompute-chain-on-schema-bump.ts run after a new schema bump, or an independent auditor verifying the chain) would find that rowHash values for rows written via AuditService.log do not match the hash recomputed from stored fields. This defeats the tamper-detection guarantee that computeRowHash's own doc advertises: 'Exported so an external verifier (production runbook, chain-audit script) can recompute and compare against stored values.' No live functionality is broken — the audit module is write-only in production and the recompute scripts self-heal by overwriting — but the integrity guarantee is latent-broken for affected rows.",
+      "suggested_fix": "Strip undefined-valued keys and normalise non-serializable types before calling computeRowHash. One approach: after the payload is assembled in AuditService.log, round-trip it through JSON.parse(JSON.stringify(payload)) to produce a JSONB-canonical plain object (drops undefined, serialises Date → ISO string, Prisma.Decimal → string). Pass this normalised form to both computeRowHash and the DB insert. Alternatively, guard ip/details with the same !== undefined pattern already used for ua/reason/before/after.",
+      "acceptance_criteria": [
+        "When AuditService.log is called without ip/details (both undefined), the stored payload in audit_logs contains no 'ip' or 'details' keys, and computeRowHash(storedRow) === storedRow.rowHash.",
+        "When a before/after value contains a Date object, computeRowHash(storedRow) === storedRow.rowHash after the row is read back from PostgreSQL.",
+        "A chain verify pass over rows written via AuditService.log finds 0 rowHash mismatches."
+      ],
+      "verification_command": "pnpm test:integration -- --testPathPattern audit-persistence; also: insert a row via AuditService.log with no ip/details, then run: docker exec orchestr-a-db psql -U postgres orchestra -c \"SELECT payload, \\\"rowHash\\\" FROM audit_logs ORDER BY \\\"createdAt\\\" DESC LIMIT 1\" and manually call computeRowHash with the stored fields to compare.",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Confirmed via empirical test: node -e proves JSON.stringify drops undefined-valued keys while stableStringify maps them to 'null'. Prisma uses JSON.stringify semantics for JSONB. Therefore hash-at-write-time ≠ hash-recomputed-from-stored-JSONB. Upgraded from 'medium' to 'high' confidence — the critical unknown (Prisma JSONB behavior on undefined) is resolved by standard JS behavior: JSON.stringify({ip: undefined}) = '{}'. The validatePayloadForAction gate (payload-schemas.ts:262-273) returns void and does NOT normalize the payload; the raw object with undefined-valued keys goes directly to computeRowHash. The Date secondary vector is also confirmed: stableStringify(new Date()) = '{}' while stored JSONB encodes Date as ISO string."
+    }
+  ],
+  "refuted": []
+}

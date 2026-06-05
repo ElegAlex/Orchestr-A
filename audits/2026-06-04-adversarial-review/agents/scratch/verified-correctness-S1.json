@@ -1,0 +1,151 @@
+{
+  "dimension": "correctness",
+  "shard": "S1",
+  "confirmed": [
+    {
+      "id": "correctness-S1-1",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "missing-transaction / partial-failure",
+      "title": "users.service update(): service-membership deleteMany+createMany execute outside the user.update() transaction — partial failure leaves the user with no services",
+      "file": "apps/api/src/users/users.service.ts",
+      "line": "620-676",
+      "code_evidence": "    if (updateUserDto.serviceIds !== undefined) {\n      await this.prisma.userService.deleteMany({\n        where: { userId: id },\n      });\n\n      if (updateUserDto.serviceIds.length > 0) {\n        await this.prisma.userService.createMany({\n          data: updateUserDto.serviceIds.map((serviceId) => ({\n            userId: id,\n            serviceId,\n          })),\n        });\n      }\n    }\n\n    const user = await this.prisma.user.update({",
+      "description": "When a PATCH /users/:id includes serviceIds, the existing UserService rows are deleted and new ones inserted BEFORE the main user.update() call. These three operations run as separate, non-transactional statements. If user.update() subsequently fails (e.g., a ConflictException on email/login, or a DB constraint), the UserService rows have already been wiped but the user row is unchanged, leaving the user with zero service memberships and no error to the caller's state matching. Similarly, if createMany fails after deleteMany succeeds, the deletion is permanent.",
+      "root_cause": "Multi-write path (deleteMany + createMany + update) is not wrapped in a $transaction, violating ACID intent.",
+      "impact": "A user can permanently lose all service memberships if any error occurs after deleteMany but before/during user.update(). Under concurrent load, a window exists where the user has no services at all — visible to any concurrent reader during that gap.",
+      "suggested_fix": "Wrap the entire update block in a $transaction: move deleteMany, createMany, and user.update() inside a single prisma.$transaction(async (tx) => { ... }) call. Reference: refresh-token.service.ts rotate() already uses this pattern correctly.",
+      "acceptance_criteria": [
+        "If user.update() throws a ConflictException, UserService rows are rolled back to their pre-call state.",
+        "No window exists where a user has zero services between deleteMany and createMany."
+      ],
+      "verification_command": "N/A — manual verification; inject a failing roleCode after valid serviceIds in a test to confirm rollback.",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Compare with hardDelete() which correctly uses $transaction for all owned-data deletions. Adversarial check: only one $transaction exists in users.service.ts (line 948, in hardDelete()). Pre-validation of serviceIds (lines 599-606) and email/login (lines 543-588) happens before deleteMany, but a concurrent constraint violation or unexpected DB error in user.update() (line 635) after deleteMany has committed would leave the user with no services."
+    },
+    {
+      "id": "correctness-S1-2",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "TOCTOU / missing-transaction",
+      "title": "auth.service resetPassword(): token validity check and usedAt marking are not atomic — concurrent reset with the same token succeeds twice",
+      "file": "apps/api/src/auth/auth.service.ts",
+      "line": "545-575",
+      "code_evidence": "    const resetToken = await this.prisma.passwordResetToken.findUnique({\n      where: { token: tokenHash },\n    });\n\n    if (!resetToken) {\n      throw new UnauthorizedException('Token de réinitialisation invalide');\n    }\n\n    if (resetToken.usedAt !== null) {\n      throw new UnauthorizedException(\n        'Ce token de réinitialisation a déjà été utilisé',\n      );\n    }\n\n    if (resetToken.expiresAt < new Date()) {\n      throw new UnauthorizedException('Ce token de réinitialisation a expiré');\n    }\n\n    const passwordHash = await bcrypt.hash(newPassword, 12);\n\n    await this.prisma.user.update({\n      where: { id: resetToken.userId },\n      data: { passwordHash },\n    });\n\n    await this.prisma.passwordResetToken.update({\n      where: { token: tokenHash },\n      data: { usedAt: new Date() },\n    });",
+      "description": "The token validity check (findUnique → check usedAt === null → check expiresAt) and the subsequent user.update() + passwordResetToken.update() are three separate non-transactional statements. Between the read (usedAt is null) and the write (usedAt gets set), a concurrent request with the same token passes the same checks and proceeds. Both requests update the user password; the second write wins. The token gets marked used by both, but both password hashes land — the last one written wins, which is non-deterministic under load.",
+      "root_cause": "Read-then-write on the token row is not wrapped in a transaction nor uses an atomic conditional UPDATE (UPDATE ... WHERE usedAt IS NULL RETURNING).",
+      "impact": "Under concurrent race, a reset token can be consumed twice: both requests hash a password and update the user row. The attacker who intercepts the token link can race the victim's submission. The second write silently wins. Practical exploitability is low (requires simultaneous submission of the same one-time link) but the invariant that a token is single-use is violated.",
+      "suggested_fix": "Wrap the entire sequence in a $transaction with Serializable isolation. Alternatively, replace findUnique + conditional check with a single atomic UPDATE ... SET usedAt = NOW() WHERE token = $hash AND usedAt IS NULL AND expiresAt > NOW() RETURNING *; reject if 0 rows updated. The existing refresh-token rotate() uses the serializable-transaction pattern.",
+      "acceptance_criteria": [
+        "Two concurrent requests with the same valid token: exactly one succeeds, the other receives 401.",
+        "After successful reset, passwordResetToken.usedAt is non-null."
+      ],
+      "verification_command": "N/A — manual verification via concurrent HTTP test or integration test with parallel requests.",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "refresh-token.service.ts rotate() avoids this correctly by using { isolationLevel: 'Serializable' } transaction. Adversarial check: no $transaction exists anywhere in auth.service.ts. schema.prisma confirms token field is @unique but usedAt has no DB-level unique partial constraint — no DB guard prevents dual usedAt writes."
+    },
+    {
+      "id": "correctness-S1-3",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "missing-session-invalidation",
+      "title": "users.service changePassword() and admin resetPassword() do not call jwtNotBefore.bumpUser() — live access tokens remain valid after password change for up to the access TTL",
+      "file": "apps/api/src/users/users.service.ts",
+      "line": "1041-1046 and 1123-1129",
+      "code_evidence": "    await this.prisma.user.update({\n      where: { id: userId },\n      data: { passwordHash: newPasswordHash, forcePasswordChange: false },\n    });\n\n    await this.refreshTokenService.revokeAllForUser(userId);",
+      "description": "changePassword() (self-service) revokes all refresh tokens via revokeAllForUser() but does NOT call jwtNotBefore.bumpUser(userId). The admin path resetPassword() in users.service.ts (line 1129) has the same omission. By contrast, the token-based resetPassword() in auth.service.ts (line 585) correctly calls bumpUser(). Without bumping the per-user nbf, any access token minted before the password change remains fully valid until its natural expiry (up to 15 minutes, configurable). JwtStrategy.validate will admit these tokens because the nbf gate only fires if a nbf key exists for the user.",
+      "root_cause": "The SEC-019 nbf invalidation pattern was applied to auth.service.ts resetPassword() but was not applied to the two password-mutation paths in users.service.ts.",
+      "impact": "A user who changes their own password (or has it changed by an admin) still has up to 15 minutes of valid access via any pre-existing access token. An attacker holding a stolen access token for a user who changes their password retains access for that window. For admin-initiated resets (e.g., after account compromise), this gap is security-relevant.",
+      "suggested_fix": "Add `await this.jwtNotBefore.bumpUser(userId);` in changePassword() after revokeAllForUser() (line ~1046), and the same in resetPassword() (users.service.ts) after revokeAllForUser() (line ~1129). JwtNotBeforeService is already injected into UsersService.",
+      "acceptance_criteria": [
+        "After changePassword(), an access token minted before the change is rejected by JwtStrategy.validate.",
+        "After admin resetPassword(), an access token minted before the reset is rejected by JwtStrategy.validate."
+      ],
+      "verification_command": "grep -n 'bumpUser' apps/api/src/users/users.service.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "jwtNotBefore is already injected at line 62. The fix is two one-line additions. Adversarial check: grep confirmed bumpUser only called at lines 781 and 826 (both for isActive true→false transitions in update() and remove() respectively). changePassword() (lines 1041-1067) and admin resetPassword() (lines 1123-1158) both end after revokeAllForUser() with no bumpUser call. auth.service.ts resetPassword() at line 585 correctly calls bumpUser — the asymmetry is confirmed."
+    },
+    {
+      "id": "correctness-S1-4",
+      "severity": "nit",
+      "category": "correctness",
+      "subcategory": "date-time / timezone",
+      "title": "getUsersPresence(): setHours(0,0,0,0) uses local server timezone — presence window is offset when Node.js process timezone differs from UTC",
+      "file": "apps/api/src/users/users.service.ts",
+      "line": "1680-1684",
+      "code_evidence": "    const targetDate = dateStr ? new Date(dateStr) : new Date();\n    const startOfDay = new Date(targetDate);\n    startOfDay.setHours(0, 0, 0, 0);\n    const endOfDay = new Date(targetDate);\n    endOfDay.setHours(23, 59, 59, 999);",
+      "description": "setHours() operates in the local timezone of the Node.js process. When a client sends dateStr='2026-06-04', new Date('2026-06-04') parses as UTC midnight. Then setHours(0,0,0,0) converts to LOCAL midnight — which may differ from UTC midnight if the container TZ differs from UTC. The resulting timestamps are then passed to PostgreSQL (which stores in UTC) as Prisma tagged-template literals. If the Node process and PostgreSQL are both UTC this is a no-op, but there is no TZ=UTC enforcement in Docker or the runtime. MEMORY.md states 'Prod=UTC' for the DB, but the Node process TZ is not pinned.",
+      "root_cause": "Using setHours() (local-time) instead of UTC-equivalent operations (setUTCHours or explicit UTC string construction) for day boundary computation.",
+      "impact": "In a non-UTC deployment, the presence report covers the wrong calendar day — e.g., a UTC+1 server would show presence for 23:00 previous day to 23:00 target day rather than 00:00–24:00 target day. Affects all callers of GET /users/presence.",
+      "suggested_fix": "Replace setHours(0,0,0,0) with setUTCHours(0,0,0,0) and setHours(23,59,59,999) with setUTCHours(23,59,59,999). Alternatively, construct the boundaries from the date string directly: `new Date(dateStr + 'T00:00:00.000Z')` and `new Date(dateStr + 'T23:59:59.999Z')`.",
+      "acceptance_criteria": [
+        "When the Node.js process TZ is set to Europe/Paris, GET /users/presence?date=2026-06-04 returns the same result as when TZ=UTC.",
+        "PostgreSQL receives timestamps that represent UTC midnight of the requested date."
+      ],
+      "verification_command": "TZ=Europe/Paris node -e \"const d=new Date('2026-06-04'); d.setHours(0,0,0,0); console.log(d.toISOString());\"",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "medium",
+      "notes": "Low practical impact if the Docker container always runs TZ=UTC (common default), but not enforced in code — marked nit rather than blocking. Adversarial check: neither docker-compose.yml nor docker-compose.prod.yml set TZ environment variable for the API container, confirming no enforcement. Code evidence verbatim at lines 1680-1684."
+    },
+    {
+      "id": "correctness-S1-5",
+      "severity": "nit",
+      "category": "correctness",
+      "subcategory": "TOCTOU / error-mapping",
+      "title": "auth.service register() and users.service create(): duplicate-check race condition surfaces as 500 instead of 409 when two concurrent registrations collide on the DB unique constraint",
+      "file": "apps/api/src/auth/auth.service.ts",
+      "line": "286-361",
+      "code_evidence": "    const existingUser = await this.prisma.user.findFirst({\n      where: {\n        // DAT-015: case-insensitive lookup matches the LOWER() unique index\n        OR: [\n          { email: { equals: registerDto.email, mode: 'insensitive' } },\n          { login: { equals: registerDto.login, mode: 'insensitive' } },\n        ],\n      },\n    });\n\n    if (existingUser) {\n      // DAT-015: case-fold before comparing\n      if (\n        existingUser.email.toLowerCase() === registerDto.email.toLowerCase()\n      ) {\n        throw new ConflictException('Cet email est déjà utilisé');\n      }",
+      "description": "The duplicate-email/login check is a read-then-write without a transaction. Two concurrent POST /auth/register requests with the same email can both pass the findFirst check (neither row exists yet), proceed to bcrypt.hash(), then reach user.create(). The second create() hits the DB-level LOWER() unique constraint and throws a Prisma PrismaClientKnownRequestError (P2002) which is not caught anywhere in register(). AllExceptionsFilter maps this to a 500 'Internal server error', instead of the expected 409. The same pattern exists in users.service.ts create() (same lines). The DB constraint prevents actual data corruption, but the HTTP response code is wrong.",
+      "root_cause": "No try/catch around user.create() to translate Prisma P2002 unique-constraint errors into ConflictException.",
+      "impact": "A concurrent duplicate registration returns 500 instead of 409. The client receives an opaque error and cannot distinguish 'email taken' from a real server error. The second user is NOT created (DB constraint holds), so no data corruption occurs.",
+      "suggested_fix": "Wrap user.create() in a try/catch that catches PrismaClientKnownRequestError with code P2002 and re-throws as ConflictException. Same fix for users.service.ts create(). Example: `import { Prisma } from 'database'; catch (e) { if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new ConflictException('...'); throw e; }`",
+      "acceptance_criteria": [
+        "Two concurrent POST /auth/register with the same email: both return 409 (not one 201 and one 500).",
+        "Prisma P2002 error is translated to ConflictException in register() and create()."
+      ],
+      "verification_command": "grep -n 'PrismaClientKnownRequestError\\|P2002' apps/api/src/auth/auth.service.ts apps/api/src/users/users.service.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Same pattern in users.service.ts create() at lines 94-116. The fix is the same in both places. Adversarial check: grep confirmed zero P2002 or PrismaClientKnownRequestError references in auth.service.ts or users.service.ts. Other services (departments, leaves, holidays) do handle P2002 correctly — the omission is specific to these two files. AllExceptionsFilter confirmed: non-HttpException → opaque 500 with no P2002 translation."
+    },
+    {
+      "id": "correctness-S1-6",
+      "severity": "nit",
+      "category": "correctness",
+      "subcategory": "race-condition / non-atomic",
+      "title": "roles.service createRole()/updateRole(): isDefault singleton management is non-atomic — two concurrent requests can create two roles with isDefault=true",
+      "file": "apps/api/src/rbac/roles.service.ts",
+      "line": "139-157",
+      "code_evidence": "    if (dto.isDefault) {\n      if (caller) {\n        prevDefaultRoleId = await this.captureCurrentDefaultId();\n      }\n      await this.unsetCurrentDefault();\n    }\n\n    const created = await this.prisma.role.create({\n      data: {\n        code: dto.code,\n        label: dto.label,\n        templateKey: dto.templateKey,\n        description: dto.description ?? null,\n        isSystem: false,\n        isDefault: dto.isDefault ?? false,\n      },",
+      "description": "The isDefault singleton (at most one role with isDefault=true) is managed via a two-step: (1) updateMany({isDefault:true}, {isDefault:false}) to unset the current default, then (2) create/update the new one with isDefault:true. These are non-transactional. Two concurrent createRole(isDefault:true) requests can both read the existing default, both call unsetCurrentDefault(), then both proceed to create with isDefault:true — leaving two rows with isDefault=true. The same race exists in updateRole(). There is no DB-level UNIQUE partial index enforcing the singleton.",
+      "root_cause": "unsetCurrentDefault() + role.create/update are not wrapped in a $transaction, and there is no database-level unique constraint on isDefault=true.",
+      "impact": "AuthService.register() uses findFirst({where:{isDefault:true}}) as the first choice for the default role. With two default roles, the result is non-deterministic (whichever Prisma returns first). This is a low-frequency race (only admin role management), but the invariant is not enforced at any layer.",
+      "suggested_fix": "Wrap unsetCurrentDefault() + create/update in a $transaction. Additionally, consider adding a partial unique index in schema.prisma: @@unique([isDefault]) WHERE isDefault = true (PostgreSQL partial index). This enforces the singleton at the DB level regardless of application-layer races.",
+      "acceptance_criteria": [
+        "Two concurrent POST /roles with isDefault:true results in exactly one role with isDefault=true.",
+        "The second request either sees the first's commit and overwrites it, or receives a constraint error."
+      ],
+      "verification_command": "N/A — manual verification via concurrent HTTP test.",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "medium",
+      "notes": "Low exploitability (requires concurrent admin requests to /roles). Marked nit. The partial index fix would be the most robust mitigation. Adversarial check: schema.prisma confirmed Role model has @@index([isDefault]) (an index, not a unique constraint) — no DB-level singleton enforcement. Code evidence verbatim at lines 139-157."
+    }
+  ],
+  "refuted": []
+}

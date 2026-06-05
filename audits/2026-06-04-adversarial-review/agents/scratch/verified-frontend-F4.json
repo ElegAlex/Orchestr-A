@@ -1,0 +1,152 @@
+{
+  "dimension": "frontend",
+  "shard": "F4",
+  "confirmed": [
+    {
+      "id": "frontend-F4-1",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "locale/i18n routing bug",
+      "title": "ProjectsDetailTable: Link href and router.push use locale-less paths, breaking client-side navigation",
+      "file": "apps/web/app/[locale]/reports/components/ProjectsDetailTable.tsx",
+      "line": "379-380, 428",
+      "code_evidence": "                  <Link\n                    href={`/projects/${row.id}`}\n                    className=\"font-semibold text-gray-900 hover:text-blue-600 hover:underline inline-flex items-center gap-1.5\"\n                  >\n...\n                          router.push(`/tasks?projectId=${row.id}&overdue=true`)",
+      "description": "The `ProjectsDetailTable` component navigates to `/projects/${row.id}` and `/tasks?projectId=${row.id}&overdue=true` without a locale prefix. The app uses Next.js + next-intl locale routing under `app/[locale]/`. All internal navigation links must be prefixed with `/${locale}/` (e.g., `/${locale}/projects/${row.id}`). next-intl middleware adds the locale prefix only on full page loads (SSR/navigation), not on client-side `router.push()` calls. The component does not import `useLocale`. By contrast, `reports/page.tsx` correctly uses `/${locale}/tasks?overdue=true` for the same pattern.",
+      "root_cause": "The component uses standard `next/link` and `useRouter` without importing `useLocale` from `next-intl`, omitting the locale segment required by the `[locale]` app router structure.",
+      "impact": "Clicking a project name link or the 'en retard' button navigates to a URL without locale (e.g., `/projects/abc` instead of `/fr/projects/abc`), causing a 404 or incorrect page load. Affects all users using the Reports > Overview tab.",
+      "suggested_fix": "1. Add `import { useLocale } from 'next-intl'` and `const locale = useLocale()` inside `ProjectsDetailTable`. 2. Change `href={\\`/projects/${row.id}\\`}` to `href={\\`/${locale}/projects/${row.id}\\`}`. 3. Change `router.push(\\`/tasks?projectId=${row.id}&overdue=true\\`)` to `router.push(\\`/${locale}/tasks?projectId=${row.id}&overdue=true\\`)`.",
+      "acceptance_criteria": [
+        "Clicking a project name link navigates to /{locale}/projects/{id}",
+        "Clicking 'en retard' button navigates to /{locale}/tasks?projectId={id}&overdue=true",
+        "No 404 errors on either navigation"
+      ],
+      "verification_command": "grep -n 'useLocale\\|locale' apps/web/app/\\[locale\\]/reports/components/ProjectsDetailTable.tsx",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Code evidence verified verbatim. No useLocale import present in ProjectsDetailTable.tsx. Routes only exist under [locale]/ (confirmed by directory scan) — /projects/abc has no corresponding page at app root. next-intl middleware (middleware.ts) uses createIntlMiddleware and only redirects on full-page requests, not client-side Link/router.push. PortfolioGantt.tsx line 72-78 confirmed to correctly use useLocale() and /${locale}/projects/${row.id}."
+    },
+    {
+      "id": "frontend-F4-2",
+      "severity": "important",
+      "category": "performance",
+      "subcategory": "isolated TanStack Query cache / module-scope QueryClient anti-pattern",
+      "title": "AdvancedAnalyticsTab creates a module-scope QueryClient inside its own QueryClientProvider, bypassing the app-level cache",
+      "file": "apps/web/app/[locale]/reports/components/advanced/AdvancedAnalyticsTab.tsx",
+      "line": "8-29",
+      "code_evidence": "const queryClient = new QueryClient({\n  defaultOptions: {\n    queries: { staleTime: 5 * 60 * 1000, retry: 1 },\n  },\n});\n\nfunction TabContent() {\n  return (\n    <div className=\"space-y-6\">\n      <RecentActivity />\n      <WorkloadChart />\n      <MilestonesCompletion />\n    </div>\n  );\n}\n\nexport default function AdvancedAnalyticsTab() {\n  return (\n    <QueryClientProvider client={queryClient}>\n      <TabContent />\n    </QueryClientProvider>\n  );\n}",
+      "description": "The app wraps everything in a `QueryProvider` (with a 30 s staleTime) in `app/[locale]/layout.tsx`. `AdvancedAnalyticsTab` adds a nested `QueryClientProvider` with a module-scope `QueryClient`. This creates an isolated cache disconnected from the parent. Consequences: (1) data fetched by `WorkloadChart`, `RecentActivity`, and `MilestonesCompletion` is never shared with other components that might query the same keys; (2) the module-scope singleton persists for the process lifetime (not per-user), which in Next.js edge/server rendering can lead to cross-request cache contamination; (3) the TanStack Query docs explicitly warn against creating the QueryClient at module scope in components, recommending `useState` or `useMemo` instead.",
+      "root_cause": "Module-scope `QueryClient` instantiation combined with a redundant `QueryClientProvider` that shadows the app-level provider.",
+      "impact": "In SSR: potential cross-request data leakage if the component ever renders server-side. In CSR: analytics queries are cached in an isolated client — they cannot be invalidated or shared with the rest of the app. Every tab switch to 'Analytics Avancés' creates a fresh client, discarding cached data and triggering a full refetch on each visit.",
+      "suggested_fix": "Remove the `QueryClientProvider` wrapper in `AdvancedAnalyticsTab` entirely. The child components (`WorkloadChart`, `RecentActivity`, `MilestonesCompletion`) should use the parent `QueryProvider` already present in the layout. If isolation is intentional, move `queryClient` inside a `useState(() => new QueryClient(...))` call.",
+      "acceptance_criteria": [
+        "AdvancedAnalyticsTab does not instantiate its own QueryClient or QueryClientProvider",
+        "WorkloadChart, RecentActivity, MilestonesCompletion queries are visible in the app-level React Query devtools cache"
+      ],
+      "verification_command": "grep -n 'QueryClientProvider\\|QueryClient' apps/web/app/\\[locale\\]/reports/components/advanced/AdvancedAnalyticsTab.tsx",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "performance",
+      "confidence": "high",
+      "notes": "Code evidence verified verbatim byte-for-byte (lines 8-30). The component is loaded via dynamic() with ssr:false in reports/page.tsx, which mitigates the cross-request SSR concern, but the isolated cache and full refetch-per-tab-switch issues remain. The parent QueryProvider in layout.tsx confirmed at line 26 with NextIntlClientProvider wrapper."
+    },
+    {
+      "id": "frontend-F4-3",
+      "severity": "important",
+      "category": "security",
+      "subcategory": "auth decisions computed client-side",
+      "title": "SuiviPage: access control (checkAccess) computed client-side from Zustand store data — no server-side enforcement of the scope filter",
+      "file": "apps/web/app/[locale]/users/[id]/suivi/page.tsx",
+      "line": "95-111, 168-170, 181-183",
+      "code_evidence": "  const checkAccess = (targetUser: User): boolean => {\n    if (!currentUser) return false;\n    if (currentUser.id === userId) return true;\n    if (hasPermission(\"users:manage_roles\")) return true;\n    if (hasPermission(\"users:manage\")) {\n      const managedServiceIds = (currentUser.managedServices || []).map(\n        (ms) => ms.id,\n      );\n      const targetServiceIds = (targetUser.userServices || []).map(\n        (us) => us.service?.id,\n      );\n      return targetServiceIds.some(\n        (id) => id && managedServiceIds.includes(id),\n      );\n    }\n    return false;\n  };",
+      "description": "The `checkAccess` function runs entirely in the browser, using data from the Zustand auth store (`currentUser.managedServices`). It determines whether the current user may view another user's tasks, leaves, telework, time stats, and skills. If an attacker manipulates the Zustand store (e.g., via browser devtools or by replaying a modified `/auth/me` response), they can bypass the access check and then fetch all downstream data (tasks, leaves, telework, time) from the API — which may or may not enforce the same scope filter server-side. The comment in the code itself acknowledges: 'RBAC V0 — permission-based'. The six parallel API calls on line 191–198 use `userId` directly without the result of `checkAccess` being communicated to the API layer.",
+      "root_cause": "Access scoping (managedServices filter) is enforced only in the frontend; the API endpoints are called directly with the target `userId` regardless of whether `checkAccess` returns true or false at the server level.",
+      "impact": "If API endpoints `/tasks?assigneeId=...`, `/leaves?userId=...`, `/telework?userId=...`, `/time-tracking/stats?userId=...`, `/skills/users/:id` do not independently enforce managedService scoping, any authenticated user with `users:manage` permission can access any other user's data by calling those endpoints directly (bypassing the UI gate).",
+      "suggested_fix": "Verify that each API endpoint accessed in the parallel fetch (tasksService.getByAssignee, leavesService.getAll with userId, teleworkService.getByDateRange with userId, timeTrackingService.getStats with userId, skillsService.getUserSkills with userId, projectsService.getByUser with userId) enforces the managedService scope server-side. If not, add a server-side check in each endpoint. The frontend check is a UX enhancement, not a security control.",
+      "acceptance_criteria": [
+        "API endpoints enforce managedService scope independently of the frontend check",
+        "A user with users:manage but no managedService overlap with target user receives 403 from the API"
+      ],
+      "verification_command": "N/A — manual verification of API endpoint guards required",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "medium",
+      "notes": "Code evidence verified verbatim. The checkAccess function (lines 95-111) and its use at lines 168-170 are exactly as cited. The parallel API calls at lines 191-198 are confirmed. Confidence remains medium — this is a genuine frontend-only gate pattern but whether it constitutes a vulnerability depends on backend enforcement, which requires cross-referencing the API shard."
+    },
+    {
+      "id": "frontend-F4-4",
+      "severity": "nit",
+      "category": "correctness",
+      "subcategory": "race condition in role filter re-fetch",
+      "title": "UsersPage: role filter useEffect fires a redundant re-fetch on initial mount when roleFilter='' and availableRoles just loaded",
+      "file": "apps/web/app/[locale]/users/page.tsx",
+      "line": "190-195",
+      "code_evidence": "  useEffect(() => {\n    // Re-fetch when the role filter changes (skip very first mount — handled above).\n    if (availableRoles.length === 0) return;\n    fetchUsers(roleFilter);\n    // eslint-disable-next-line react-hooks/exhaustive-deps\n  }, [roleFilter]);",
+      "description": "The guard `if (availableRoles.length === 0) return` is designed to skip the first mount. However, `availableRoles` is populated inside `fetchUsers()` (via `setAvailableRoles(roles)`). When `fetchUsers` completes on mount, `availableRoles` goes from [] to non-empty. This does NOT re-trigger the `roleFilter` effect (because `roleFilter` did not change). The guard is therefore effective. However, if the user sets a roleFilter BEFORE the first fetch completes (unlikely UI race), the guard fires `return` and the filter is silently ignored until the next filter change. The `eslint-disable-next-line react-hooks/exhaustive-deps` comment suppresses the missing `fetchUsers` dependency warning, masking the real coupling.",
+      "root_cause": "Two interleaved effects (mount effect + filter effect) share mutable state (`availableRoles`) without proper coordination.",
+      "impact": "Minor: in very fast networks, the filter applied before mount fetch completes is silently dropped. No data corruption. The user must re-apply the filter.",
+      "suggested_fix": "Pass `roleFilter` as a parameter to the initial `fetchUsers` call at mount, remove the secondary effect entirely, and handle filter changes by calling `fetchUsers(roleFilter)` directly in the filter change handler.",
+      "acceptance_criteria": [
+        "Setting a role filter before data loads correctly applies the filter",
+        "No double fetch on initial page load"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "medium",
+      "notes": "Code evidence verified verbatim at lines 190-195. The eslint-disable comment is present. In practice this race is unlikely to be hit. Severity nit."
+    },
+    {
+      "id": "frontend-F4-5",
+      "severity": "nit",
+      "category": "observability",
+      "subcategory": "missing error boundary",
+      "title": "No error boundary anywhere in the [locale] subtree — unhandled render errors crash the entire app",
+      "file": "apps/web/app/[locale]/layout.tsx",
+      "line": "1-30",
+      "code_evidence": "      <QueryProvider>{children}</QueryProvider>",
+      "description": "The `app/[locale]/` directory has no `error.tsx` file (Next.js App Router error boundary). `find apps/web/app/[locale] -name 'error.tsx'` returns nothing. An unhandled JavaScript error in any component within the locale subtree (e.g., SkillsMatrix, reports charts, SuiviPage) will crash the entire application and display a white screen instead of a user-facing error message. This is especially relevant given that several components (SkillsMatrix, ProjectsDetailTable, AdvancedAnalyticsTab sub-components) do their own loading/error state management but their render logic can still throw on malformed API data.",
+      "root_cause": "No `error.tsx` file created at the `app/[locale]/` or page-level directories.",
+      "impact": "Any unhandled render error shows a blank screen with no user-facing feedback. Affects all authenticated users.",
+      "suggested_fix": "Create `apps/web/app/[locale]/error.tsx` with a user-friendly error boundary component that displays a 'Something went wrong' message and a retry/navigate-home button.",
+      "acceptance_criteria": [
+        "An error.tsx file exists at apps/web/app/[locale]/error.tsx",
+        "Throwing an error in a page component renders the error boundary instead of crashing the app"
+      ],
+      "verification_command": "find apps/web/app/\\[locale\\] -name 'error.tsx'",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "observability",
+      "confidence": "high",
+      "notes": "Verified: `find /home/alex/Documents/REPO/ORCHESTRA/apps/web/app/[locale] -name 'error.tsx'` returned no results. The layout.tsx code is verbatim. No error.tsx at any subdirectory level either."
+    },
+    {
+      "id": "frontend-F4-6",
+      "severity": "nit",
+      "category": "correctness",
+      "subcategory": "stale closure / dead code",
+      "title": "reports/page.tsx: canView = !permissionsLoaded || hasPermission('reports:view') — the !permissionsLoaded branch is dead code",
+      "file": "apps/web/app/[locale]/reports/page.tsx",
+      "line": "49",
+      "code_evidence": "  const canView = !permissionsLoaded || hasPermission(\"reports:view\");",
+      "description": "The `AuthProvider` (apps/web/src/components/AuthProvider.tsx line 63) renders a loading spinner and returns early if `!permissionsLoaded`. This means the reports page only ever renders when `permissionsLoaded === true`. Therefore `!permissionsLoaded` is always `false` by the time this line executes, and `canView` always equals `hasPermission('reports:view')`. The intent appears to have been 'allow access while loading' to avoid a flash of the unauthorized message, but the AuthProvider already handles this at a higher level. The dead code creates a confusing false impression that the permission check is bypassed during loading.",
+      "root_cause": "The developer added `!permissionsLoaded` as a pessimistic guard without accounting for the AuthProvider's own loading gate above in the tree.",
+      "impact": "No security impact (the condition is never true in practice). Code readability and maintainability concern — a future developer might remove the AuthProvider loading gate without noticing this implicit dependency.",
+      "suggested_fix": "Simplify to `const canView = hasPermission('reports:view')`. If the previous intent was to avoid loading flash, it is already handled by AuthProvider.",
+      "acceptance_criteria": [
+        "reports/page.tsx uses const canView = hasPermission('reports:view') with no !permissionsLoaded branch",
+        "No flash of unauthorized message visible in normal page load"
+      ],
+      "verification_command": "grep -n 'canView' apps/web/app/\\[locale\\]/reports/page.tsx",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Code evidence verified verbatim at line 49. AuthProvider.tsx line 63 confirmed: `if (!ready || isLoading || (isAuthenticated && !permissionsLoaded))` returns loading spinner before children render. AuthProvider is in root layout.tsx (app/layout.tsx line 42), wrapping all pages. The permission guard in reports/page.tsx at line 164 already checks `if (permissionsLoaded && !canView)` — consistent with the finding that !permissionsLoaded in canView is dead code."
+    }
+  ],
+  "refuted": []
+}

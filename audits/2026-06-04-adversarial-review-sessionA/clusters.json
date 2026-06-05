@@ -1,0 +1,162 @@
+[
+  {
+    "id": "A",
+    "title": "Timezone drift: server-local time used instead of explicit UTC/Paris anchor",
+    "root_cause": "Date computations call setHours(0,0,0,0) and new Date().getFullYear() against process-local time rather than an explicit timezone anchor, so results depend on the server's TZ setting.",
+    "findings": ["COR-001", "COR-006"],
+    "transversal_remediation": "Anchor every business date/year computation to an explicit zone (date-fns-tz fromZonedTime / Date.UTC) as the leave-year-window helpers already do. Add a lint rule or grep gate forbidding bare setHours/getFullYear in services. Note current prod runs UTC, which masks COR-001 today but breaks the moment the app is deployed to a non-UTC host.",
+    "phase_recommendation": 1
+  },
+  {
+    "id": "B",
+    "title": "Non-atomic multi-write operations (missing $transaction / TOCTOU windows)",
+    "root_cause": "Business operations that mutate multiple rows perform sequential writes (and count-then-create checks) outside any wrapping transaction, leaving partial-failure and concurrent-replay windows.",
+    "findings": ["COR-002", "COR-003", "COR-005"],
+    "transversal_remediation": "Wrap each multi-step mutation in prisma.$transaction and replace count-then-create invariant checks with atomic conditional writes (unique constraint or SELECT ... FOR UPDATE / conditional WHERE). Establish a convention: any handler issuing >1 write must use a tx client.",
+    "phase_recommendation": 1
+  },
+  {
+    "id": "C",
+    "title": "JWT access tokens survive credential change (nbf not bumped)",
+    "root_cause": "Password-change paths revoke refresh tokens but never bump the per-user not-before (nbf) marker, so already-issued access tokens remain valid until natural expiry.",
+    "findings": ["SEC-001", "SEC-002"],
+    "transversal_remediation": "Call jwtNotBefore.bumpUser(userId) inside both admin reset-password and self-service change-password, in the same transaction as the password write. Add a spec asserting a pre-existing access token is rejected after each path. Amplified by the 7d effective access TTL — see cluster R.",
+    "phase_recommendation": 1
+  },
+  {
+    "id": "D",
+    "title": "Input DTO validation gaps (@MaxLength / @IsUUID missing), incl. bcrypt DoS",
+    "root_cause": "Free-text and identifier DTO fields lack length bounds and strong-type validators, so unbounded strings reach bcrypt (DoS) and persistence (storage abuse).",
+    "findings": ["SEC-003", "SEC-004", "SEC-005", "SEC-006", "SEC-007", "SEC-008", "SEC-009", "SEC-010"],
+    "transversal_remediation": "Add @MaxLength to every free-text field and @IsUUID to every id field across DTOs; prioritise LoginDto (bcrypt DoS) for phase 1. Consider a shared base validator decorator set and a test that scans DTOs for unbounded string properties.",
+    "phase_recommendation": 1
+  },
+  {
+    "id": "E",
+    "title": "Audit-trail coverage gaps: sensitive actions unlogged or logged with the wrong action code",
+    "root_cause": "Several sensitive mutations and authorization events have no audit emitter, and one event emits a misleading action code, so the audit_logs table does not faithfully reflect security-relevant activity.",
+    "findings": ["OBS-001", "OBS-002", "OBS-003", "OBS-004", "OBS-006", "OBS-015"],
+    "transversal_remediation": "Emit audit rows for user create/import, access-denied (in the guard), and document download; correct generateResetToken to a token-issued action distinct from PASSWORD_CHANGED. Add a compile-time/test check that every AuditAction enum value has at least one emitter call site.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "F",
+    "title": "Audit-log subsystem: integrity, throughput, and lifecycle weaknesses",
+    "root_cause": "The hash-chained audit_logs subsystem has an out-of-transaction write ordering bug, a manual-only chain recompute with no CI guard, a global advisory lock that serialises all writes, a missing sort index, and no retention/partitioning.",
+    "findings": ["DAT-004", "DAT-005", "PERF-014", "PERF-025", "OBS-012"],
+    "transversal_remediation": "Move the USER_DELETED write inside the erasure transaction; automate chain recompute as a migration post-hook or CI step with an assertion; add the (createdAt DESC, id DESC) index; evaluate batching/sequence-based chaining to relax the advisory-lock bottleneck; declare and enforce a retention/partitioning policy.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "G",
+    "title": "Unbounded list/aggregate queries (no bounded pagination ceiling)",
+    "root_cause": "List and aggregate service methods default to a 1000-row limit or no limit at all, so payload and memory grow with data volume.",
+    "findings": ["PERF-001", "PERF-002", "PERF-003", "PERF-004", "PERF-005", "PERF-006", "PERF-010", "PERF-015", "PERF-016", "PERF-017", "PERF-019", "PERF-022"],
+    "transversal_remediation": "Introduce a shared pagination helper with a hard max page size (<=100) and apply it to every findMany that can return user/task/project/leave/snapshot collections; convert in-memory aggregates (analytics, project stats, snapshots) to groupBy/aggregate so unbounded rows never enter Node memory.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "H",
+    "title": "Per-row DB round-trips and redundant queries (N+1)",
+    "root_cause": "Bulk imports and graph walks issue one or more DB queries per row/node, and analytics fires duplicate groupBy queries, multiplying latency and connection pressure.",
+    "findings": ["PERF-007", "PERF-008", "PERF-009", "PERF-011", "PERF-012", "PERF-018", "COR-007"],
+    "transversal_remediation": "Batch imports with createMany / pre-fetched lookup sets (resolve holidays once before the row loop); replace the dependency BFS with a single recursive CTE; memoise/deduplicate the repeated analytics groupBy; use one groupBy/aggregate for time-entry totals. Ensure all per-row reads inside a tx use the tx client.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "I",
+    "title": "Missing DB indexes on FK reverse and lookup columns",
+    "root_cause": "Foreign-key reverse columns used for traversal and deletion lack covering indexes, forcing sequential scans.",
+    "findings": ["PERF-020", "PERF-021"],
+    "transversal_remediation": "Add @@index([dependsOnTaskId]) to TaskDependency and @@index([userId]) to TaskRACI (plus a migration). Audit all relations for an index on the non-primary side that is queried.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "J",
+    "title": "Referential integrity: missing/untyped FKs and nullable critical FK",
+    "root_cause": "Some relations are modelled as plain String columns without a foreign key, and a security-critical FK (User.roleId) is nullable, allowing dangling references and RBAC bypass.",
+    "findings": ["DAT-001", "DAT-002", "DAT-012"],
+    "transversal_remediation": "Convert TaskRACI.userId and UserSkill.validatedBy to real relations with FKs and an explicit onDelete policy; backfill and promote User.roleId to NOT NULL with a default/guard so no user can exist without a role.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "K",
+    "title": "Missing DB CHECK constraints (ranges, ordering, non-negative)",
+    "root_cause": "Domain ranges and intra-row ordering are enforced only in application code (or not at all), leaving the database able to store out-of-range/inconsistent rows.",
+    "findings": ["DAT-007", "DAT-008", "DAT-009", "DAT-010", "DAT-011"],
+    "transversal_remediation": "Add CHECK constraints via migration: progress >= 0; dayOfWeek/recurrenceDay BETWEEN 0 AND 6; weekInterval/ordinal/dayOfMonth ranges; endTime >= startTime; endDate >= startDate. Mirror the existing schema-constraint migration pattern.",
+    "phase_recommendation": 3
+  },
+  {
+    "id": "L",
+    "title": "Cross-entity/cross-project invariants not enforced on all paths",
+    "root_cause": "Same-project relation invariants are checked on create but not on update, and a null-vs-null comparison lets orphan tasks bypass the check entirely.",
+    "findings": ["COR-004", "COR-008"],
+    "transversal_remediation": "Centralise the 'epic/milestone/dependency must share the task's project' invariant in one validator used by both create and update, and special-case projectId === null (orphan) to forbid cross-linking rather than silently allow it.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "M",
+    "title": "Transport and security hardening (headers, timing, CI secrets, info disclosure)",
+    "root_cause": "Edge and infra configuration omit HSTS/redirect, trust a spoofable forwarded-proto header, use a timing-unsafe token compare, embed CI credentials in YAML, and expose an endpoint listing publicly.",
+    "findings": ["SEC-011", "SEC-013", "SEC-015", "SEC-016", "SEC-017"],
+    "transversal_remediation": "Add HSTS + HTTP->HTTPS redirect in nginx and derive proto from $scheme; switch the metrics token compare to timingSafeEqual; move CI credentials to GitHub Secrets; gate or trim the root endpoint listing. These are independent quick wins.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "N",
+    "title": "Observability infrastructure absent or stubbed",
+    "root_cause": "Request-ID propagation, external error tracking, durable metrics, dependency metrics, and distributed tracing are scaffolded but unwired or in-memory only, so production incidents are hard to diagnose.",
+    "findings": ["OBS-005", "OBS-007", "OBS-008", "OBS-009", "OBS-014"],
+    "transversal_remediation": "Wire getRequestId() into the logger and audit payloads; implement the Sentry/error-reporter sink; export metrics to a durable store (Prometheus scrape + persistence) and add DB-pool/Redis-latency gauges; adopt OpenTelemetry for end-to-end tracing.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "O",
+    "title": "Controller spec coverage gaps",
+    "root_cause": "13 of 35 controllers have no controller-level spec, leaving their HTTP wiring, permission decorators, and DTO binding untested.",
+    "findings": ["TEST-004", "TEST-005", "TEST-006", "TEST-007", "TEST-008", "TEST-009", "TEST-010", "TEST-011", "TEST-012"],
+    "transversal_remediation": "Add controller specs following the apps/api/src/tasks pattern, prioritising settings, leave-types, rbac/roles, and analytics-advanced (non-trivial permission/business logic). Each spec must include both authorized and 403 negative cases.",
+    "phase_recommendation": 3
+  },
+  {
+    "id": "P",
+    "title": "Weak / void test assertions that cannot fail",
+    "root_cause": "Several tests assert tautologies, screenshot-only, swallowed-selector URL-only, or negated status codes, so a broken page or wrong status still passes.",
+    "findings": ["TEST-002", "TEST-003", "TEST-013", "TEST-017", "TEST-019"],
+    "transversal_remediation": "Replace expect(true).toBeTruthy() / .not.toBe(401) / URL-only assertions with concrete positive assertions on rendered content or exact status; remove screenshot-only 'tests' or convert to visual-regression with a baseline. Add a lint rule banning expect(true) and .not.toBe(<status>).",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "Q",
+    "title": "E2E convention violations and coverage gaps",
+    "root_cause": "Legacy E2E specs use UI login instead of the mandated API storageState pattern, contain unconditional skips, omit RBAC denial cases, and most migrations have no integration assertion.",
+    "findings": ["TEST-001", "TEST-014", "TEST-015", "TEST-016", "TEST-018"],
+    "transversal_remediation": "Migrate the 5 legacy specs to the asRole()/storageState API-auth pattern; resolve or delete seed-dependent skips; add contributeur/observateur 403 cases; add integration assertions for behaviorally-significant migrations (dat015, dat021, dat025).",
+    "phase_recommendation": 3
+  },
+  {
+    "id": "R",
+    "title": "Environment/config template drift and completeness",
+    "root_cause": "Several boot-relevant variables are missing from or stale in the env/compose templates (METRICS_TOKEN, JWT_ACCESS_TTL, AUDIT_HASH_KEY, deprecated ALLOWED_ORIGINS), causing insecure-by-default behavior and operator confusion.",
+    "findings": ["SEC-012", "SEC-014", "SEC-018", "OBS-013"],
+    "transversal_remediation": "Reconcile .env.production.example, init-env.sh and docker-compose.prod.yml with the variables the code actually reads; document METRICS_TOKEN (fail closed if unset), JWT_ACCESS_TTL, AUDIT_HASH_KEY; replace ALLOWED_ORIGINS with CORS_ORIGIN. Add a boot-time assertion + template-vs-code drift test.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "S",
+    "title": "Raw console.* in business code bypassing the central logger",
+    "root_cause": "A few service methods log via console.error/console.warn instead of the NestJS Logger, bypassing Fastify log redaction and structured output.",
+    "findings": ["OBS-010", "OBS-011"],
+    "transversal_remediation": "Replace console.* with the injected Logger; add an ESLint no-console rule scoped to apps/api/src (excluding bootstrap) to prevent regression.",
+    "phase_recommendation": 3
+  },
+  {
+    "id": "T",
+    "title": "Frontend rendering and data-fetching architecture",
+    "root_cause": "Every App Router page is a client component using useEffect+useState with no RSC and no TanStack Query (despite it being installed), and reference data is refetched on each interaction, inflating bundle size and request volume.",
+    "findings": ["PERF-023", "PERF-024"],
+    "transversal_remediation": "Adopt RSC for static/shell content and TanStack Query for client data with cached reference lookups; this is a larger architectural effort and should be staged after correctness/security fixes.",
+    "phase_recommendation": 3
+  }
+]

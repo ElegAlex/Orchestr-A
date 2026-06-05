@@ -1,0 +1,84 @@
+{
+  "dimension": "correctness",
+  "shard": "S9",
+  "confirmed": [
+    {
+      "id": "correctness-S9-1",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "missing-p2002-catch",
+      "title": "skills.service.ts create() and update() missing P2002 catch — concurrent duplicate name causes unhandled 500",
+      "file": "apps/api/src/skills/skills.service.ts",
+      "line": "28-57",
+      "code_evidence": "  async create(createSkillDto: CreateSkillDto) {\n    const { name, description, category, requiredCount } = createSkillDto;\n\n    // Vérifier l'unicité du nom\n    const existing = await this.prisma.skill.findFirst({\n      where: { name },\n    });\n\n    if (existing) {\n      throw new ConflictException('Une compétence avec ce nom existe déjà');\n    }\n\n    const skill = await this.prisma.skill.create({",
+      "description": "The `create()` method performs a pre-check `findFirst` then calls `prisma.skill.create()` without wrapping the create in a try/catch for Prisma P2002 (unique constraint violation). `Skill.name` has a `@unique` constraint in schema.prisma. Under concurrent requests (two users submitting the same skill name simultaneously), both pass the findFirst check, then the second `prisma.skill.create()` throws a `PrismaClientKnownRequestError` with code P2002 that is unhandled. This propagates as a 500 Internal Server Error. The same issue exists in `update()` at line 165 which also has no try/catch around `prisma.skill.update()`.\n\nBy contrast, `departments.service.ts` and `services.service.ts` explicitly define an `isUniqueViolation()` helper and wrap their create/update calls in try/catch blocks to map P2002 → 409 ConflictException. `skills.service.ts` lacks this defense.",
+      "root_cause": "`skills.service.ts` never adopted the P2002 catch pattern that `departments.service.ts` and `services.service.ts` introduced (COR-034), leaving the unique-constraint race unhandled.",
+      "impact": "A concurrent double-submit of a skill with the same name (or a client retry) returns HTTP 500 instead of 409, exposing an internal Prisma error in the response body and breaking any client that expects a structured conflict error.",
+      "suggested_fix": "Add `isUniqueViolation` helper and wrap both `create()` and `update()` calls in try/catch blocks, mirroring the pattern in `departments.service.ts`:\n```typescript\nfunction isUniqueViolation(err: unknown): boolean {\n  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';\n}\n// In create():\ntry {\n  const skill = await this.prisma.skill.create({ ... });\n  return skill;\n} catch (err) {\n  if (isUniqueViolation(err)) throw new ConflictException('Une compétence avec ce nom existe déjà');\n  throw err;\n}\n```",
+      "acceptance_criteria": [
+        "Two concurrent POST /skills with the same name both return HTTP 409 (not 500)",
+        "PATCH /skills/:id renaming to an existing name returns HTTP 409 under concurrency"
+      ],
+      "verification_command": "grep -n 'isUniqueViolation\\|P2002\\|catch' apps/api/src/skills/skills.service.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "departments.service.ts lines 12-19 and 69-74 show the correct pattern. importSkills() at line 725 already has a try/catch per item. Only the standalone create()/update() methods are missing it. Adversarial check: grep confirmed zero P2002/catch/isUniqueViolation in skills.service.ts outside line 725 (importSkills). schema.prisma line 743 confirms @unique on Skill.name."
+    },
+    {
+      "id": "correctness-S9-2",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "non-atomic-delete",
+      "title": "services.service.ts remove() performs 3 sequential DB writes without a transaction — inconsistent state on crash",
+      "file": "apps/api/src/services/services.service.ts",
+      "line": "308-343",
+      "code_evidence": "    // Détacher les utilisateurs liés avant suppression\n    if (service._count.userServices > 0) {\n      await this.prisma.userService.deleteMany({\n        where: { serviceId: id },\n      });\n    }\n\n    // Retirer le manager du service\n    if (service.managerId) {\n      await this.prisma.service.update({\n        where: { id },\n        data: { managerId: null },\n      });\n    }\n\n    await this.prisma.service.delete({\n      where: { id },\n    });",
+      "description": "The `remove()` method executes three separate database writes sequentially: (1) deleteMany on userService pivot rows, (2) update service.managerId to null, (3) delete the service. None of these are wrapped in a `prisma.$transaction()`. If the process crashes or the connection drops after step 1 but before step 3, all userServices pivot rows are gone but the service still exists, leaving the data in an inconsistent state. Step 2 (update managerId=null before deleting the row) is also logically redundant since the service is immediately deleted, but it still incurs an extra round-trip and is evidence of confused logic.\n\nAdversarial note: UserService has `onDelete: Cascade` on the service FK (schema.prisma line 158), so step 1 is redundant — the DB cascade handles it. However, the absence of a transaction still allows a crash after step 2 (managerId set to null) but before step 3 (service deleted) to leave a service row with managerId=null in a permanently inconsistent intermediate state visible to other reads.",
+      "root_cause": "The delete operation was built incrementally without wrapping all writes in a single Prisma transaction, leaving the multi-step operation non-atomic.",
+      "impact": "A process crash or transient DB connection error mid-delete leaves `service` rows intact with orphaned (but deleted) `userService` rows, or a service row with managerId=null that was never cleaned up. Re-running the delete would then find zero userServices but a non-null managerId, producing an incoherent intermediate state that other reads could observe. Impact somewhat mitigated by onDelete: Cascade on UserService which auto-cleans pivot rows on service delete — but does not eliminate the managerId=null partial state.",
+      "suggested_fix": "Wrap all three operations in `prisma.$transaction()`. Also remove the redundant managerId nulling step since the row will be deleted:\n```typescript\nawait this.prisma.$transaction(async (tx) => {\n  if (service._count.userServices > 0) {\n    await tx.userService.deleteMany({ where: { serviceId: id } });\n  }\n  await tx.service.delete({ where: { id } });\n});\n```\nNote: if the DB schema uses `onDelete: Cascade` on userServices, even step 1 can be removed.",
+      "acceptance_criteria": [
+        "DELETE /services/:id completes atomically — no partial state visible under concurrent reads",
+        "A simulated crash between the first and third writes leaves the service intact (rolled back)"
+      ],
+      "verification_command": "grep -n '\\$transaction\\|deleteMany\\|service.update\\|service.delete' apps/api/src/services/services.service.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "The managerId=null update step (lines 332-337) is entirely redundant before delete — it should be removed along with the transaction wrapping fix. Adversarial check: onDelete: Cascade on UserService.service (schema.prisma line 158) makes step 1 redundant, but the missing transaction is still a real correctness gap — worst case is managerId=null service row surviving if crash between steps 2 and 3."
+    },
+    {
+      "id": "correctness-S9-3",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "toctou-count-limit",
+      "title": "personal-todos.service.ts create() has TOCTOU race on the 20-todo limit",
+      "file": "apps/api/src/personal-todos/personal-todos.service.ts",
+      "line": "31-47",
+      "code_evidence": "  async create(userId: string, dto: CreatePersonalTodoDto) {\n    // Vérifier la limite de 20 todos\n    const count = await this.prisma.personalTodo.count({\n      where: { userId },\n    });\n\n    if (count >= MAX_TODOS) {\n      throw new BadRequestException(`Limite de ${MAX_TODOS} to-dos atteinte`);\n    }\n\n    return this.prisma.personalTodo.create({\n      data: {\n        userId,\n        text: dto.text,\n      },\n    });\n  }",
+      "description": "The 20-todo limit is enforced by reading the count and then creating. There is no DB-level constraint capping the count per user, and no transaction around the count+create pair. Two concurrent requests for the same user can both read count=19 (or any value < 20), both pass the guard, and both successfully create a new todo, leaving the user with 21 todos. This violates the stated business invariant documented in CLAUDE.md ('Personal Todos: hard-coded 20-item limit').",
+      "root_cause": "The count-then-create pattern is inherently non-atomic in a concurrent environment without a transaction or a DB-level constraint to enforce the limit.",
+      "impact": "Any user who submits two or more simultaneous create requests (e.g., double-click, slow network retry, browser tab duplicate) can exceed the 20-item limit. The CLAUDE.md notes this as a hard-coded invariant, so the violation is a correctness regression.",
+      "suggested_fix": "Wrap the count+create in a `prisma.$transaction()` with serializable isolation, or use a DB-level `CHECK` constraint or trigger, or at minimum accept that occasional over-limit is acceptable (nit) and document it. Minimal fix:\n```typescript\nawait this.prisma.$transaction(async (tx) => {\n  const count = await tx.personalTodo.count({ where: { userId } });\n  if (count >= MAX_TODOS) throw new BadRequestException(...);\n  return tx.personalTodo.create({ data: { userId, text: dto.text } });\n});\n```\nNote: Prisma default transactions use read-committed; for a true count lock you need a SELECT FOR UPDATE or a raw query. Alternatively add a unique partial index or trigger in Postgres.",
+      "acceptance_criteria": [
+        "Concurrent double-submit for the same user does not result in more than 20 todos",
+        "The 21st todo attempt returns HTTP 400 even under concurrent load"
+      ],
+      "verification_command": "grep -n '\\$transaction\\|count\\|MAX_TODOS' apps/api/src/personal-todos/personal-todos.service.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "CLAUDE.md explicitly states 'Personal Todos: hard-coded 20-item limit'. The findByUser() cleanup (cleanupOldCompleted) runs before the count check, which at least reduces the window, but does not close it. Adversarial check: code at lines 31-47 matches exactly; no DB CHECK constraint found in schema.prisma for PersonalTodo count per user; no $transaction wrapping confirmed absent."
+    }
+  ],
+  "refuted": [
+    {
+      "id": "correctness-S9-4",
+      "reason": "The finding's core premise is wrong: PostgreSQL native enum types sort by their definition order, not alphabetically. The SkillLevel enum is defined (migration 20251116093059_init/migration.sql line 35) as: BEGINNER, INTERMEDIATE, EXPERT, MASTER — in ascending semantic order. Therefore `ORDER BY level DESC` produces: MASTER > EXPERT > INTERMEDIATE > BEGINNER, which IS the correct semantic descending order (highest first). The comment '// Experts en premier' is slightly misleading (MASTER ranks above EXPERT) but the sort behavior is correct. The alphabetical ordering claim (MASTER > INTERMEDIATE > EXPERT > BEGINNER) is false for Postgres native enums."
+    }
+  ]
+}

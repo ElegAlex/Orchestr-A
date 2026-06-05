@@ -1,0 +1,126 @@
+{
+  "dimension": "tests",
+  "shard": "T2",
+  "confirmed": [
+    {
+      "id": "tests-T2-1",
+      "severity": "important",
+      "category": "tests",
+      "subcategory": "ui-login",
+      "title": "Root-level e2e specs use UI login helper with hardcoded admin/admin123 credentials",
+      "file": "e2e/helpers.ts",
+      "line": "1-13",
+      "code_evidence": "export async function login(\n  page: Page,\n  username = \"admin\",\n  password = \"admin123\",\n) {\n  await page.goto(\"/login\");\n  await page.locator('input[id=\"login\"]').fill(username);\n  await page.locator('input[id=\"password\"]').fill(password);\n  await page.getByTestId(\"login-submit\").click();\n  await page.waitForURL(\"**/dashboard\", { timeout: 15000 });\n}",
+      "description": "Five root-level spec files (full-workflow.spec.ts, projects.spec.ts, tasks.spec.ts, planning.spec.ts, leaves.spec.ts) all import and call this UI `login()` helper from e2e/helpers.ts, which drives the browser login form with hardcoded admin/admin123 credentials. This violates the CLAUDE.md convention ('Auth via API (never UI login in tests)') and the established auth.setup.ts pattern. The `chromium` project in playwright.config.ts runs these specs without a `dependencies: ['setup']` link and without a `storageState`, so these tests hit the rate-limited login endpoint and are fragile against any UI login-form change.",
+      "root_cause": "Root-level e2e specs were written before the auth.setup.ts/storage-state pattern was established and were never migrated.",
+      "impact": "Tests fragile against UI changes; hit rate-limited /api/auth/login in the browser (5 req/60s throttle); introduce test-isolation risk; break the 'API auth only' convention uniformly followed by all tests under e2e/tests/.",
+      "suggested_fix": "Migrate the 5 root-level specs to use the storage-state pattern: add `dependencies: ['setup']` to the `chromium` project in playwright.config.ts, or move the specs under e2e/tests/ and add `storageState: 'playwright/.auth/admin.json'` to their project. Replace `await login(page)` calls with the existing page.goto() pattern used by e2e/tests/workflows specs.",
+      "acceptance_criteria": [
+        "No e2e spec outside e2e/tests/workflows/auth.spec.ts uses the UI login form or calls helpers.login()",
+        "Root-level specs run without triggering a browser-based login flow"
+      ],
+      "verification_command": "grep -rn 'import.*helpers\\|await login(' e2e/*.spec.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "tests",
+      "confidence": "high",
+      "notes": "Affected files: e2e/full-workflow.spec.ts, e2e/projects.spec.ts, e2e/tasks.spec.ts, e2e/planning.spec.ts, e2e/leaves.spec.ts. The helpers.ts password 'admin123' differs from the seed ROLE_PASSWORD ('Test1234!') for the test users, making these tests target only the bootstrap admin account. VERIFIED: code_evidence verbatim confirmed in e2e/helpers.ts lines 1-13. chromium project in playwright.config.ts confirmed without dependencies or storageState. All 5 files confirmed to call login() via grep."
+    },
+    {
+      "id": "tests-T2-2",
+      "severity": "blocking",
+      "category": "tests",
+      "subcategory": "matrix-contradiction",
+      "title": "clients.spec.ts Suite 6 asserts HTTP 200 for contributeur on GET /api/clients, contradicting the permission matrix and the generated INTERDIT test",
+      "file": "e2e/clients.spec.ts",
+      "line": "657-680",
+      "code_evidence": "test.describe(\"Clients — Lecture autorisée pour tous les rôles\", () => {\n  const allRoles: Role[] = [\n    \"admin\",\n    \"responsable\",\n    \"manager\",\n    \"referent\",\n    \"contributeur\",\n    \"observateur\",\n  ];\n\n  for (const role of allRoles) {\n    test(`GET /api/clients — 200 pour ${role}`, async ({ request }) => {",
+      "description": "Suite 6 includes `contributeur` in the allRoles array and asserts `expect(res.status()).toBe(200)` for it. However, the permission matrix (permission-matrix.ts line 579) places `contributeur` in `deniedRoles` for `clients:read` / GET /api/clients. The matrix is authoritative: BASIC_USER template (bound to `contributeur` in seed) does NOT include `clients:read` — that permission is part of `PROJECT_STRUCTURE_READ` which BASIC_USER does not receive (it uses only `COMMON_BASE + STANDARD_SELF_SERVICE`). The auto-generated test in api-permissions.spec.ts therefore generates an [INTERDIT] test asserting 403 for the same role+endpoint. Both suites run during a full `pnpm test:e2e`, and exactly one will fail. The blocking severity reflects that the contradiction guarantees a permanent test failure.",
+      "root_cause": "Suite 6 was written with the incorrect assumption that all roles can read clients; the actual RBAC template for BASIC_USER excludes PROJECT_STRUCTURE_READ (which contains clients:read).",
+      "impact": "One of the two conflicting assertions always fails: either Suite 6's 200-for-contributeur fails (if RBAC is correct), or the INTERDIT 403-for-contributeur from api-permissions.spec.ts fails (if the endpoint is accidentally open). In a correct deployment, Suite 6 fails on every CI run for contributeur.",
+      "suggested_fix": "Remove `contributeur` from the allRoles array in Suite 6. The corrected array should be `['admin', 'responsable', 'manager', 'referent', 'observateur']` — matching the `allowedRoles` in the permission matrix for `clients:read`. Optionally add a separate denial test for `contributeur` expecting 403.",
+      "acceptance_criteria": [
+        "Suite 6 allRoles does not include 'contributeur'",
+        "Running pnpm test:e2e produces zero failures on the GET /api/clients — 200 pour contributeur test",
+        "The api-permissions.spec.ts [INTERDIT] test for clients:read/contributeur passes with 403"
+      ],
+      "verification_command": "grep -A20 'Lecture autorisée pour tous les rôles' e2e/clients.spec.ts | grep contributeur",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "tests",
+      "confidence": "high",
+      "notes": "Cross-verified against packages/rbac/templates.ts lines 887-894 (BASIC_USER = compose(COMMON_BASE, STANDARD_SELF_SERVICE)) and packages/rbac/atomic-permissions.ts lines 224-233 (PROJECT_STRUCTURE_READ includes clients:read; BASIC_USER does not receive PROJECT_STRUCTURE_READ). Matrix comment at line 559 explicitly states 'PAS contributeur (BASIC_USER ne l'a pas)'. VERIFIED: code_evidence verbatim confirmed in e2e/clients.spec.ts lines 657-680. permission-matrix.ts line 586 confirms deniedRoles: [\"contributeur\"] for GET /api/clients. RBAC chain independently verified: templates.ts:1049 CONTRIBUTEUR→BASIC_USER, templates.ts:893 BASIC_USER=compose(COMMON_BASE, STANDARD_SELF_SERVICE), atomic-permissions.ts:224-233 PROJECT_STRUCTURE_READ includes clients:read, BASIC_USER does not include PROJECT_STRUCTURE_READ."
+    },
+    {
+      "id": "tests-T2-3",
+      "severity": "important",
+      "category": "tests",
+      "subcategory": "smoke-coverage-gap",
+      "title": "api-permissions.spec.ts — the core RBAC matrix test has zero @smoke tags despite covering all permission codes",
+      "file": "e2e/tests/rbac/api-permissions.spec.ts",
+      "line": "89-143",
+      "code_evidence": "for (const resource of resources) {\n  const entries = PERMISSION_MATRIX.filter((e) => e.resource === resource);\n\n  test.describe(`RBAC — ${resource}`, () => {\n    for (const entry of entries) {\n      // Tests pour les rôles AUTORISÉS\n      for (const role of entry.allowedRoles as Role[]) {\n        test(`[AUTORISÉ] ${entry.method} ${entry.apiEndpoint} — rôle: ${role} — ${entry.action}`, async ({",
+      "description": "The api-permissions.spec.ts generates tests for every entry in PERMISSION_MATRIX (covering all 90+ permission codes, both allowed and denied paths). None of these generated tests carry the `@smoke` tag. The CLAUDE.md convention requires 'Tag critical tests with @smoke' and 'critical paths' are expected to have smoke tags. These are arguably the most critical permission tests in the suite; their absence from @smoke means running `pnpm exec playwright test --grep @smoke` (a fast pre-deploy smoke check) will skip the entire RBAC matrix verification.",
+      "root_cause": "The test generation loop in api-permissions.spec.ts was not updated to annotate generated tests with { tag: '@smoke' } for high-severity entries (e.g. privilege escalation: admin-only endpoints tested for all denied roles).",
+      "impact": "A pre-deploy smoke run using --grep @smoke misses all RBAC matrix tests. A regression that re-opens a privilege escalation path (e.g. CONTRIBUTEUR gaining projects:create) would not be caught by the smoke gate.",
+      "suggested_fix": "Add `{ tag: '@smoke' }` to the test options for denied-role tests (403 assertions), which are the security-critical cases. For large suites, at minimum tag the tests for endpoints with high-privilege actions (projects:delete, users:create, users:manage_roles). Example: `test('[INTERDIT] ...', { tag: '@smoke' }, async ({ request }) => { ... })`.",
+      "acceptance_criteria": [
+        "pnpm exec playwright test --grep @smoke includes at least the denied-role assertions from api-permissions.spec.ts for admin-only endpoints",
+        "At least the users:manage_roles and projects:delete INTERDIT tests carry @smoke"
+      ],
+      "verification_command": "grep -c '@smoke' e2e/tests/rbac/api-permissions.spec.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "tests",
+      "confidence": "high",
+      "notes": "Other spec files (granular-checks.spec.ts, rbac-escalation.spec.ts, clients.spec.ts) do tag critical tests with @smoke. The gap is specific to the matrix-driven loop. VERIFIED: code_evidence verbatim confirmed in api-permissions.spec.ts lines 89-143. `grep -c '@smoke' e2e/tests/rbac/api-permissions.spec.ts` returns 0, confirming zero smoke tags."
+    },
+    {
+      "id": "tests-T2-4",
+      "severity": "suggestion",
+      "category": "tests",
+      "subcategory": "matrix-endpoint-gap",
+      "title": "Permission matrix has no entry for GET /api/analytics/advanced/* endpoints (6 routes using reports:view)",
+      "file": "e2e/fixtures/permission-matrix.ts",
+      "line": "389-407",
+      "code_evidence": "  {\n    action: \"reports:view\",\n    resource: \"analytics\",\n    method: \"GET\",\n    apiEndpoint: \"/api/analytics\",\n    allowedRoles: [\"admin\", \"responsable\", \"manager\", \"observateur\"],\n    deniedRoles: [\"referent\", \"contributeur\"],\n    description:\n      \"Accéder aux analytics — Admin, Responsable, Manager, Observateur (OBSERVER_FULL a reports:view)\",\n  },",
+      "description": "The analytics controller has a sibling `AnalyticsAdvancedController` at path `analytics/advanced` with 6 GET endpoints (snapshots, workload, project-health, milestones-completion, tasks-breakdown, recent-activity), all gated by `@RequirePermissions('reports:view')`. The permission matrix only tests `reports:view` on `/api/analytics` and `/api/analytics/export`. While the permission code is covered, the advanced endpoints are never individually exercised by the matrix test loop. Additionally, `GET /api/projects/:id/snapshots` also uses `reports:view` (projects.controller.ts line 184) and is absent from the matrix.",
+      "root_cause": "Matrix design is permission-code-based (by intent — see TST-001 comment). Additional endpoints that reuse already-covered codes were not added as supplementary entries.",
+      "impact": "If the advanced analytics endpoints have a misconfigured guard (e.g. wrong decorator applied) or the guard is accidentally removed, no test will catch it. Low probability but detectable only by endpoint-level coverage.",
+      "suggested_fix": "Add at least one entry per new endpoint group to the matrix, or create a separate integration test for the advanced analytics controller. At minimum add an entry for `/api/analytics/advanced/workload` (representative) with the same allowedRoles/deniedRoles as `reports:view`.",
+      "acceptance_criteria": [
+        "At least one analytics/advanced endpoint is represented in the permission matrix or a dedicated RBAC test"
+      ],
+      "verification_command": "grep -n 'analytics/advanced' e2e/fixtures/permission-matrix.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "tests",
+      "confidence": "high",
+      "notes": "The matrix TST-001 design goal is 100% coverage of @RequirePermissions codes, which is achieved. This finding is about endpoint-level coverage beyond that goal. Severity is suggestion. VERIFIED: code_evidence verbatim confirmed in permission-matrix.ts lines 389-407. AnalyticsAdvancedController confirmed at apps/api/src/analytics/advanced/analytics-advanced.controller.ts with 6 @RequirePermissions('reports:view') GET endpoints. `grep -n 'analytics/advanced' e2e/fixtures/permission-matrix.ts` returns empty — no matrix entries. analytics-advanced.spec.ts only tests UI behavior for admin/manager, no denied-role RBAC assertions."
+    },
+    {
+      "id": "tests-T2-5",
+      "severity": "nit",
+      "category": "tests",
+      "subcategory": "migration-coverage",
+      "title": "No migration-level e2e test exists inside e2e/; schema-constraint coverage lives only in apps/api/src/schema-constraints/*.int.spec.ts",
+      "file": "e2e/global-setup.ts",
+      "line": "1-63",
+      "code_evidence": "export default async function globalSetup(): Promise<void> {\n  const apiUrl =\n    process.env.API_URL ||\n    (process.env.CI ? \"http://localhost:4000\" : \"http://localhost:4000\");\n\n  const context = await request.newContext({ baseURL: apiUrl });\n\n  try {\n    const response = await context.post(\"/api/testing/reset\");",
+      "description": "The task checklist asks whether migration assertions exist at all. They do, but not inside e2e/: schema constraint tests (DAT-003 through DAT-038, PER-010 through PER-013, AUD immutability) live at apps/api/src/schema-constraints/*.int.spec.ts and run via `pnpm test:integration`. The e2e/ tree has no migration-specific test. This is expected for the Playwright E2E suite (which tests behavior, not schema), but worth noting that the integration harness is the only coverage of constraint enforcement.",
+      "root_cause": "Design decision: schema constraint tests live in the integration layer (vitest.int.config.ts), not in Playwright e2e/.",
+      "impact": "No impact — coverage exists in the integration layer. If the integration suite is skipped (e.g. CI shortcut), schema constraint regressions would go undetected before prod.",
+      "suggested_fix": "No immediate action needed. Consider adding a CI step that always runs `pnpm test:integration` before `pnpm test:e2e` to ensure schema coverage is never skipped.",
+      "acceptance_criteria": [
+        "CI pipeline runs pnpm test:integration before pnpm test:e2e"
+      ],
+      "verification_command": "find apps/api/src/schema-constraints -name '*.int.spec.ts' | wc -l",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "tests",
+      "confidence": "high",
+      "notes": "17 schema-constraint integration test files found at apps/api/src/schema-constraints/. This is not a gap in test existence, only a location note. VERIFIED: code_evidence verbatim confirmed in e2e/global-setup.ts lines 20-30 (the exact export default function and request.newContext/post lines match). Design-by-intent architectural observation, not a defect."
+    }
+  ],
+  "refuted": []
+}

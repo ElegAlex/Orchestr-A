@@ -1,0 +1,152 @@
+{
+  "dimension": "security",
+  "shard": "S1",
+  "confirmed": [
+    {
+      "id": "security-S1-1",
+      "severity": "important",
+      "category": "security",
+      "subcategory": "session-invalidation",
+      "title": "Admin password reset (POST /users/:id/reset-password) does not bump JWT nbf, leaving existing access tokens valid for up to 15 min",
+      "file": "apps/api/src/users/users.service.ts",
+      "line": "1089-1159",
+      "code_evidence": "    await this.refreshTokenService.revokeAllForUser(userId);\n\n    // OBS-004 — durable admin-reset event. Renamed from the SEC-003 free-string\n    // 'PASSWORD_RESET_ADMIN' to the AuditAction enum value (advances OBS-024's\n    // enum-vs-free-string unification). The console-parity auditService.log\n    // below still emits PASSWORD_CHANGED — that dual sink is OBS-024 territory.\n    await this.auditPersistence.log({",
+      "description": "UsersService.resetPassword (the admin path, reached via POST /users/:id/reset-password) calls refreshTokenService.revokeAllForUser to revoke all refresh tokens, but does NOT call jwtNotBefore.bumpUser. As a result, any live access token belonging to the target user continues to be valid until its natural TTL expires (default 15 minutes). The complementary path — AuthService.resetPassword (reached via POST /auth/reset-password with a token) — correctly calls BOTH revokeAllForUser AND jwtNotBefore.bumpUser (auth.service.ts line 585). The SEC-019 rationale is already documented in the codebase: 'without this bump a stolen access token stays valid until it expires (≤15 min) after the victim resets.'",
+      "root_cause": "jwtNotBefore.bumpUser was added to AuthService.resetPassword (SEC-019) but the equivalent admin path in UsersService.resetPassword was not updated.",
+      "impact": "After an admin force-resets a user's password (e.g. in response to credential compromise), the target user's existing access tokens remain usable for up to 15 minutes. An attacker who has stolen an access token can continue to act as that user despite the forced reset, until token TTL expires.",
+      "suggested_fix": "Add `await this.jwtNotBefore.bumpUser(userId);` immediately after `await this.refreshTokenService.revokeAllForUser(userId);` in UsersService.resetPassword (around line 1130). JwtNotBeforeService is already injected in UsersService (line 62) so no additional wiring is needed.",
+      "acceptance_criteria": [
+        "After POST /users/:id/reset-password, a previously-issued access token for the target user is rejected by JwtStrategy.validate on the next request.",
+        "The Redis key jwt:nbf:<userId> exists with a value equal to approximately now+1 (seconds) and TTL <= JWT_ACCESS_TTL + 60s.",
+        "Integration test: issue access token, admin-reset password, verify 401 on the old token within 1 second."
+      ],
+      "verification_command": "grep -n 'bumpUser' apps/api/src/users/users.service.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "jwtNotBefore is already injected (constructor line 62, field declared at line 63). The fix is one line. Adversarial check confirms: bumpUser appears at lines 781 and 826 (for deactivation/removal paths) but NOT in the resetPassword body (lines 1089-1159). AuthService.resetPassword at line 585 correctly calls bumpUser — the omission in the admin path is confirmed."
+    },
+    {
+      "id": "security-S1-2",
+      "severity": "important",
+      "category": "security",
+      "subcategory": "input-validation",
+      "title": "LoginDto.password has no @MaxLength — long password input allows DoS via bcrypt CPU exhaustion",
+      "file": "apps/api/src/auth/dto/login.dto.ts",
+      "line": "13-19",
+      "code_evidence": "  @ApiProperty({\n    description: 'Mot de passe',\n    example: 'admin123',\n  })\n  @IsString()\n  @MinLength(6)\n  password: string;",
+      "description": "The LoginDto's password field only enforces @IsString and @MinLength(6). There is no @MaxLength. bcrypt is deliberately CPU-intensive: hashing or comparing a very long string (e.g. 10 KB) can consume hundreds of milliseconds. Even with the @Throttle limit (5/min per IP) an attacker can send 5 requests per minute each with a 1 MB password body, generating significant CPU load. The per-IP throttle mitigates rate but not payload size. Many bcrypt libraries also truncate at 72 bytes, but the comparison still iterates on the full input up to that truncation in some implementations, and the server reads and deserialises the full body. NestJS's ValidationPipe does not cap body size by itself; a separate global limit should exist, but DTO-level MaxLength is the defense-in-depth layer at the validation gate.",
+      "root_cause": "LoginDto was never given a @MaxLength on password, and the global throttle was treated as the sole guard against credential-stuffing DoS.",
+      "impact": "A single attacker IP can send 5 requests/minute each with a multi-MB password string, causing high CPU load on the auth path. Under sustained attack from multiple IPs this degrades auth latency for legitimate users.",
+      "suggested_fix": "Add @MaxLength(1024) to LoginDto.password (and optionally @MaxLength(254) to login, matching the NIST recommendation). Also confirm that Fastify's bodyLimit is set to a reasonable value (e.g. 1 MB) in main.ts to cap the raw body size before DTO validation.",
+      "acceptance_criteria": [
+        "POST /auth/login with a password longer than 1024 characters returns 400 Bad Request.",
+        "Login with a valid <= 1024 char password still succeeds."
+      ],
+      "verification_command": "grep -n 'MaxLength\\|bodyLimit' apps/api/src/auth/dto/login.dto.ts apps/api/src/main.ts 2>/dev/null | head -20",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "medium",
+      "notes": "Adversarial check: main.ts line 96-98 sets bodyLimit=1048576 (1 MiB, SEC-025) which provides an outer bound — a single request body cannot exceed 1 MB. However, a 1 MB password still represents ~14,000 characters feeding into bcrypt. The DTO-level MaxLength is still absent and the defense-in-depth gap is real. Confidence downgraded from high to medium because the 1 MiB body limit substantially mitigates the worst-case payload size."
+    },
+    {
+      "id": "security-S1-3",
+      "severity": "important",
+      "category": "security",
+      "subcategory": "access-control",
+      "title": "POST /users/:id/reset-password uses 'users:manage_roles' permission — semantically wrong and may grant unintended reset capability to role managers",
+      "file": "apps/api/src/users/users.controller.ts",
+      "line": "430-431",
+      "code_evidence": "  @Post(':id/reset-password')\n  @RequirePermissions('users:manage_roles')\n  @HttpCode(HttpStatus.OK)\n  @ApiOperation({\n    summary:\n      \"Réinitialiser le mot de passe d'un utilisateur (Admin/Responsable)\",",
+      "description": "The admin password-reset endpoint at POST /users/:id/reset-password requires the permission 'users:manage_roles', not 'users:reset_password'. The complementary token-generation endpoint at POST /auth/reset-password-token uses 'users:reset_password'. This means that any role template carrying 'users:manage_roles' (role administration) can directly reset any subordinate user's password, even if the operator intended role administration and password reset to be separate privileges. Conversely, a role template that holds 'users:reset_password' but not 'users:manage_roles' cannot use this direct-reset endpoint, even though it can use the token-generation path. The inconsistency means the password-reset access surface is wider than explicitly designed: role managers gain implicit password-reset authority.",
+      "root_cause": "The direct-reset endpoint was wired to 'users:manage_roles' instead of the purpose-built 'users:reset_password' permission, possibly because it was added alongside role-management features.",
+      "impact": "Any role bound to a template that includes 'users:manage_roles' can directly reset subordinate users' passwords. If the operator assigns 'users:manage_roles' to a role they intend as pure role-administration (not credential management), they silently gain password-reset authority over subordinates. This widens the blast radius of a compromised account with role-management access.",
+      "suggested_fix": "Change line 431 to @RequirePermissions('users:reset_password'). Verify that all templates intended to perform admin password resets carry 'users:reset_password'. If both are needed, add @RequireAnyPermission('users:manage_roles', 'users:reset_password') with a comment explaining the dual need.",
+      "acceptance_criteria": [
+        "A caller with only 'users:manage_roles' (and not 'users:reset_password') gets 403 on POST /users/:id/reset-password.",
+        "A caller with 'users:reset_password' gets 200 on POST /users/:id/reset-password (provided hierarchy check passes).",
+        "E2E: RBAC matrix confirms the reset-password endpoint is not reachable by REFERENT_TECHNIQUE roles that only hold manage_roles."
+      ],
+      "verification_command": "grep -rn \"users:reset_password\\|users:manage_roles\" apps/api/src/users/users.controller.ts apps/api/src/auth/auth.controller.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Adversarial check: users.controller.ts line 431 confirmed `@RequirePermissions('users:manage_roles')`. auth.controller.ts line 314 uses `@RequirePermissions('users:reset_password')` for the token-path — the mismatch is real. Both endpoints still enforce hierarchy in the service layer via roleHierarchy.assertCanAssignRole, so there is no privilege escalation, but the permission surface inconsistency is confirmed."
+    },
+    {
+      "id": "security-S1-4",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "input-validation",
+      "title": "CreateUserDto.login and ImportUserDto.login missing @MaxLength — unbounded login field",
+      "file": "apps/api/src/users/dto/create-user.dto.ts",
+      "line": "46-52",
+      "code_evidence": "  @ApiProperty({\n    description: 'Login (format: prenom.nom)',\n    example: 'marie.martin',\n  })\n  @IsString()\n  @MinLength(3)\n  login: string;",
+      "description": "CreateUserDto.login and ImportUserDto.login (same pattern at import-users.dto.ts lines 28-34) have @IsString and @MinLength(3) but no @MaxLength. The RegisterDto.login correctly has @MaxLength(50). Without a cap, an adversary with 'users:create' or 'users:import' can store an arbitrarily long login string in the DB. The DB column may have its own limit (likely varchar), but the DTO layer should enforce it independently for defense-in-depth and to produce a cleaner 400 rather than a DB-layer 500 on overflow.",
+      "root_cause": "RegisterDto was hardened with @MaxLength(50) but the same constraint was not copied to CreateUserDto and ImportUserDto when they were defined.",
+      "impact": "An admin or importer could create users with very long login strings, potentially causing DB truncation/errors or storage abuse. Low severity because the endpoint is admin-only (users:create / users:import).",
+      "suggested_fix": "Add @MaxLength(50) to CreateUserDto.login and ImportUserDto.login, matching RegisterDto.login.",
+      "acceptance_criteria": [
+        "POST /users with a login longer than 50 characters returns 400 Bad Request.",
+        "POST /users/import with a login longer than 50 characters reports a per-row error, not a 500."
+      ],
+      "verification_command": "grep -n 'MaxLength\\|MinLength' apps/api/src/users/dto/create-user.dto.ts apps/api/src/users/dto/import-users.dto.ts",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Adversarial check: create-user.dto.ts line 49 confirms @MinLength(3) with no @MaxLength on login. import-users.dto.ts line 29 same pattern. Prisma schema shows `login String @unique` with no @db.VarChar(N) — PostgreSQL will map this to TEXT (unbounded), so there is no DB-level cap either. Finding is fully confirmed."
+    },
+    {
+      "id": "security-S1-5",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "input-validation",
+      "title": "getUsersPresence accepts arbitrary dateStr with no format validation — invalid date causes NaN Date passed to $queryRaw",
+      "file": "apps/api/src/users/users.service.ts",
+      "line": "1679-1684",
+      "code_evidence": "  async getUsersPresence(dateStr?: string) {\n    const targetDate = dateStr ? new Date(dateStr) : new Date();\n    const startOfDay = new Date(targetDate);\n    startOfDay.setHours(0, 0, 0, 0);\n    const endOfDay = new Date(targetDate);\n    endOfDay.setHours(23, 59, 59, 999);",
+      "description": "The date query parameter is passed directly to new Date(dateStr) without validation. If dateStr is an invalid date string (e.g. 'not-a-date', 'NaN', ''), new Date() produces an Invalid Date object (whose getTime() returns NaN). This NaN Date is then passed as a bound parameter to the Prisma $queryRaw template literal. Prisma will serialize NaN/Invalid Date in a DB-driver-specific way: PostgreSQL will likely reject it with a type error (500 Internal Server Error), but the error message from AllExceptionsFilter is safely opaqued to 'Internal server error'. The path is: GET /users/presence?date=<badstring> → service crash → 500. This is a denial-of-service concern and a poor user experience. The SQL injection risk is nil because Prisma's tagged template literal parameterizes values.",
+      "root_cause": "The date query parameter is not validated before use — no regex or isValid() check, no DTO validator.",
+      "impact": "Any authenticated user with 'users:read' can trigger a 500 by passing an invalid date string to GET /users/presence. This is a minor DoS/observability issue.",
+      "suggested_fix": "In the controller, add a query parameter validator: either use a custom pipe (@Query('date', new ParseDatePipe())) or add a guard in the service: `if (dateStr && isNaN(new Date(dateStr).getTime())) throw new BadRequestException('Date format invalide — use YYYY-MM-DD');`",
+      "acceptance_criteria": [
+        "GET /users/presence?date=not-a-date returns 400 Bad Request.",
+        "GET /users/presence?date=2026-06-04 returns 200 with presence data."
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Adversarial check: controller at line 185 passes raw string directly: `getUsersPresence(@Query('date') date?: string)` with no pipe. Service line 1679-1684 verbatim confirmed. No isNaN guard present. No injection risk (parameterized), but 500 on invalid date is confirmed real."
+    },
+    {
+      "id": "security-S1-6",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "information-disclosure",
+      "title": "uploads-auth.hook.ts skips jti blacklist and nbf checks — logged-out tokens remain valid for avatar reads up to access TTL",
+      "file": "apps/api/src/common/fastify/uploads-auth.hook.ts",
+      "line": "78-83",
+      "code_evidence": "    try {\n      verifier.verify(token);\n    } catch {\n      return unauthorized(reply);\n    }\n  };\n}",
+      "description": "The uploads auth hook (SEC-016) only checks that the Bearer token's signature is valid and has not expired — it does NOT check the jti blacklist (JwtBlacklistService) or the per-user nbf (JwtNotBeforeService). The comment in the file acknowledges this intentionally: 'a logged-out-but-unexpired token revealing a profile photo for ≤ the access TTL is negligible vs. the anonymous hole'. However, this also means that after a forced password reset or account deactivation (both of which bump nbf via JwtNotBeforeService), the old token can still be used to retrieve avatar images for the remaining access TTL. For a public-sector app handling HR data (org chart avatars could be sensitive), this could be a privacy concern. The mitigating factors are: (1) avatarUrl is already returned to every authenticated user in summaries, so avatars are not confidential; (2) the TTL gap is ≤15 min.",
+      "root_cause": "Intentional design decision documented in the hook's comment — the blacklist/nbf checks were omitted as disproportionate for avatar access.",
+      "impact": "A logged-out user (via /auth/logout) or a deactivated/reset user can continue to fetch avatar images for up to JWT_ACCESS_TTL after the security event. Low severity because avatars are already visible to all authenticated users in summaries.",
+      "suggested_fix": "Accept as intentional, or optionally add a lightweight blacklist check by injecting JwtBlacklistService into the hook factory: `if (payload.jti && await blacklist.isBlacklisted(payload.jti)) return unauthorized(reply);`. This adds one Redis round-trip per avatar fetch but closes the logout-bypass for avatar reads.",
+      "acceptance_criteria": [
+        "After POST /auth/logout, GET /api/uploads/avatars/<id>.jpg with the old token returns 401."
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Adversarial check: code at lines 78-83 verbatim confirmed — only verifier.verify(token) called, no blacklist/nbf check. Finding is intentional by design (documented in hook comment). Retained as confirmed because: (1) the code evidence is accurate, (2) the gap is real even if intentional, (3) operators need to make an explicit accept/close decision. Classified as nit/informational."
+    }
+  ],
+  "refuted": []
+}

@@ -1,0 +1,130 @@
+{
+  "dimension": "data_integrity",
+  "shard": "D4",
+  "confirmed": [
+    {
+      "id": "data_integrity-D4-1",
+      "severity": "important",
+      "category": "data_integrity",
+      "subcategory": "lock_risk_no_concurrently",
+      "title": "25 CREATE INDEX statements in dat011_fk_indexes run without CONCURRENTLY — ACCESS EXCLUSIVE lock on every indexed table",
+      "file": "packages/database/prisma/migrations/20260603115724_dat011_fk_indexes/migration.sql",
+      "line": "1-74",
+      "code_evidence": "-- CreateIndex\nCREATE INDEX \"comments_taskId_idx\" ON \"comments\"(\"taskId\");\n\n-- CreateIndex\nCREATE INDEX \"comments_authorId_idx\" ON \"comments\"(\"authorId\");\n\n-- CreateIndex\nCREATE INDEX \"departments_managerId_idx\" ON \"departments\"(\"managerId\");\n\n-- CreateIndex\nCREATE INDEX \"documents_projectId_idx\" ON \"documents\"(\"projectId\");",
+      "description": "All 25 CREATE INDEX statements in this migration (finding originally counted 18, actual count is 25 from grep) use the standard (blocking) form without CONCURRENTLY. PostgreSQL acquires an ACCESS EXCLUSIVE lock for the duration of the index build, which blocks all concurrent reads and writes to the affected table. This migration touches high-traffic tables: comments, documents, events, projects, milestones, password_reset_tokens, predefined_task_recurring_rules, predefined_tasks, services, holidays, leave_validation_delegates, leaves, epics. On a live production database with millions of rows in any of these tables, the migration will cause a complete read+write outage for each table in sequence. Prisma wraps migrations in a transaction, so CONCURRENTLY cannot be used directly — the comment in dat015 acknowledges this pattern — but the risk on large tables remains unmitigated.",
+      "root_cause": "All CREATE INDEX statements are non-concurrent, taking ACCESS EXCLUSIVE table locks; acceptable in a small dev DB but causes outages on large production tables.",
+      "impact": "On any table with non-trivial data volume, all reads and writes are blocked for the duration of each index build. With 25 indexes in sequence, the total lock window could span seconds to minutes per table, causing request timeouts and visible service interruption on prod.",
+      "suggested_fix": "For production deployments, run each CREATE INDEX CONCURRENTLY in a separate migration (or using a custom migration runner outside a transaction). Prisma cannot use CONCURRENTLY inside its default transactional migration wrapper; a workaround is to mark the migration as non-transactional in its migration.sql (add `-- No transaction` at the top for Prisma v3+ with the `--skip-generate` flag, or use a custom migration script). Alternatively, accept the lock window if tables are small and document the maintenance window requirement.",
+      "acceptance_criteria": [
+        "Either each index is built CONCURRENTLY in a separate non-transactional migration, or the prod deployment runbook documents a maintenance window for this migration",
+        "No production requests are dropped or timeout due to table locks during the migration"
+      ],
+      "verification_command": "SELECT schemaname, tablename, indexname FROM pg_indexes WHERE indexname IN ('comments_taskId_idx','documents_projectId_idx','projects_createdById_idx') AND schemaname='public'; -- verify indexes exist after migration",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "data_integrity",
+      "confidence": "high",
+      "notes": "CONFIRMED. Code evidence verbatim present. Migration file has 25 CREATE INDEX statements (finding title said '18' — minor count error, does not affect validity of finding). No CONCURRENTLY keyword and no '-- No transaction' directive present anywhere in the migration. The same pattern recurs in per010, per011, per012, per013, dat029 migrations. Flagged once here at the first occurrence (dat011). The dat015 migration itself explicitly notes 'NOTE: not CONCURRENTLY — migrations run inside a transaction', confirming this is a known constraint but not addressing the lock risk on large tables."
+    },
+    {
+      "id": "data_integrity-D4-2",
+      "severity": "important",
+      "category": "data_integrity",
+      "subcategory": "missing_check_constraint",
+      "title": "project_snapshots.progress lacks CHECK (BETWEEN 0 AND 100) — DAT-003/004 coverage gap",
+      "file": "packages/database/prisma/migrations/20260603130000_cor014_snapshot_unique_projectid_date/migration.sql",
+      "line": "1-8",
+      "code_evidence": "-- COR-014: Add unique constraint on (projectId, date) in project_snapshots\n-- Prevents duplicate snapshots from concurrent scheduler ticks.\n-- date is stored as startOfDay (midnight UTC), so this enforces one row per project per day.\n-- DropIndex replaces the plain index with the unique index (subsumes it).\nDROP INDEX IF EXISTS \"project_snapshots_projectId_date_idx\";\n\n-- CreateIndex\nCREATE UNIQUE INDEX \"project_snapshots_projectId_date_key\" ON \"project_snapshots\"(\"projectId\", \"date\");",
+      "description": "The COR-014 migration adds the unique constraint on (projectId, date) but does not add CHECK constraints on project_snapshots numeric integrity. Cross-checking against the DAT-003/004 migration (20260527120000_dat003_dat004_business_invariants/migration.sql), that migration adds CHECK constraints for tasks.progress, epics.progress, project_members.allocation, etc. — but project_snapshots.progress (0.00–100.00 per schema comment) is absent. Additionally, there is no CHECK (tasksDone >= 0), CHECK (tasksTotal >= 0), or CHECK (tasksDone <= tasksTotal) on project_snapshots. A buggy scheduler tick or direct SQL fix could insert progress=150 or tasksDone=10 with tasksTotal=5 without any DB-level rejection.",
+      "root_cause": "The DAT-003/004 migration that added business invariant CHECK constraints omitted project_snapshots entirely; the COR-014 migration which touches project_snapshots was a natural opportunity to add them but did not.",
+      "impact": "A buggy snapshot service, a race condition, or a direct SQL admin correction could insert out-of-range progress values (e.g. > 100%) or impossible task counts (tasksDone > tasksTotal), which would cascade into incorrect analytics, dashboard displays, and KPI reports without any DB-level rejection.",
+      "suggested_fix": "Add a follow-up migration:\n```sql\nALTER TABLE \"project_snapshots\"\n  ADD CONSTRAINT \"project_snapshots_progress_ck\" CHECK (\"progress\" BETWEEN 0 AND 100),\n  ADD CONSTRAINT \"project_snapshots_tasksDone_ck\" CHECK (\"tasksDone\" >= 0),\n  ADD CONSTRAINT \"project_snapshots_tasksTotal_ck\" CHECK (\"tasksTotal\" >= 0),\n  ADD CONSTRAINT \"project_snapshots_tasksDone_le_total_ck\" CHECK (\"tasksDone\" <= \"tasksTotal\");\n```\nVerify no existing rows violate these predicates before applying.",
+      "acceptance_criteria": [
+        "project_snapshots has CHECK (progress BETWEEN 0 AND 100)",
+        "project_snapshots has CHECK (tasksDone >= 0) and CHECK (tasksTotal >= 0)",
+        "project_snapshots has CHECK (tasksDone <= tasksTotal)",
+        "INSERT of progress=101 into project_snapshots is rejected by the DB with a constraint violation"
+      ],
+      "verification_command": "SELECT conname, consrc FROM pg_constraint WHERE conrelid = 'project_snapshots'::regclass AND contype = 'c';",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "data_integrity",
+      "confidence": "high",
+      "notes": "CONFIRMED. COR-014 migration code evidence is verbatim. Full grep of all migrations confirms zero CHECK constraints on project_snapshots. DAT-003/004 migration (20260527120000_dat003_dat004_business_invariants/migration.sql) confirmed to add CHECK constraints for tasks.progress, epics.progress, predefined_tasks.weight, project_members.allocation, leaves.days, leave_balances.totalDays, documents.size — but project_snapshots is explicitly absent. Schema.prisma comment says '0.00 – 100.00' but this is documentation only, not enforced at the DB level."
+    },
+    {
+      "id": "data_integrity-D4-3",
+      "severity": "important",
+      "category": "data_integrity",
+      "subcategory": "dual_uniqueness_semantic_confusion",
+      "title": "DAT-015 creates redundant dual-layer uniqueness on email: plain @unique (case-sensitive) + LOWER() functional index (case-insensitive) — Prisma findUnique bypasses the case-insensitive guard",
+      "file": "packages/database/prisma/migrations/20260603140000_dat015_email_varchar254_lower_unique/migration.sql",
+      "line": "9-16",
+      "code_evidence": "-- AlterTable: cap email to VarChar(254) per RFC 5321 max length\nALTER TABLE \"users\" ALTER COLUMN \"email\" SET DATA TYPE VARCHAR(254);\n\n-- CreateIndex: case-insensitive unique index on email (LOWER() functional index)\n-- NOTE: not CONCURRENTLY — migrations run inside a transaction\nCREATE UNIQUE INDEX \"users_email_lower_uk\" ON \"users\" (LOWER(email));\n\n-- CreateIndex: case-insensitive unique index on login\nCREATE UNIQUE INDEX \"users_login_lower_uk\" ON \"users\" (LOWER(login));",
+      "description": "The migration comment states 'The @unique PSL constraint is kept; these indexes do the case-insensitive enforcement.' However, the Prisma-managed plain @unique constraint on email (which creates a B-tree index on the raw email column) is case-sensitive and remains active. The new users_email_lower_uk LOWER() functional index is case-insensitive. This dual-layer setup means: (1) INSERT/UPDATE of 'User@Example.com' when 'user@example.com' already exists is correctly BLOCKED by the LOWER() index. (2) However, auth.service.ts validateUser() uses prisma.user.findUnique({ where: { email: login } }) at line 80-81, which uses the exact-match B-tree index. Emails are stored as-is (no toLowerCase before storage confirmed at users.service.ts:155). If the stored canonical form is 'User@Example.com' and the login attempt uses 'user@example.com', findUnique returns null and authentication fails, even though the uniqueness constraint would block creating a second user.",
+      "root_cause": "Prisma's @unique PSL constraint generates a plain B-tree index that Prisma uses for findUnique calls; adding a separate LOWER() functional index enforces DB-level case-insensitive uniqueness at write time but does not make Prisma findUnique case-insensitive at read time. Emails are stored as-is (not normalized to lowercase), so the case-sensitivity gap on read paths is real.",
+      "impact": "Users who registered with a mixed-case email (or created via admin import without normalization) cannot log in using a different case variant of that email. Authentication silently fails for case-variant email addresses. Registration via self-registration (auth.service.ts) also stores email as-is (line 333: `email: registerDto.email`).",
+      "suggested_fix": "For consistent case-insensitive email handling: (1) Normalize all email inputs to lowercase in the application layer (auth.service.ts, users.service.ts) before DB storage AND before lookup. (2) Once all stored emails are lowercase, the LOWER() functional index and the plain @unique become equivalent and the plain one can be dropped via `DROP INDEX users_email_key`. Alternatively, replace Prisma findUnique with findFirst + raw WHERE LOWER(email) = LOWER($1) for auth lookups, but this bypasses Prisma's unique index optimization.",
+      "acceptance_criteria": [
+        "prisma.user.findUnique({ where: { email: 'USER@EXAMPLE.COM' } }) returns the same row as findUnique({ where: { email: 'user@example.com' } })",
+        "Attempting to create a user with 'USER@EXAMPLE.COM' when 'user@example.com' exists fails with a unique constraint error",
+        "No two users have emails that differ only in case"
+      ],
+      "verification_command": "SELECT email, COUNT(*) FROM users GROUP BY LOWER(email) HAVING COUNT(*) > 1; -- should return 0 rows after normalization",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "data_integrity",
+      "confidence": "high",
+      "notes": "CONFIRMED. Migration code evidence is verbatim. auth.service.ts line 80-81: `prisma.user.findUnique({ where: { email: login } })` verified — no toLowerCase on login before call. users.service.ts line 155: `email: createUserDto.email` — stored as-is. Registration path (auth.service.ts line 333) also stores as-is. The migration comment acknowledges 'compatible with the existing @unique Prisma declarations used by findUnique calls in auth.service.ts' but this is the issue — findUnique on email is case-sensitive. The same dual-index pattern is applied to login but login is typically typed exactly so the risk is lower there."
+    },
+    {
+      "id": "data_integrity-D4-4",
+      "severity": "suggestion",
+      "category": "data_integrity",
+      "subcategory": "non_partial_index_on_nullable_hot_filter",
+      "title": "password_reset_tokens index (userId, usedAt) is non-partial — hot query path WHERE usedAt IS NULL will scan all rows including consumed tokens",
+      "file": "packages/database/prisma/migrations/20260604050007_dat028_password_reset_token_indexes/migration.sql",
+      "line": "2-3",
+      "code_evidence": "-- CreateIndex\nCREATE INDEX \"password_reset_tokens_userId_usedAt_idx\" ON \"password_reset_tokens\"(\"userId\", \"usedAt\");",
+      "description": "The auth service's hot query is `updateMany({ where: { userId, usedAt: null } })` (auth.service.ts:501) — finding all unused tokens for a user. The composite index (userId, usedAt) includes all rows, both used (usedAt IS NOT NULL, historical) and unused (usedAt IS NULL, active). Over time, as users request password resets repeatedly, the index grows with consumed token rows. A partial index WHERE usedAt IS NULL would be far smaller and faster for the hot path, since the active token set is always a tiny fraction of the historical set.",
+      "root_cause": "The index was created as a full composite index; the access pattern (filter on usedAt IS NULL) would be more efficiently served by a partial index.",
+      "impact": "As the password_reset_tokens table accumulates history (each admin-generated reset creates a row), the index becomes progressively less efficient for the unused-token lookup. This is a gradual performance degradation rather than an immediate bug, but in large deployments or security-heavy environments with frequent token generation it becomes significant.",
+      "suggested_fix": "Replace with a partial index:\n```sql\nDROP INDEX IF EXISTS \"password_reset_tokens_userId_usedAt_idx\";\nCREATE INDEX \"password_reset_tokens_userId_active_idx\" ON \"password_reset_tokens\"(\"userId\") WHERE \"usedAt\" IS NULL;\n```\nKeep the expiresAt index for GC scans.",
+      "acceptance_criteria": [
+        "EXPLAIN ANALYZE on `SELECT * FROM password_reset_tokens WHERE userId = 'x' AND usedAt IS NULL` uses the partial index (Index Scan) rather than a full composite index scan"
+      ],
+      "verification_command": "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM password_reset_tokens WHERE \"userId\" = 'test-uuid' AND \"usedAt\" IS NULL;",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "data_integrity",
+      "confidence": "high",
+      "notes": "CONFIRMED. Index code evidence is verbatim. auth.service.ts line 501: `where: { userId, usedAt: null }` confirmed. The existing index does provide a benefit over no index, but a partial index would be strictly superior for this access pattern."
+    },
+    {
+      "id": "data_integrity-D4-5",
+      "severity": "nit",
+      "category": "data_integrity",
+      "subcategory": "missing_length_check_on_hash_column",
+      "title": "documents.contentSha256 is TEXT with no CHECK constraint — any arbitrary string can be stored as a SHA-256 hash",
+      "file": "packages/database/prisma/migrations/20260603214608_dat025_document_fk_softdelete/migration.sql",
+      "line": "2-3",
+      "code_evidence": "-- AlterTable\nALTER TABLE \"documents\" ADD COLUMN     \"contentSha256\" TEXT,\nADD COLUMN     \"deletedAt\" TIMESTAMP(3),\nALTER COLUMN \"uploadedBy\" DROP NOT NULL;",
+      "description": "The contentSha256 column stores a SHA-256 hex digest (64 hex characters). It is declared as TEXT (unbounded) with no CHECK constraint. This allows storing values of incorrect length (e.g. 32 chars for MD5, or truncated values) or non-hex characters without DB-level rejection. While the column is described as nullable ('no upload pipeline yet'), once it is populated by the upload service, a corrupted or wrong-format hash will silently pass validation and could later lead to incorrect integrity checks.",
+      "root_cause": "Column declared as TEXT without a length constraint or format CHECK; SHA-256 hex digests have a fixed length of 64 characters.",
+      "impact": "A bug or typo in the upload pipeline could store a malformed hash (wrong length, non-hex characters, uppercase vs lowercase inconsistency). Integrity verification would then silently fail or throw unexpected errors when the hash is used for comparison.",
+      "suggested_fix": "Change to a fixed-length type or add a CHECK constraint:\n```sql\nALTER TABLE \"documents\" ALTER COLUMN \"contentSha256\" TYPE CHAR(64);\n-- or:\nALTER TABLE \"documents\" ADD CONSTRAINT \"documents_contentSha256_ck\" CHECK (\"contentSha256\" ~ '^[0-9a-f]{64}$');\n```\nAlso standardize on lowercase hex output in the upload pipeline.",
+      "acceptance_criteria": [
+        "INSERT of a 32-character string into documents.contentSha256 fails with a constraint error",
+        "INSERT of a non-hex string into documents.contentSha256 fails with a constraint error",
+        "INSERT of a valid 64-character lowercase hex string succeeds"
+      ],
+      "verification_command": "SELECT id, contentSha256 FROM documents WHERE contentSha256 IS NOT NULL AND contentSha256 !~ '^[0-9a-f]{64}$'; -- should return 0 rows if data is clean",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "data_integrity",
+      "confidence": "high",
+      "notes": "CONFIRMED. Code evidence is verbatim. Full search of all migrations confirms contentSha256 appears only once (in dat025_document_fk_softdelete) and no subsequent migration adds a CHECK constraint. Schema.prisma declares it as `String?` (TEXT in PostgreSQL) with comment 'nullable — no upload pipeline yet'. Pre-emptive but appropriate to flag before the pipeline is built."
+    }
+  ],
+  "refuted": []
+}

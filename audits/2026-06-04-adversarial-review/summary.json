@@ -1,0 +1,61 @@
+{
+  "report_date": "2026-06-04",
+  "repo_commit": "0997b30e2d44289239d5ba5d8f4f463d58748ad0",
+  "verdict": "blocking-issues",
+  "verdict_rationale": "7 confirmed blocking findings remain after live verification downgraded the SEC-001 'plaintext prod' claim (prod terminates TLS via a certbot-managed host nginx with a valid Let's Encrypt cert and http->https redirect). The blockers still span authorization bypass (any delegate approves any leave), data-loss windows (audit SET-NULL gap, missing TaskRACI FK), a non-transactional task import, and a CI boot failure that blocks E2E. With 155 important findings concentrated in systemic themes (transactions, IDOR, unbounded queries, audit coverage), the system cannot ship until at least the blocking set and the highest-leverage important clusters are remediated.",
+  "totals": {
+    "findings": 268,
+    "blocking": 7,
+    "important": 155,
+    "nit": 99,
+    "suggestion": 7,
+    "by_category": {
+      "correctness": 69,
+      "data_integrity": 31,
+      "observability": 29,
+      "performance": 61,
+      "security": 66,
+      "tests": 12
+    }
+  },
+  "top_10_blocking": [
+    "DAT-001",
+    "COR-001",
+    "COR-002",
+    "COR-003",
+    "DAT-002",
+    "OBS-001",
+    "TST-001",
+    "DAT-010",
+    "DAT-013",
+    "SEC-001"
+  ],
+  "key_metrics": {
+    "confirmed_findings": "268",
+    "refuted_by_adversarial_verify": "13",
+    "blocking": "7",
+    "important": "155",
+    "nit": "99",
+    "suggestion": "7",
+    "controllers_scanned": "35",
+    "migrations_scanned": "73",
+    "pages_scanned": "30",
+    "files_with_findings": "123",
+    "root_cause_clusters": "16",
+    "security_findings": "66",
+    "correctness_findings": "69",
+    "performance_findings": "61",
+    "data_integrity_findings": "31",
+    "observability_findings": "29",
+    "test_findings": "12",
+    "missing_audit_coverage_modules": "14+",
+    "unbounded_or_1000_cap_list_endpoints": "29"
+  },
+  "coverage_assertion": {
+    "controllers_scanned": 35,
+    "migrations_scanned": 73,
+    "pages_scanned": 30,
+    "test_files_scanned": 227,
+    "untracked_files_included": 0
+  }
+}

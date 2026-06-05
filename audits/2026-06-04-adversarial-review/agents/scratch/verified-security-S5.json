@@ -1,0 +1,128 @@
+{
+  "dimension": "security",
+  "shard": "S5",
+  "confirmed": [
+    {
+      "id": "security-S5-1",
+      "severity": "important",
+      "category": "security",
+      "subcategory": "authorization / IDOR",
+      "title": "canValidate() delegation fallback grants approve rights across the entire org, bypassing service-scope",
+      "file": "apps/api/src/leaves/leaves.service.ts",
+      "line": "1638-1650",
+      "code_evidence": "    // Vérifier les délégations actives\n    const today = new Date();\n    const activeDelegation =\n      await this.prisma.leaveValidationDelegate.findFirst({\n        where: {\n          delegateId: validatorId,\n          isActive: true,\n          startDate: { lte: today },\n          endDate: { gte: today },\n        },\n      });\n\n    return activeDelegation !== null;",
+      "description": "The final branch of `canValidate()` checks whether the caller is an active delegate of ANY delegator in the system, without scoping the check to the leave's owner, department, or service perimeter. A user delegated by Manager A (who covers Dept A) can therefore approve a pending leave belonging to any user in any other department. This directly contradicts the intention of delegations (which are supposed to cover the delegating manager's own perimeter) and the scope logic enforced everywhere else in the service (`getServiceIds`, `getManagedUserIds`). The `findValidatorForUser()` helper correctly scopes delegation lookups to `delegatorId: managerId` (the leave owner's department manager), but `canValidate()` does not.",
+      "root_cause": "The delegation lookup at the end of `canValidate()` matches any active delegation where the caller is `delegateId`, with no filter on `delegatorId` nor any perimeter check linking the delegator to the leave's owner.",
+      "impact": "Any user who has been delegated by even one manager can approve (or reject) leave requests from any other employee in the organization, regardless of service or department perimeter. Affects confidentiality (a delegate sees and can act on leaves outside their scope) and integrity (unauthorized leave approvals).",
+      "suggested_fix": "After checking the delegator's service perimeter, further restrict the delegation lookup: fetch the leave's `validatorId` (the assigned manager), then query for a delegation scoped to that delegatorId: `{ delegateId: validatorId, delegatorId: leave.validatorId, isActive: true, startDate: { lte: today }, endDate: { gte: today } }`. If `leave.validatorId` is null, fall back to the department manager lookup as in `findValidatorForUser`.",
+      "acceptance_criteria": [
+        "A delegate of Manager A cannot call POST /leaves/:id/approve on a leave whose `validatorId` belongs to Manager B (expect 403).",
+        "A delegate of Manager A CAN approve a leave whose `validatorId` is Manager A (expect 200).",
+        "Existing unit test for `canValidate` covers cross-department delegation boundary."
+      ],
+      "verification_command": "N/A — manual verification: create two managers M1, M2 each with subordinates, create delegation for M1->D, then have D try to approve a leave belonging to M2's subordinate.",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "The comment at line 712 acknowledges the correct scope ('COR-005: scope the delegation lookup to the user's own department manager') for findValidatorForUser, but canValidate does not apply the same discipline. Adversarial review confirmed: the approve() method at line 1704 calls canValidate(), and the delegation check at lines 1638-1650 has no delegatorId filter. findValidatorForUser() at lines 712-735 correctly scopes to `delegatorId: managerId` — the asymmetry is real and exploitable."
+    },
+    {
+      "id": "security-S5-2",
+      "severity": "important",
+      "category": "security",
+      "subcategory": "input validation / DoS",
+      "title": "ImportLeavesDto.leaves array has no upper-bound limit, enabling memory-exhaustion via large payloads",
+      "file": "apps/api/src/leaves/dto/import-leaves.dto.ts",
+      "line": "61-70",
+      "code_evidence": "export class ImportLeavesDto {\n  @ApiProperty({\n    description: 'Liste des congés à importer',\n    type: [ImportLeaveDto],\n  })\n  @IsArray()\n  @ValidateNested({ each: true })\n  @Type(() => ImportLeaveDto)\n  leaves: ImportLeaveDto[];\n}",
+      "description": "The `leaves` array in `ImportLeavesDto` has no `@ArrayMaxSize()` constraint. While the global body limit is 1 MiB (main.ts), a 1 MiB JSON array of `ImportLeaveDto` objects can contain several thousand rows. The `importLeaves()` service method then iterates all rows, calling `getHolidayKeySet()` (a DB query) on each row inside a transaction, plus `findValidatorForUser()` for each row. This can translate to thousands of sequential DB queries per import call, causing significant CPU/DB load. The `validateImport` endpoint (dry-run) has the same issue and even loads ALL active users into memory upfront. Both endpoints require only `leaves:create` permission (not a restricted admin-only permission), so any contributor-level user can trigger this.",
+      "root_cause": "No `@ArrayMaxSize(N)` decorator on `ImportLeavesDto.leaves`; no per-request DB query budget inside `importLeaves()`.",
+      "impact": "Authenticated users with `leaves:create` permission can craft a ~1 MiB JSON payload containing ~5000 leave rows, triggering thousands of DB queries per request. Repeated calls can saturate the database connection pool. The `leaves:create` permission is available to broad roles (CONTRIBUTEUR and above).",
+      "suggested_fix": "Add `@ArrayMaxSize(500)` (or a configurable limit) to `ImportLeavesDto.leaves`. Consider batching `getHolidayKeySet` calls across the entire date range rather than per row, and caching `findValidatorForUser` results per userId within the batch.",
+      "acceptance_criteria": [
+        "POST /leaves/import with `leaves` containing 501 items returns HTTP 400.",
+        "POST /leaves/import/validate with 501 items returns HTTP 400."
+      ],
+      "verification_command": "N/A — manual verification: POST /leaves/import with payload {\"leaves\": [... 501 items ...]}, expect 400.",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "The body limit of 1 MiB (SEC-025) mitigates extreme cases but does not prevent the hundreds-of-rows scenario. Adversarial review confirmed: import-leaves.dto.ts lines 61-70 verbatim, no @ArrayMaxSize present. No compensating per-request row limit found elsewhere in the controller or service."
+    },
+    {
+      "id": "security-S5-3",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "input validation / missing constraint",
+      "title": "CreateLeaveDto.reason and ImportLeaveDto.comment lack @MaxLength, allowing oversized free-text storage",
+      "file": "apps/api/src/leaves/dto/create-leave.dto.ts",
+      "line": "74-81",
+      "code_evidence": "  @ApiProperty({\n    description: 'Raison du congé',\n    example: \"Vacances d'été\",\n    required: false,\n  })\n  @IsString()\n  @IsOptional()\n  reason?: string;",
+      "description": "The `reason` field in `CreateLeaveDto` (stored as `comment` in the DB) has no `@MaxLength` annotation. The same issue exists for `comment` in `ImportLeaveDto`. ApproveLeaveDto and RejectLeaveDto correctly enforce `@MaxLength(2000)`. Without a consistent ceiling, a caller can submit a very large `reason` string (up to the global 1 MiB body limit), which will be persisted to the `leaves.comment` column. The DB column may have its own length limit (depends on the Prisma schema type), but no application-level guard surfaces a meaningful error before attempting the write.",
+      "root_cause": "Missing `@MaxLength` decorator on `CreateLeaveDto.reason` and `ImportLeaveDto.comment`.",
+      "impact": "Large free-text values persist to the DB comment column; if the column is `TEXT` there is no DB-side truncation. Audit trail entries then echo these large strings into the audit payload JSON, inflating audit_logs storage.",
+      "suggested_fix": "Add `@MaxLength(2000)` to `CreateLeaveDto.reason` and `ImportLeaveDto.comment`, consistent with `ApproveLeaveDto.comment` and `RejectLeaveDto.reason`.",
+      "acceptance_criteria": [
+        "POST /leaves with `reason` longer than 2000 chars returns HTTP 400.",
+        "POST /leaves/import with a `comment` longer than 2000 chars on any row returns HTTP 400."
+      ],
+      "verification_command": "N/A — manual verification: POST /leaves with reason=<2001-char string>, expect 400.",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Also applies to ImportLeaveDto.comment (import-leaves.dto.ts line 55-58). Adversarial review confirmed verbatim: create-leave.dto.ts lines 74-81 for `reason`, import-leaves.dto.ts lines 55-58 for `comment`. No @MaxLength found in either. ApproveLeaveDto/RejectLeaveDto do have @MaxLength(2000) — inconsistency confirmed."
+    },
+    {
+      "id": "security-S5-4",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "input validation / missing format check",
+      "title": "ImportLeaveDto.userEmail uses @IsString/@IsNotEmpty instead of @IsEmail, and CreateLeaveDto.leaveTypeId / ImportLeaveDto lack @IsUUID",
+      "file": "apps/api/src/leaves/dto/import-leaves.dto.ts",
+      "line": "13-20",
+      "code_evidence": "export class ImportLeaveDto {\n  @ApiProperty({\n    description: \"Email de l'utilisateur\",\n    example: 'user@example.com',\n  })\n  @IsString()\n  @IsNotEmpty()\n  userEmail: string;",
+      "description": "The `userEmail` field in `ImportLeaveDto` is validated only as a non-empty string, not as a valid email address (`@IsEmail()`). Similarly, `CreateLeaveDto.leaveTypeId` and `UpsertLeaveBalanceDto.leaveTypeId`/`userId` accept any non-empty string rather than a UUID (`@IsUUID()`). Although the service resolves these by DB lookup (preventing actual injection), the absence of format validation means malformed payloads only fail at the DB round-trip (returning a generic not-found) rather than producing an early, clear 400 validation error. This also masks enumeration timing differences.",
+      "root_cause": "Missing `@IsEmail()` on `ImportLeaveDto.userEmail` and `@IsUUID()` on FK-typed string fields in several leave DTOs.",
+      "impact": "Malformed email/UUID inputs produce delayed errors (DB lookup) rather than fast early rejection. Minor timing oracle for user enumeration if the lookup timing differs, though Prisma parameterization prevents injection.",
+      "suggested_fix": "Add `@IsEmail()` to `ImportLeaveDto.userEmail`. Add `@IsUUID()` to `CreateLeaveDto.leaveTypeId`, `UpsertLeaveBalanceDto.leaveTypeId`, and `UpsertLeaveBalanceDto.userId` (where non-null). Add `@IsUUID()` to `CreateLeaveDto.targetUserId`.",
+      "acceptance_criteria": [
+        "POST /leaves/import with userEmail='not-an-email' returns HTTP 400.",
+        "POST /leaves with leaveTypeId='not-a-uuid' returns HTTP 400."
+      ],
+      "verification_command": "N/A — manual verification: POST /leaves with leaveTypeId='INJECTION_ATTEMPT', expect 400.",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "CreateLeaveDto.targetUserId is also @IsString without @IsUUID. Adversarial review confirmed: grep of IsUUID/IsEmail across create-leave.dto.ts, import-leaves.dto.ts, upsert-leave-balance.dto.ts returned zero results. All three files confirmed to use only @IsString/@IsNotEmpty for UUID and email fields."
+    },
+    {
+      "id": "security-S5-5",
+      "severity": "nit",
+      "category": "security",
+      "subcategory": "input validation / missing validation",
+      "title": "GET /holidays/import-french: year query param parsed via parseInt without range bounds or ParseIntPipe",
+      "file": "apps/api/src/holidays/holidays.controller.ts",
+      "line": "127-131",
+      "code_evidence": "  async importFrenchHolidays(\n    @Query('year') year: string,\n    @CurrentUser() user: User,\n  ) {\n    const targetYear = year ? parseInt(year, 10) : new Date().getFullYear();",
+      "description": "The `year` query parameter on `POST /holidays/import-french` is received as a raw string and parsed with `parseInt(year, 10)` in the handler body. Unlike the sibling `GET /holidays/year/:year` route (which uses `ParseIntPipe`), this endpoint applies no NestJS pipe validation. A NaN value (e.g. `year=abc`) silently becomes `NaN`, which causes the Easter calculation and Date.UTC calls in `importFrenchHolidays()` to produce invalid dates (`Invalid Date`). No range check is applied either, so `year=1600` or `year=9999` would generate malformed holiday inserts. The endpoint requires `holidays:create` (admin-level) so the attack surface is limited.",
+      "root_cause": "Manual `parseInt` in the handler instead of `ParseIntPipe` with range validation, inconsistent with the `GET /holidays/year/:year` pattern.",
+      "impact": "An admin supplying a non-numeric `year` causes silent NaN propagation; `Date.UTC(NaN, ...)` produces `Invalid Date`, likely causing a Prisma write error or inserting a null/invalid date. Low severity given admin-only access.",
+      "suggested_fix": "Replace `@Query('year') year: string` with `@Query('year', new ParseIntPipe({ optional: true })) year?: number` and add a range check in the service (e.g., 2000 ≤ year ≤ 2100) consistent with `ImportSchoolVacationDto`.",
+      "acceptance_criteria": [
+        "POST /holidays/import-french?year=abc returns HTTP 400.",
+        "POST /holidays/import-french?year=1600 returns HTTP 400 or is rejected by the service."
+      ],
+      "verification_command": "N/A — manual verification: POST /holidays/import-french?year=NaN (as admin), observe response.",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "The `GET /holidays/year/:year` endpoint correctly uses ParseIntPipe; this inconsistency in the import endpoint is the gap. Adversarial review confirmed: holidays.controller.ts line 130 verbatim `parseInt(year, 10)` with no pipe on the @Query decorator. holidays.service.ts importFrenchHolidays() has no isNaN guard — `Date.UTC(NaN, 0, 1)` propagates Invalid Date into Prisma upsert calls. Global ValidationPipe does not intercept raw @Query string params without a DTO class. Endpoint is @Post not @Get as the finding notes say, but that does not affect validity."
+    }
+  ],
+  "refuted": []
+}

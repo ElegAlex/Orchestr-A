@@ -1,0 +1,80 @@
+{
+  "dimension": "data_integrity",
+  "shard": "D3",
+  "confirmed": [
+    {
+      "id": "data_integrity-D3-1",
+      "severity": "important",
+      "category": "data_integrity",
+      "subcategory": "audit_immutability",
+      "title": "audit_logs immutability trigger does not cover TRUNCATE — entire ledger can be wiped silently",
+      "file": "packages/database/prisma/migrations/20260525190000_audit_logs_immutability_hash_chain_actor_snapshot/migration.sql",
+      "line": "120-122",
+      "code_evidence": "CREATE TRIGGER audit_logs_no_update_delete\n  BEFORE UPDATE OR DELETE ON \"audit_logs\"\n  FOR EACH ROW EXECUTE FUNCTION audit_logs_immutable();",
+      "description": "The immutability trigger uses `FOR EACH ROW` and catches only UPDATE and DELETE events. PostgreSQL's TRUNCATE is a DDL-level operation that bypasses row-level triggers entirely. A privileged user (or a bug in a service that has DDL-level access) can execute `TRUNCATE audit_logs` and wipe the entire append-only ledger — hash chain, actor snapshots, and all — without the trigger firing once. The migration's stated goal is to make audit_logs append-only for Cour-des-Comptes compliance; TRUNCATE is the single operation that completely invalidates that guarantee at the DB level.",
+      "root_cause": "`FOR EACH ROW BEFORE UPDATE OR DELETE` triggers are not fired by TRUNCATE in PostgreSQL; only a statement-level `BEFORE TRUNCATE` trigger can intercept it.",
+      "impact": "Any role with TRUNCATE privilege on audit_logs (typically the database owner, superuser, or the application role if not explicitly revoked) can silently destroy the entire audit ledger. This directly voids the Cour-des-Comptes audit trail guarantee that DAT-009/OBS-002 were designed to enforce. The hash chain and actor snapshots are also wiped, making post-hoc integrity verification impossible. Partial mitigation exists: packages/database/prisma/init-roles.sql line 57 revokes TRUNCATE from app_user (runtime role), so the application runtime path is blocked. However the schema-owning role (orchestr_a/POSTGRES_USER, the migration role) retains TRUNCATE privilege and no statement-level TRUNCATE trigger exists to block it.",
+      "suggested_fix": "Add a statement-level TRUNCATE trigger on audit_logs using the same function:\n```sql\nCREATE TRIGGER audit_logs_no_truncate\n  BEFORE TRUNCATE ON \"audit_logs\"\n  FOR EACH STATEMENT EXECUTE FUNCTION audit_logs_immutable();\n```\nAlso revoke TRUNCATE privilege from the application role (defense-in-depth):\n```sql\nREVOKE TRUNCATE ON audit_logs FROM <app_role>;\n```\nThe `audit_logs_immutable()` function already raises a generic `check_violation` exception regardless of TG_OP, so it will work correctly for TRUNCATE without modification.",
+      "acceptance_criteria": [
+        "TRUNCATE audit_logs raises 'audit_logs is append-only: TRUNCATE is not permitted' (SQLSTATE 23514)",
+        "INSERT into audit_logs still succeeds after adding the TRUNCATE trigger",
+        "UPDATE/DELETE on audit_logs still raise the same exception as before"
+      ],
+      "verification_command": "psql $DATABASE_URL -c \"TRUNCATE audit_logs;\" 2>&1 | grep 'audit_logs is append-only'",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "data_integrity",
+      "confidence": "high",
+      "notes": "PostgreSQL docs: 'Row-level triggers fired for TRUNCATE are a PostgreSQL extension. They are not part of the SQL standard.' In practice, TRUNCATE simply does not fire FOR EACH ROW triggers at all. Code evidence verbatim confirmed at lines 120-122. No TRUNCATE trigger found in any migration file (grep across all migrations returned zero results). init-roles.sql line 57 does REVOKE UPDATE, DELETE, TRUNCATE ON audit_logs FROM app_user — this partially mitigates the runtime path but the schema-owning role retains full privilege. The statement-level trigger gap remains unaddressed."
+    },
+    {
+      "id": "data_integrity-D3-2",
+      "severity": "nit",
+      "category": "data_integrity",
+      "subcategory": "audit_immutability",
+      "title": "audit_logs actorId FK retains ON UPDATE CASCADE after migration removes ON DELETE CASCADE — asymmetry can trigger immutability violation",
+      "file": "packages/database/prisma/migrations/20260525190000_audit_logs_immutability_hash_chain_actor_snapshot/migration.sql",
+      "line": "101-104",
+      "code_evidence": "ALTER TABLE \"audit_logs\" DROP CONSTRAINT \"audit_logs_actorId_fkey\";\nALTER TABLE \"audit_logs\" ADD CONSTRAINT \"audit_logs_actorId_fkey\"\n  FOREIGN KEY (\"actorId\") REFERENCES \"users\"(\"id\")\n  ON DELETE NO ACTION ON UPDATE CASCADE;",
+      "description": "The migration's stated rationale (step 5 comment, lines 95-99) is that the previous ON DELETE SET NULL caused a cascade UPDATE on audit_logs rows which would be rejected by the immutability trigger (step 6) — so it was changed to ON DELETE NO ACTION. However the migration then re-adds ON UPDATE CASCADE on the same FK. If a users.id value were ever changed (e.g., by a migration that reassigns primary keys, an admin fix, or a future user-merge feature), the cascade UPDATE on audit_logs would fire the immutability trigger and abort the users UPDATE with a confusing 'audit_logs is append-only' error. The risk is latent since uuid ids are immutable in practice, but the asymmetry contradicts the stated design principle.",
+      "root_cause": "The migration author correctly removed ON DELETE CASCADE/SET NULL to avoid cascade writes hitting the immutability trigger, but did not extend the same reasoning to ON UPDATE CASCADE.",
+      "impact": "Any operation that changes users.id (currently none, but possible in a future migration or admin script) will fail with a confusing SQLSTATE 23514 from the immutability trigger, not a clear FK violation message. This could make users table maintenance operations undebuggably hard. Low probability given uuid usage (schema.prisma uses @default(uuid())), but the constraint specification is internally inconsistent.",
+      "suggested_fix": "Change ON UPDATE CASCADE to ON UPDATE NO ACTION to be consistent with the ON DELETE NO ACTION:\n```sql\nALTER TABLE \"audit_logs\" DROP CONSTRAINT \"audit_logs_actorId_fkey\";\nALTER TABLE \"audit_logs\" ADD CONSTRAINT \"audit_logs_actorId_fkey\"\n  FOREIGN KEY (\"actorId\") REFERENCES \"users\"(\"id\")\n  ON DELETE NO ACTION ON UPDATE NO ACTION;\n```\nThe actorEmail/actorLabel snapshot columns already preserve actor identity for the audit record, so there is no data preservation need for cascading an id update.",
+      "acceptance_criteria": [
+        "audit_logs actorId FK uses ON UPDATE NO ACTION",
+        "Attempting to UPDATE users.id raises a FK violation (23503), not an immutability violation (23514)"
+      ],
+      "verification_command": "psql $DATABASE_URL -c \"SELECT confupdtype FROM pg_constraint WHERE conname='audit_logs_actorId_fkey';\" 2>&1 | grep -E 'a|r'",
+      "related_findings": ["data_integrity-D3-1"],
+      "cluster_id": null,
+      "found_by": "data_integrity",
+      "confidence": "high",
+      "notes": "pg_constraint.confupdtype: 'a' = NO ACTION, 'c' = CASCADE, 'r' = RESTRICT. Current state after migration: 'c' (CASCADE). Expected after fix: 'a' (NO ACTION). Code evidence verbatim confirmed at lines 101-104. No subsequent migration modifies this FK — the most recent migration touching audit_logs (20260604103344_dat008_026_user_fk_full_erasure) explicitly states 'NOT touched: audit_logs.actorId' in its header comment. users.id uses @default(uuid()) in schema.prisma — UUID reassignment is not done in practice by any existing service method, confirming low probability but non-zero architectural risk."
+    },
+    {
+      "id": "data_integrity-D3-3",
+      "severity": "suggestion",
+      "category": "data_integrity",
+      "subcategory": "audit_completeness",
+      "title": "dat037 cascade UPDATE of task.projectId produces no audit_logs rows — N tasks silently rewritten under Cour-des-Comptes scope",
+      "file": "packages/database/prisma/migrations/20260528150000_dat037_task_project_consistency/migration.sql",
+      "line": "40-47",
+      "code_evidence": "-- AUDIT IMPLICATIONS (documented for Cour des Comptes): the parent-side CASCADE\n-- silently rewrites N task rows in one DDL fire. Today this is invariant maintenance\n-- (the task's \"true\" project IS the parent's), but a future auditor may want a row in\n-- audit_logs for each affected task. NOT added here — the existing OBS-002 trigger\n-- pipeline doesn't cover system-derived consistency writes (only user mutations\n-- through the app), and adding it now would be scope creep.",
+      "description": "The epics_cascade_projectid_trg and milestones_cascade_projectid_trg AFTER UPDATE triggers silently rewrite task.projectId on potentially many rows (e.g. moving a large epic to another project rewrites all its tasks). The audit_logs table records the parent (epic/milestone) UPDATE, but none of the N cascaded task rewrites appear in audit_logs. A Cour-des-Comptes auditor examining a task's project attribution history has no DB-level evidence of the cascade; they must infer it from the parent's audit entry, which requires cross-referencing epicId/milestoneId and timing. This is acknowledged in the migration comment as deliberate out-of-scope, but the gap is real and worth a future task.",
+      "root_cause": "The cascade is implemented as an AFTER UPDATE trigger on epics/milestones that issues a silent UPDATE on tasks, bypassing the application's AuditService which is the only path that writes to audit_logs.",
+      "impact": "Post-hoc audit trail for task project re-attribution via epic/milestone moves is incomplete. A task could appear to have always been in its current project despite having been moved silently. Under Cour-des-Comptes audit review, this is an explainability gap rather than a security hole.",
+      "suggested_fix": "File a follow-up task (e.g. DAT-037b) to add audit_logs INSERT rows inside the cascade trigger functions for each affected task row, bracketed by a SYSTEM_CONSISTENCY action code. This is non-trivial because the cascade trigger runs at the DB level without access to the app's AuditService; it would require a plpgsql INSERT into audit_logs directly (similar to how OBS-002 inserts RELEASE_DEPLOYED rows). Alternatively, move the cascade logic from a DB trigger into the application service layer (EpicsService.update) where AuditService is already wired.",
+      "acceptance_criteria": [
+        "When an epic's projectId is changed, audit_logs contains one row per affected task with action='TASK_PROJECT_REASSIGNED' or equivalent",
+        "The audit chain remains intact (rowHash chains correctly through the new rows)"
+      ],
+      "verification_command": "N/A — manual verification",
+      "related_findings": ["data_integrity-D3-1"],
+      "cluster_id": null,
+      "found_by": "data_integrity",
+      "confidence": "high",
+      "notes": "The migration author explicitly documented this gap. Severity is suggestion only because the parent's audit row provides indirect derivability and the comment discloses the limitation. Code evidence verbatim confirmed at lines 40-47 of the migration file. EpicsService (apps/api/src/epics/epics.service.ts) contains no AuditService injection or audit logging for cascade task updates — confirmed via grep. The cascade trigger functions (epics_cascade_projectid_to_tasks, milestones_cascade_projectid_to_tasks) issue bare UPDATE statements with no audit side-effects."
+    }
+  ],
+  "refuted": []
+}

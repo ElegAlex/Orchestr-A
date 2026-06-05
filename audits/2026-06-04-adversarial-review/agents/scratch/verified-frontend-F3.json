@@ -1,0 +1,145 @@
+{
+  "dimension": "frontend",
+  "shard": "F3",
+  "confirmed": [
+    {
+      "id": "frontend-F3-4",
+      "severity": "important",
+      "category": "correctness",
+      "subcategory": "unhandled_rejection",
+      "title": "usersService.getAll() in telework/page.tsx has no .catch() — silent failure in user selector",
+      "file": "apps/web/app/[locale]/telework/page.tsx",
+      "line": "395-404",
+      "code_evidence": "  useEffect(() => {\n    if (!user) return;\n    setSelectedUserId(user.id);\n\n    if (canManageOthers && canListUsers) {\n      usersService.getAll().then((data) => {\n        setAllUsers(Array.isArray(data) ? data : []);\n      });\n    }\n  }, [user, canManageOthers, canListUsers]);",
+      "description": "The `usersService.getAll()` promise has a `.then()` handler but no `.catch()`. If the request fails (network error, 403, 500), the rejection is unhandled. In modern browsers and Next.js, unhandled promise rejections in effects can produce console errors that reach the user-visible error reporter (via `logger.error` if it were called, but it isn't here). More critically, `allUsers` is never populated, so the manager's user-selector dropdown will be empty with no error feedback. The user has no way to know the fetch failed.",
+      "root_cause": "Missing `.catch()` on a fire-and-forget async operation inside a useEffect.",
+      "impact": "Managers (telework:manage_any) who encounter a transient API error will see an empty collaborator selector with no error toast. They cannot view or manage other users' telework calendars until they reload. No observability.",
+      "suggested_fix": "Add a `.catch()` handler: `usersService.getAll().then(data => { setAllUsers(Array.isArray(data) ? data : []); }).catch(err => { logger.error('Error fetching users for telework:', err); toast.error(tc('errors.serverError')); });`",
+      "acceptance_criteria": [
+        "When usersService.getAll() rejects, a toast error is shown to the manager.",
+        "logger.error is called with the error context.",
+        "The selector renders empty with a recoverable state."
+      ],
+      "verification_command": "grep -n 'usersService.getAll' apps/web/app/\\[locale\\]/telework/page.tsx",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "correctness",
+      "confidence": "high",
+      "notes": "Code is verbatim confirmed at lines 395-404. No .catch() is present anywhere on this promise chain."
+    },
+    {
+      "id": "frontend-F3-5",
+      "severity": "important",
+      "category": "security",
+      "subcategory": "client_side_auth",
+      "title": "Leave cancellation request button gated by client-side userId comparison instead of API canRequestCancel flag",
+      "file": "apps/web/app/[locale]/leaves/page.tsx",
+      "line": "776-786",
+      "code_evidence": "            {!showValidationActions &&\n              leave.status === LeaveStatus.APPROVED &&\n              leave.userId === user?.id && (\n                <button\n                  onClick={() => handleRequestCancel(leave.id)}\n                  className=\"p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition\"\n                  title=\"Demander l'annulation\"\n                >\n                  ↩️\n                </button>\n              )}",
+      "description": "The 'request cancellation' button is shown when `leave.status === LeaveStatus.APPROVED && leave.userId === user?.id`. This is a client-side ownership check using the locally stored `user.id` from the auth store (JWT token). Per the CLAUDE.md memory rule, auth decisions must use API-computed flags (canEdit/canDelete per resource). While the API itself should enforce the authorization, the button relies on the frontend correctly reading `user.id` from the JWT, which could be manipulated by a XSS attacker or lead to display inconsistency if a manager is viewing someone else's leave in the all-leaves tab (where `leave.userId !== user.id` may incorrectly hide or show the button). The `canEdit` and `canDelete` flags are correctly API-sourced (lines 757, 767) — this one slip is inconsistent with the established pattern.",
+      "root_cause": "The requestCancel affordance check was implemented with a direct client-side `userId === user.id` comparison rather than an API-provided `canRequestCancel` flag on the leave object.",
+      "impact": "Minor inconsistency with the established API-flag pattern. A manager viewing another user's approved leave in the all-leaves tab (showUser=true, showValidationActions=false) will NOT see the button due to userId mismatch — which is correct by accident. The risk is forward: if the all-leaves view ever shows canRequestCancel for delegates, this logic would break. The API enforces the rule, so no actual unauthorized action is possible.",
+      "suggested_fix": "Add a `canRequestCancel` boolean flag to the Leave API response (similar to `canEdit`/`canDelete`). Use that flag: `(leave as Leave & { canRequestCancel?: boolean }).canRequestCancel && leave.status === LeaveStatus.APPROVED`.",
+      "acceptance_criteria": [
+        "Backend returns canRequestCancel: boolean in each Leave object.",
+        "Frontend renders the cancel-request button solely based on the API flag.",
+        "No client-side userId comparison remains for authorization decisions."
+      ],
+      "verification_command": "grep -n 'leave.userId === user' apps/web/app/\\[locale\\]/leaves/page.tsx",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "security",
+      "confidence": "high",
+      "notes": "Code confirmed verbatim at lines 776-786. The API enforces the actual permission, so this is primarily an architectural inconsistency rather than an exploitable vulnerability. Severity is 'important' rather than 'blocking'."
+    },
+    {
+      "id": "frontend-F3-6",
+      "severity": "important",
+      "category": "performance",
+      "subcategory": "unbounded_parallel_requests",
+      "title": "handleExportExcel fires Promise.all over all active clients without concurrency cap (up to 200 requests)",
+      "file": "apps/web/app/[locale]/clients/page.tsx",
+      "line": "147-155",
+      "code_evidence": "      const results = await Promise.all(\n        cap.map((c) =>\n          clientsService\n            .getProjectsWithSummary(c.id)\n            .then((res) => ({ clientId: c.id, clientName: c.name, res }))\n            .catch(() => ({ clientId: c.id, clientName: c.name, res: null })),\n        ),\n      );",
+      "description": "The Excel export function fires one HTTP request per active client simultaneously via `Promise.all`. The list `cap` is bounded by the page-fetch limit of 200 (`getAll({ limit: 200 })`). Sending 200 simultaneous GET requests will saturate the browser's connection pool (typically 6 concurrent per origin), create a thundering-herd on the API, and likely trigger rate-limiting or timeouts. While there is a `> 100` confirm dialog, it only adds friction — the unbounded parallelism is present for any non-zero number of clients.",
+      "root_cause": "No concurrency limiter (e.g., p-limit, sequential chunking) is applied to the per-client project-summary fetches.",
+      "impact": "With 100+ active clients, the API may return 429 rate-limit errors or timeout, causing the export to partially fail silently (`.catch()` returns `{ res: null }` for failed items). Users receive an incomplete Excel file without knowing which clients are missing. Server may experience a DoS-like spike during large exports.",
+      "suggested_fix": "Use a concurrency-limited pattern: import p-limit (already may be in package.json) with limit of 5-10, or fetch in sequential chunks of e.g. 10 clients at a time using a `for...of` loop with `await`. Alternatively, add a backend endpoint that returns all client+project summaries in a single call.",
+      "acceptance_criteria": [
+        "handleExportExcel never fires more than 10 simultaneous requests.",
+        "Export completes correctly for 200+ active clients.",
+        "Failed per-client fetches show a specific toast indicating partial data."
+      ],
+      "verification_command": "grep -n 'Promise.all' apps/web/app/\\[locale\\]/clients/page.tsx",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "performance",
+      "confidence": "high",
+      "notes": "Code confirmed verbatim at lines 147-155. The `> 100` confirm dialog at line 130 suggests the developer was aware of scale issues but chose UI friction over a proper fix."
+    },
+    {
+      "id": "frontend-F3-7",
+      "severity": "important",
+      "category": "observability",
+      "subcategory": "missing_error_boundary",
+      "title": "No React error boundary or Next.js error.tsx in any of the 6 scanned route segments",
+      "file": "apps/web/app/[locale]/leaves/page.tsx",
+      "line": "1",
+      "code_evidence": "\"use client\";\n\nimport { useEffect, useState } from \"react\";\nimport { useTranslations } from \"next-intl\";\nimport { MainLayout } from \"@/components/MainLayout\";",
+      "description": "None of the 6 route segments (leaves, telework, time-tracking, clients, third-parties, events) have a co-located `error.tsx` file (Next.js App Router error boundary convention) or a React `<ErrorBoundary>` wrapper in their page component. A runtime rendering error (e.g., null-dereference when API returns unexpected shape, invalid date passed to `new Date()`) in any of these pages will crash the entire route segment and show a white screen with a browser error. The absence of `error.tsx` is confirmed by filesystem search — no such file exists under `apps/web/app/[locale]/` for any of the target directories.",
+      "root_cause": "No error.tsx or React ErrorBoundary created for these route segments, leaving unhandled render errors as full-page crashes.",
+      "impact": "Any rendering exception (e.g., `leave.user.department.name` when department is null, or a malformed date string from the API) will crash the entire page with no recovery path. Users see a blank/crash screen instead of a graceful error message. Severity is elevated for pages like leaves and events that are used daily by all staff.",
+      "suggested_fix": "Create `apps/web/app/[locale]/leaves/error.tsx` (and similarly for the other 5 directories) following the Next.js App Router pattern: `'use client'; export default function Error({ reset }) { return <div>... <button onClick={reset}>Réessayer</button></div>; }`. Additionally add a shared `<ErrorBoundary>` wrapper inside `MainLayout` as a catch-all.",
+      "acceptance_criteria": [
+        "Each of the 6 directories has an error.tsx file.",
+        "Navigating to the page after an injected rendering error shows a user-facing error message with a retry button.",
+        "The error is logged via logger.error."
+      ],
+      "verification_command": "find apps/web/app/\\[locale\\]/{leaves,telework,time-tracking,clients,third-parties,events} -name 'error.tsx' 2>/dev/null | wc -l",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "observability",
+      "confidence": "high",
+      "notes": "Filesystem check confirmed 0 error.tsx files in all 6 directories. This finding covers all 6 route segments under the shard."
+    },
+    {
+      "id": "frontend-F3-8",
+      "severity": "nit",
+      "category": "performance",
+      "subcategory": "no_query_cache",
+      "title": "All 6 pages use manual fetch + useState with no TanStack Query caching — repeated fetches on every navigation",
+      "file": "apps/web/app/[locale]/leaves/page.tsx",
+      "line": "1",
+      "code_evidence": "\"use client\";\n\nimport { useEffect, useState } from \"react\";\n...\n  const [loading, setLoading] = useState(true);\n  const [leaves, setLeaves] = useState<Leave[]>([]);\n  ...\n  useEffect(() => {\n    fetchAll();\n    // eslint-disable-next-line react-hooks/exhaustive-deps\n  }, []);",
+      "description": "All 6 pages use the same pattern: `useEffect + manual fetch + useState`. None use TanStack Query which is listed in the project stack (CLAUDE.md). Every navigation to these pages triggers a full re-fetch (no staleTime, no background revalidation, no deduplication). The leaves page fires 8 concurrent requests on every mount. The CLAUDE.md convention specifies TanStack Query for frontend data fetching.",
+      "root_cause": "Pages were built without adopting TanStack Query, leading to manual fetch orchestration with no caching layer.",
+      "impact": "Unnecessary network load on every navigation; no optimistic updates possible without rollback logic; no deduplication when multiple components fetch the same data. Navigation feels slower than needed. This is nit severity as it's a design debt issue rather than a bug.",
+      "suggested_fix": "Migrate to `useQuery` / `useMutation` from TanStack Query. Define query keys per domain (e.g., `['leaves', 'mine']`, `['leaves', 'pending']`). Set `staleTime: 30_000` for relatively static data like leave types and balances. Use `invalidateQueries` after mutations instead of calling `fetchAll()`.",
+      "acceptance_criteria": [
+        "Each page uses useQuery for data fetching.",
+        "Navigating away and back does not trigger a loading spinner if data is fresh.",
+        "Mutations use useMutation and invalidate relevant query keys."
+      ],
+      "verification_command": "grep -rn 'useQuery\\|useMutation' apps/web/app/\\[locale\\]/leaves/page.tsx apps/web/app/\\[locale\\]/events/page.tsx | wc -l",
+      "related_findings": [],
+      "cluster_id": null,
+      "found_by": "performance",
+      "confidence": "high",
+      "notes": "Confirmed: grep for useQuery/useMutation returns 0 matches in leaves/page.tsx and events/page.tsx. Nit severity because it is well-known architectural debt requiring significant refactoring."
+    }
+  ],
+  "refuted": [
+    {
+      "id": "frontend-F3-1",
+      "reason": "The impact claim — that validators see empty tabs on initial page load due to async permission loading — is refuted by the AuthProvider. apps/web/src/components/AuthProvider.tsx line 63 blocks rendering children with a loading spinner until `!ready || isLoading || (isAuthenticated && !permissionsLoaded)` is false. Since useAuthBootstrap.ts calls setAuth(user, permissions) atomically (both user and permissions set in the same Zustand setState call), by the time any page component mounts and its useEffect([], []) fires, permissions are fully loaded and stable. The canValidate/canReadAllLeaves/canManageBalances variables are derived from hasPermission() at render time, not captured in closures themselves. While the eslint-disable comments and missing useCallback wrapping are real code quality issues, the described UX regression (empty tabs on hard refresh) cannot occur in practice. Severity reduced to nit/code-quality concern only."
+    },
+    {
+      "id": "frontend-F3-2",
+      "reason": "The stale closure impact is refuted by two mitigations working in combination: (1) AuthProvider blocks page rendering until permissionsLoaded=true (see AuthProvider.tsx line 63), and (2) setAuth() in auth.store.ts lines 62-76 atomically sets both user and permissions in a single Zustand setState call. Since fetchData useCallback depends on [user], it re-creates when user changes. Because user and permissions change in the same React render batch (same setState), the new fetchData closure captures the already-updated hasPermission reference (which itself is memoized with [permissions] via useCallback in usePermissions.ts lines 24-29). The scenario where hasPermission has stale permissions when fetchData runs cannot occur given this bootstrap flow. The dep array omission is a lint hygiene issue but not a functional bug."
+    },
+    {
+      "id": "frontend-F3-3",
+      "reason": "Same refutation as frontend-F3-2. AuthProvider guarantees permissionsLoaded before any page renders. The atomic setAuth() call in auth.store.ts ensures user and permissions are set together in one React batch. Since events/page.tsx fetchData useCallback depends on [user], it re-creates in the same render cycle that sees updated permissions, capturing the correct hasPermission reference. The three hasPermission calls inside fetchData ('projects:read', 'events:readAll', 'events:update') will use the correct permission set when fetchData first executes. The dep array omission is a lint hygiene issue only, not a functional bug causing wrong branch selection."
+    }
+  ]
+}
