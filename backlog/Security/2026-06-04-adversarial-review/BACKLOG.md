@@ -751,7 +751,7 @@ N/A — manual verification
 **Notes:**
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-021 ⇄ sessionA PERF-003, sessionA PERF-004).
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -802,7 +802,7 @@ N/A — manual verification
 **Notes:**
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-022 ⇄ sessionA PERF-006).
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -860,7 +860,7 @@ N/A — manual verification
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-025 ⇄ sessionA PERF-005).
 - Audit note: CLAUDE.md explicitly notes 'Tasks without a project = intentional (meetings, cross-cutting work)' — so the orphan set is a first-class concern and can grow large.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -986,7 +986,7 @@ N/A — manual verification
 **Notes:**
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-023 ⇄ sessionA PERF-009).
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -1048,7 +1048,7 @@ N/A — manual verification
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-024 ⇄ sessionA PERF-007).
 - Audit note: validateImport correctly pre-fetches existingTasks in one query (line 1558) — importTasks should mirror that pattern. Confirmed: ImportTasksDto has no @ArrayMaxSize. The 1 MiB bodyLimit (SEC-025) provides some protection but does not eliminate the N+1 pattern.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -1932,7 +1932,7 @@ grep -n 'reorderSubtasks\|subtask.update' apps/api/src/tasks/tasks.service.ts
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: updateSubtask and deleteSubtask correctly use findFirst({where:{id, taskId}}) — reorderSubtasks diverges from that pattern. Verified at lines 2006-2007 and 2029-2030.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -2328,7 +2328,7 @@ N/A — manual verification: create two tasks each with one subtask, then POST /
 - Related (same run): COR-029.
 - Audit note: Adversarial review: code evidence verbatim confirmed at tasks.service.ts lines 2051-2058. The assertCanReadTask guard on line 2045 only checks the caller's access to the parent taskId, not ownership of each subtask ID. No additional guard found in the controller (tasks.controller.ts:596-608) or the ReorderSubtasksDto. IDOR is real and exploitable.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -3096,7 +3096,7 @@ grep -n 'checkCircularDependency\|taskDependency.create\|taskDependency.findUniq
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: checkCircularDependency itself is BFS, correct for sequential execution.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -3747,7 +3747,7 @@ curl -s 'http://localhost:3001/tasks?limit=1000' | jq '.meta.limit'
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The same pattern appears in comments.service.ts and documents.service.ts (both use `Math.min(limit || 1000, 1000)` with default 1000). Adversarial note: the description's JS truthy reasoning is partially inverted (10 IS truthy, so default=10 path is correct; the problem is callers CAN pass limit=1000 explicitly). The substance of the finding is confirmed — the hard cap is 1000 with heavy includes.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -4456,7 +4456,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The impact is lower than P2-7/8 because subtask counts are typically small (< 20). Still a design smell. Confirmed: ReorderSubtasksDto has only @IsArray() and @IsUUID — no @ArrayMaxSize.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -8894,7 +8894,7 @@ grep -n 'new Date(taskData\.' apps/api/src/tasks/tasks.service.ts
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The ImportTaskDto uses @IsString() not @IsDateString() for startDate/endDate (verified). Impact is slightly softened: Prisma will throw on Invalid Date, caught by per-row catch, so no silent data corruption — but error message is cryptic.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -8941,7 +8941,7 @@ grep -n 'startDate && {\|endDate && {' apps/api/src/tasks/tasks.service.ts
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: projectId clearing uses `...(projectId && {projectId})` with the same issue (line 789) but that case is handled by detachFromProject endpoint.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -9638,7 +9638,7 @@ grep -n 'projectId !== dependsOnTask.projectId' apps/api/src/tasks/tasks.service
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-COR-004` to avoid ID collision with the primary run; original id `COR-004` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
@@ -9701,7 +9701,7 @@ grep -n 'epicId\|milestoneId\|projectId' apps/api/src/tasks/tasks.service.ts | g
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-COR-008` to avoid ID collision with the primary run; original id `COR-008` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d41e8566
 
 ---
 
