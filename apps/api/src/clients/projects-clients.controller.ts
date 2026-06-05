@@ -17,6 +17,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { IsNotEmpty, IsUUID } from 'class-validator';
+import {
+  CurrentUser,
+  AuthenticatedUser,
+} from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { ClientsService } from './clients.service';
 
@@ -36,8 +40,11 @@ export class ProjectsClientsController {
   @Get()
   @RequirePermissions('clients:read')
   @ApiOperation({ summary: 'Lister les clients rattachés à un projet' })
-  list(@Param('projectId', ParseUUIDPipe) projectId: string) {
-    return this.clientsService.listProjectClients(projectId);
+  list(
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    return this.clientsService.listProjectClients(projectId, currentUser);
   }
 
   @Post()

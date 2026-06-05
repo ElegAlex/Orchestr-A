@@ -1,11 +1,13 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from 'database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AccessScopeService } from '../common/services/access-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClientsService } from './clients.service';
 
@@ -24,6 +26,7 @@ describe('ClientsService', () => {
     project: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
+      count: vi.fn(),
     },
     projectClient: {
       findUnique: vi.fn(),
@@ -43,12 +46,18 @@ describe('ClientsService', () => {
     }),
   };
 
+  const mockAccessScope = {
+    assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockAccessScope.assertCanAccessProject.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClientsService,
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: AccessScopeService, useValue: mockAccessScope },
       ],
     }).compile();
     service = module.get<ClientsService>(ClientsService);
@@ -341,6 +350,26 @@ describe('ClientsService', () => {
         NotFoundException,
       );
     });
+
+    it('COR-008 — count-check and delete execute inside a single $transaction', async () => {
+      // Both the guard (count) and the destructive op (delete) must be wrapped in
+      // a single $transaction so a concurrent assignClientToProject cannot insert
+      // a ProjectClient row between the count read and the DELETE (TOCTOU fix).
+      mockPrismaService.client.findUnique.mockResolvedValue({ id: 'c-1' });
+      mockPrismaService.projectClient.count.mockResolvedValue(0);
+      mockPrismaService.client.delete.mockResolvedValue({ id: 'c-1' });
+
+      await service.hardDelete('c-1');
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
+      // count + delete still reached via the tx callback (mockPrismaService acts as tx)
+      expect(mockPrismaService.projectClient.count).toHaveBeenCalledWith({
+        where: { clientId: 'c-1' },
+      });
+      expect(mockPrismaService.client.delete).toHaveBeenCalledWith({
+        where: { id: 'c-1' },
+      });
+    });
   });
 
   // ─── assertExistsAndActive ─────────────────────────────────────────────────
@@ -377,11 +406,16 @@ describe('ClientsService', () => {
   // ─── listProjectClients ────────────────────────────────────────────────────
 
   describe('listProjectClients', () => {
+    const memberUser = {
+      id: 'u-1',
+      role: { code: 'CONTRIBUTEUR', templateKey: 'CONTRIBUTEUR' },
+    };
+
     it('returns project clients ordered by createdAt', async () => {
       mockPrismaService.projectClient.findMany.mockResolvedValue([
         { projectId: 'p-1', clientId: 'c-1', client: { id: 'c-1', name: 'X' } },
       ]);
-      const result = await service.listProjectClients('p-1');
+      const result = await service.listProjectClients('p-1', memberUser);
       expect(result).toHaveLength(1);
       expect(mockPrismaService.projectClient.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -389,6 +423,25 @@ describe('ClientsService', () => {
           orderBy: { createdAt: 'asc' },
         }),
       );
+    });
+
+    it('SEC-004 — non-member user receives ForbiddenException', async () => {
+      // assertCanAccessProject throws ForbiddenException for users without
+      // project membership and without projects:manage_any permission.
+      mockAccessScope.assertCanAccessProject.mockRejectedValueOnce(
+        new ForbiddenException('Accès projet non autorisé'),
+      );
+      const nonMember = {
+        id: 'u-99',
+        role: { code: 'OBSERVATEUR', templateKey: 'OBSERVATEUR' },
+      };
+
+      await expect(
+        service.listProjectClients('p-other', nonMember),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      // The DB query must NOT be reached.
+      expect(mockPrismaService.projectClient.findMany).not.toHaveBeenCalled();
     });
   });
 

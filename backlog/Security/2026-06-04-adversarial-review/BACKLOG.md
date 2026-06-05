@@ -1992,7 +1992,7 @@ grep -n 'findForPlanningOverview\|expandRecurringRulesForRange' apps/api/src/tel
 
 ### SEC-004 — GET /projects/:projectId/clients — missing project-scope access check (IDOR)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -2621,7 +2621,7 @@ N/A — manual verification of API endpoint guards required
 
 ### COR-008 — hardDelete: count-then-delete without transaction allows deletion of client with active project links
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** B
 - **Confidence:** primary-only

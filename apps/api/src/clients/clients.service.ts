@@ -6,6 +6,10 @@ import {
 } from '@nestjs/common';
 import { Client, Prisma, ProjectStatus } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  AccessScopeService,
+  AccessUser,
+} from '../common/services/access-scope.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { QueryClientsDto } from './dto/query-clients.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
@@ -45,7 +49,10 @@ function isUniqueViolation(err: unknown): boolean {
 
 @Injectable()
 export class ClientsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
   async create(dto: CreateClientDto): Promise<Client> {
     try {
@@ -262,16 +269,22 @@ export class ClientsService {
       throw new NotFoundException(`Client ${id} not found`);
     }
 
-    const projectsCount = await this.prisma.projectClient.count({
-      where: { clientId: id },
-    });
-    if (projectsCount > 0) {
-      throw new ConflictException(
-        `Client ${id} cannot be deleted: it is linked to ${projectsCount} project(s). Remove the associations first or archive the client instead.`,
-      );
-    }
+    // COR-008 — wrap the count-check and the delete in a single transaction to
+    // close the TOCTOU window where a concurrent assignClientToProject() could
+    // insert a ProjectClient row between the count read and the DELETE, resulting
+    // in a client being hard-deleted while it still has live project associations.
+    await this.prisma.$transaction(async (tx) => {
+      const projectsCount = await tx.projectClient.count({
+        where: { clientId: id },
+      });
+      if (projectsCount > 0) {
+        throw new ConflictException(
+          `Client ${id} cannot be deleted: it is linked to ${projectsCount} project(s). Remove the associations first or archive the client instead.`,
+        );
+      }
 
-    await this.prisma.client.delete({ where: { id } });
+      await tx.client.delete({ where: { id } });
+    });
   }
 
   async assertExistsAndActive(id: string): Promise<void> {
@@ -287,7 +300,11 @@ export class ClientsService {
     }
   }
 
-  async listProjectClients(projectId: string) {
+  // SEC-004 — project-scope IDOR fix: callers without project membership or
+  // projects:manage_any receive a 403 before any data is returned.
+  async listProjectClients(projectId: string, currentUser: AccessUser) {
+    await this.accessScope.assertCanAccessProject(projectId, currentUser);
+
     return this.prisma.projectClient.findMany({
       where: { projectId },
       include: {
