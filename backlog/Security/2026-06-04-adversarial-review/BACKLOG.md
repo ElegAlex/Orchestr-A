@@ -507,7 +507,7 @@ N/A — manual verification; inject a failing roleCode after valid serviceIds in
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary COR-040 ⇄ sessionA COR-002).
 - Audit note: Compare with hardDelete() which correctly uses $transaction for all owned-data deletions. Adversarial check: only one $transaction exists in users.service.ts (line 948, in hardDelete()). Pre-validation of serviceIds (lines 599-606) and email/login (lines 543-588) happens before deleteMany, but a concurrent constraint violation or unexpected DB error in user.update() (line 635) after deleteMany has committed would leave the user with no services.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 93c3073d
 
 ---
 
@@ -1108,7 +1108,7 @@ N/A — manual verification
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-030 ⇄ sessionA PERF-008).
 - Audit note: The validateImport method (line 1454) wisely pre-fetches all existing users at once (line 1479-1481); the same pattern should be applied to importUsers. ImportUsersDto.users has no @Max constraint — batch size is truly unbounded.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 93c3073d
 
 ---
 
@@ -1704,7 +1704,7 @@ grep -n 'bumpUser' apps/api/src/users/users.service.ts
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary COR-039 ⇄ sessionA SEC-002).
 - Audit note: jwtNotBefore is already injected at line 62. The fix is two one-line additions. Adversarial check: grep confirmed bumpUser only called at lines 781 and 826 (both for isActive true→false transitions in update() and remove() respectively). changePassword() (lines 1041-1067) and admin resetPassword() (lines 1123-1158) both end after revokeAllForUser() with no bumpUser call. auth.service.ts resetPassword() at line 585 correctly calls bumpUser — the asymmetry is confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 93c3073d
 
 ---
 
@@ -1758,7 +1758,7 @@ grep -n 'bumpUser' apps/api/src/users/users.service.ts
 - Related (same run): COR-039, COR-007.
 - Audit note: jwtNotBefore is already injected (constructor line 62, field declared at line 63). The fix is one line. Adversarial check confirms: bumpUser appears at lines 781 and 826 (for deactivation/removal paths) but NOT in the resetPassword body (lines 1089-1159). AuthService.resetPassword at line 585 correctly calls bumpUser — the omission in the admin path is confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 93c3073d
 
 ---
 
@@ -9104,7 +9104,7 @@ grep -n 'auditPersistence.log\|\$transaction\|USER_DELETED' /home/alex/Documents
 - sessionA-only finding (99-run). Namespaced `SA-DAT-004` to avoid ID collision with the primary run; original id `DAT-004` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: Line 912 confirms 'Plain await, non-transactional'. Line 916-936: audit committed. Line 948: erasure $transaction begins. The same pre-tx pattern in project deletion (projects.service.ts line 855) is protected by an earlier checkProjectDependencies(); the user path has no equivalent guard for the concurrent-audit-insert case.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 93c3073d
 
 ---
 
