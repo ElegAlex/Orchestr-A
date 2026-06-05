@@ -450,8 +450,12 @@ export class TasksService {
         title: true,
         status: true,
         priority: true,
+        estimatedHours: true,
         startDate: true,
         endDate: true,
+        startTime: true,
+        endTime: true,
+        isExternalIntervention: true,
         projectId: true,
         assigneeId: true,
         project: {

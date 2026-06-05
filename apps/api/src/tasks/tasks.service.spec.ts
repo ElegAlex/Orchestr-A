@@ -508,6 +508,45 @@ describe('TasksService', () => {
 
       expect(result).toEqual({ data: mockTasks });
     });
+
+    // Regression: the planning grid (DayCell) styles external-intervention tasks
+    // in red and draws a red cell overlay, both driven by task.isExternalIntervention.
+    // The explicit select MUST expose the field, otherwise the frontend receives
+    // `undefined` (falsy) and renders an external task as a normal one.
+    it('selects isExternalIntervention so the planning can render the external visual', async () => {
+      await service.findForPlanningOverview(
+        '2026-01-01',
+        '2026-06-30',
+        planningUser,
+      );
+
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({ isExternalIntervention: true }),
+        }),
+      );
+    });
+
+    // The planning cell (DayCell) also renders the task schedule and effort:
+    // 🕐 startTime–endTime and ⏱️ estimatedHours. The curated select must expose
+    // them, otherwise the planning silently never shows hours or estimated effort.
+    it('selects the schedule/effort fields the planning cell renders', async () => {
+      await service.findForPlanningOverview(
+        '2026-01-01',
+        '2026-06-30',
+        planningUser,
+      );
+
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            startTime: true,
+            endTime: true,
+            estimatedHours: true,
+          }),
+        }),
+      );
+    });
   });
 
   describe('findOne', () => {
