@@ -1437,7 +1437,7 @@ docker exec orchestr-a-db psql -U postgres -d orchestra -c "EXPLAIN SELECT * FRO
 **Notes:**
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-035 ⇄ sessionA PERF-020).
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 375a2386
 
 ---
 
@@ -1495,7 +1495,7 @@ docker exec orchestr-a-db psql -U postgres -d orchestra -c "EXPLAIN SELECT * FRO
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-036 ⇄ sessionA PERF-021).
 - Audit note: DOWNGRADED from medium to low. The cascade-delete rationale is incorrect: TaskRACI.userId has no Prisma FK relation to User (only to Task). No cascade trigger from User deletion will hit task_raci via a DB FK. The index would only help if a userId-only query is ever issued, which the current service layer does not do. Real impact is limited to hypothetical future queries.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 375a2386
 
 ---
 
@@ -6668,7 +6668,7 @@ psql $DATABASE_URL -c "SELECT indexname FROM pg_indexes WHERE tablename = 'task_
 - Related (same run): PER-035.
 - Audit note: ADVERSARIAL REVIEW CONFIRMED. Verified schema.prisma lines 391-403 verbatim — no @@index([dependsOnTaskId]). Checked ALL migrations referencing task_dependencies (init + DAT-018): init only creates the composite unique index on (taskId, dependsOnTaskId); DAT-018 adds a no-self-loop CHECK and a cycle-prevention trigger — neither adds a dependsOnTaskId index. No migration anywhere adds this index. The DAT-029 pattern (@@index([serviceId]) on UserService, @@index([userId]) on ProjectMember) was not applied here.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 375a2386
 
 ---
 
@@ -6732,7 +6732,7 @@ psql $DATABASE_URL -c "SELECT indexname FROM pg_indexes WHERE tablename = 'user_
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ADVERSARIAL REVIEW CONFIRMED. Verified schema.prisma lines 763-777 verbatim — no @@index([skillId]). Checked all migrations: no migration adds a skillId index on user_skills. The @@id([userId, skillId]) PK only covers userId-leading lookups. Finding is structurally identical to DAT-029 pattern that was applied to UserService but missed UserSkill.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 375a2386
 
 ---
 
