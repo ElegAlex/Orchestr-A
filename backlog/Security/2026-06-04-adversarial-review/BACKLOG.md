@@ -3652,7 +3652,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verbatim confirmed: Prisma `where` clause only filters `skillId` (and optionally `level`), `isActive: true` is absent from the DB query. JS filter at line 515 confirmed. No middleware or decorator that would add the filter at a higher level found.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 074f307a
 
 ---
 
@@ -3700,7 +3700,7 @@ curl -s 'http://localhost:3000/api/skills?limit=9999' | jq '.meta.limit' # shoul
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Same pattern at apps/api/src/departments/departments.service.ts:80-81 and apps/api/src/services/services.service.ts:102-103 — all three need the same fix. Verbatim evidence verified in all three files. No global validation pipe or controller-level cap found that would override the 1000-row default.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 074f307a
 
 ---
 
@@ -4403,7 +4403,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: import-skills.dto.ts confirmed: `@IsArray()` and `@ValidateNested({ each: true })` present but no `@ArrayMaxSize` decorator. Serial for-loop at lines 693-731 verbatim confirmed with `await this.prisma.skill.create()` inside the loop. validateImport (line 576) has the same loop but only performs one pre-load findMany then Set-based lookups, so no per-row DB call. The missing @ArrayMaxSize still allows oversized payloads to consume memory during JSON parse.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 074f307a
 
 ---
 
@@ -8848,7 +8848,7 @@ grep -n 'isUniqueViolation\|P2002\|catch' apps/api/src/skills/skills.service.ts
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: departments.service.ts lines 12-19 and 69-74 show the correct pattern. importSkills() at line 725 already has a try/catch per item. Only the standalone create()/update() methods are missing it. Adversarial check: grep confirmed zero P2002/catch/isUniqueViolation in skills.service.ts outside line 725 (importSkills). schema.prisma line 743 confirms @unique on Skill.name.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 074f307a
 
 ---
 
