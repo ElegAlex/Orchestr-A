@@ -696,7 +696,7 @@ N/A — manual verification
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-016 ⇄ sessionA PERF-016).
 - Audit note: Confirmed: `members: true` at line 1276, used only for `.length` at line 1371. Tasks array unbounded.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 08693a50
 
 ---
 
@@ -2263,7 +2263,7 @@ grep -n 'assertProjectOwnershipOrBypass' apps/api/src/projects/projects.service.
 - Related (same run): COR-025.
 - Audit note: Adversarial check: grep confirms assertProjectOwnershipOrBypass called at lines 555, 670, 693, 730, 970, 1015 (update, remove, archive, unarchive, updateMember, removeMember). hardDelete at line 833 has NO such call — confirmed omission. @OwnershipCheck decorator IS present on the controller, so the controller-level guard exists, but the service-layer backstop is absent unlike all siblings.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 08693a50
 
 ---
 
@@ -2848,7 +2848,7 @@ grep -n 'auditPersistence.log\|project.delete' apps/api/src/projects/projects.se
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 08693a50
 
 ---
 
@@ -3523,7 +3523,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code confirmed verbatim. findAll uses groupBy (PER-005) but getProjectsByUser at line 1074-1134 does not — the inconsistency is real.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 08693a50
 
 ---
 
@@ -3579,7 +3579,7 @@ curl -s -H 'Authorization: Bearer <token>' 'http://localhost:3000/api/projects' 
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Same pattern in epics.service.ts:31 and milestones.service.ts:59 (both default+cap at 1000). QueryProjectsDto has no @Max or limit field — no DTO-level constraint mitigates this.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 08693a50
 
 ---
 
@@ -4840,7 +4840,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: verified_clean note mentions milestones.service.ts:314-320 isNaN check, but that is in the validateImport preview path — NOT in getSnapshots. The projects.service.ts getSnapshots path at lines 1244-1249 has NO isNaN guard, no try/catch, no DTO validation before new Date(). Finding stands.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 08693a50
 
 ---
 
@@ -8775,7 +8775,7 @@ grep -n 'startDate && endDate' apps/api/src/projects/projects.service.ts
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 08693a50
 
 ---
 
@@ -9257,7 +9257,7 @@ curl -s -H 'Authorization: Bearer <token>' 'http://localhost:3000/projects' | jq
 - sessionA-only finding (99-run). Namespaced `SA-PERF-001` to avoid ID collision with the primary run; original id `PERF-001` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: tasks.findAll uses default 10 but ceiling 1000 — the ceiling issue is shared.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 08693a50
 
 ---
 
@@ -9364,7 +9364,7 @@ grep -n 'getSnapshots\|findMany' apps/api/src/projects/projects.service.ts | hea
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-PERF-017` to avoid ID collision with the primary run; original id `PERF-017` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 08693a50
 
 ---
 
@@ -9527,7 +9527,7 @@ grep -n 'timeEntry.findMany\|userTimeEntries\|thirdPartyTimeEntries' apps/api/sr
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-PERF-018` to avoid ID collision with the primary run; original id `PERF-018` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 08693a50
 
 ---
 
