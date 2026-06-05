@@ -3037,7 +3037,7 @@ grep -n 'assertTeleworkCompatibility\|predefinedTaskAssignment.create' apps/api/
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: createAssignment (single) has the same pattern but the window is much smaller.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d7d60074
 
 ---
 
@@ -4214,7 +4214,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Confirmed: BulkAssignmentDto has only @ArrayMinSize(1) on both userIds and dates — no upper bound. The 1 MiB bodyLimit limits the raw payload size but does not bound the number of DB round trips for a payload under 1 MiB.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d7d60074
 
 ---
 
@@ -4275,7 +4275,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Confirmed: CreateBulkRecurringRulesDto has no @ArrayMaxSize on userIds. daysOfWeek is bounded by @Min(0)/@Max(6) per element (0-6 = at most 7 values) which partially mitigates the day dimension, but userIds has no upper bound.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d7d60074
 
 ---
 
@@ -4343,7 +4343,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Confirmed: GenerateFromRulesDto has only @IsDateString()/@IsNotEmpty() on startDate and endDate — no max-range constraint. Any date range is accepted.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d7d60074
 
 ---
 
@@ -6983,7 +6983,7 @@ grep -n 'new Date(date)\|new Date(dateStr)\|Date.UTC' apps/api/src/predefined-ta
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Prod is UTC (MEMORY.md), TeleworkSchedule.date is @db.Date. BulkAssignmentDto uses @IsDateString() with UTC-qualified examples. Risk is latent but real for date-only inputs or non-UTC deployments.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d7d60074
 
 ---
 
