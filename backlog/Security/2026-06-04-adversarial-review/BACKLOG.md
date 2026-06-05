@@ -2676,7 +2676,7 @@ grep -n '\$transaction' apps/api/src/clients/clients.service.ts
 
 ### COR-012 — Recurring event child occurrences created outside any transaction — partial failure leaves orphaned parent with no children
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** B
 - **Confidence:** primary-only
@@ -3358,7 +3358,7 @@ N/A — manual verification via concurrent load test
 
 ### PER-006 — All `events.findAll` / `getEventsByUser` / `getEventsByRange` list endpoints are unpaginated and unbounded
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -3982,7 +3982,7 @@ N/A — manual verification
 
 ### PER-005 — Recurring event creation: sequential per-occurrence `event.create` loop — N DB round-trips on request path
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only

@@ -123,6 +123,8 @@ describe('EventsController', () => {
         undefined,
         undefined,
         undefined,
+        undefined,
+        undefined,
       );
     });
 
@@ -147,6 +149,8 @@ describe('EventsController', () => {
         '2025-11-30',
         'user-1',
         'project-1',
+        undefined,
+        undefined,
       );
     });
   });
@@ -213,7 +217,11 @@ describe('EventsController', () => {
       );
 
       expect(result).toEqual(events);
-      expect(service.getEventsByUser).toHaveBeenCalledWith('user-1');
+      expect(service.getEventsByUser).toHaveBeenCalledWith(
+        'user-1',
+        undefined,
+        undefined,
+      );
     });
   });
 
@@ -235,6 +243,8 @@ describe('EventsController', () => {
         '2025-11-30',
         'user-1',
         'ADMIN',
+        undefined,
+        undefined,
       );
     });
   });

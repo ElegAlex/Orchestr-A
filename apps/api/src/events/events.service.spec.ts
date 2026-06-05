@@ -25,6 +25,7 @@ describe('EventsService', () => {
       create: vi.fn(),
       createMany: vi.fn(),
       findMany: vi.fn(),
+      count: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -123,6 +124,10 @@ describe('EventsService', () => {
         id: 'project-1',
       });
       mockPrismaService.user.findMany.mockResolvedValue([{ id: 'user-2' }]);
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
       mockPrismaService.event.create.mockResolvedValue(mockEvent);
 
       const result = await service.create(createEventDto, userId);
@@ -175,6 +180,10 @@ describe('EventsService', () => {
         date: '2025-11-10',
       };
 
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
       mockPrismaService.event.create.mockRejectedValue(
         new Error(
           'Raw query failed. Code: P0001. Message: events_parent_no_cycle: parent chain creates a cycle',
@@ -192,6 +201,10 @@ describe('EventsService', () => {
         date: '2025-11-10',
       };
 
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
       mockPrismaService.event.create.mockRejectedValue(
         new Error(
           'Raw query failed. Code: 23514. Message: new row for relation "events" violates check constraint "events_parent_no_self_ck"',
@@ -203,12 +216,12 @@ describe('EventsService', () => {
       );
     });
 
-    // PER-024 — recurring event must wire participants via nested create, NOT
-    // via createMany+findMany(parentEventId). The unfixed code calls
-    // event.createMany then event.findMany({parentEventId}) to get IDs back.
-    // Post-fix: event.create called once per occurrence (nested participants),
-    // event.findMany with parentEventId filter NEVER called.
-    it('PER-024: recurring event wires participants with nested create, no findMany round-trip', async () => {
+    // PER-024 — recurring event must NOT use createMany→findMany(parentEventId)
+    // round-trip. Post-COR-012/PER-005 fix: everything runs in $transaction;
+    // event.create is called exactly once (parent), event.createMany once for
+    // child occurrences, eventParticipant.createMany once for participant rows.
+    // event.findMany with parentEventId filter is NEVER called.
+    it('PER-024: recurring event uses createMany for occurrences, no findMany round-trip', async () => {
       const parentEvent = {
         ...mockEvent,
         id: 'parent-1',
@@ -216,14 +229,16 @@ describe('EventsService', () => {
         recurrenceWeekInterval: 1,
       };
 
-      // First call = parent event; subsequent calls = child occurrences
-      let callCount = 0;
-      mockPrismaService.event.create.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) return Promise.resolve(parentEvent);
-        return Promise.resolve({ ...parentEvent, id: `child-${callCount}` });
+      // $transaction executes the callback with mockPrismaService as tx
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
+      mockPrismaService.event.create.mockResolvedValue(parentEvent);
+      mockPrismaService.event.createMany.mockResolvedValue({ count: 2 });
+      mockPrismaService.eventParticipant.createMany.mockResolvedValue({
+        count: 4,
       });
-
       // findMany should NOT be called with parentEventId (anti-pattern)
       mockPrismaService.event.findMany.mockResolvedValue([]);
 
@@ -240,40 +255,136 @@ describe('EventsService', () => {
 
       await service.create(dto, 'user-1');
 
+      // event.create called exactly once (parent only — COR-012/PER-005 fix)
+      expect(prisma.event.create).toHaveBeenCalledTimes(1);
+      // event.createMany called once for all child occurrences
+      expect(prisma.event.createMany).toHaveBeenCalledTimes(1);
       // POST-FIX assertion: findMany must NOT have been called with parentEventId
       expect(prisma.event.findMany).not.toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ parentEventId: 'parent-1' }),
         }),
       );
-      // POST-FIX assertion: event.create called more than once (parent + children)
-      expect(prisma.event.create).toHaveBeenCalledTimes(3); // parent + 2 occurrences
+    });
+
+    // COR-012 — partial occurrence failure must roll back the parent event.
+    // Pre-fix: parent event.create commits, then occurrence loop runs outside
+    // any transaction; a mid-loop failure leaves an orphaned parent.
+    // Post-fix: everything inside $transaction; if the callback throws, the
+    // entire tx is aborted and the parent is not persisted.
+    it('COR-012 — occurrence failure inside $transaction rolls back parent (no orphaned event)', async () => {
+      const parentEvent = { ...mockEvent, id: 'parent-1', isRecurring: true };
+
+      // $transaction rejects when the callback throws (simulates a failed child write)
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: typeof mockPrismaService) => Promise<unknown>) => {
+          // parent create succeeds inside the tx
+          mockPrismaService.event.create.mockResolvedValueOnce(parentEvent);
+          // createMany throws (child batch write fails)
+          mockPrismaService.event.createMany.mockRejectedValueOnce(
+            new Error('DB connection reset'),
+          );
+          return cb(mockPrismaService);
+        },
+      );
+
+      mockPrismaService.user.findMany.mockResolvedValue([{ id: 'user-2' }]);
+
+      const dto: CreateEventDto = {
+        title: 'Recurring event',
+        date: '2025-11-10',
+        isRecurring: true,
+        recurrenceWeekInterval: 1,
+        recurrenceEndDate: '2025-11-24',
+        participantIds: ['user-2'],
+      };
+
+      await expect(service.create(dto, 'user-1')).rejects.toThrow(
+        'DB connection reset',
+      );
+      // The $transaction itself is what rolled back — verify it was called
+      expect(prisma.$transaction).toHaveBeenCalled();
+      // event.create must have been called inside the tx (then rolled back)
+      expect(prisma.event.create).toHaveBeenCalledTimes(1);
+    });
+
+    // PER-005 — recurring event creation must execute ≤3 DB statements.
+    // Pre-fix: N sequential event.create calls (one per occurrence).
+    // Post-fix: 1 parent event.create + 1 event.createMany for occurrences
+    //           + 1 eventParticipant.createMany for participants = 3 statements.
+    it('PER-005 — 52-week recurring event executes ≤3 DB write statements (createMany batching)', async () => {
+      const parentEvent = { ...mockEvent, id: 'parent-1', isRecurring: true };
+
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
+      mockPrismaService.event.create.mockResolvedValue(parentEvent);
+      mockPrismaService.event.createMany.mockResolvedValue({ count: 52 });
+      mockPrismaService.eventParticipant.createMany.mockResolvedValue({
+        count: 52,
+      });
+
+      const dto: CreateEventDto = {
+        title: 'Weekly meeting',
+        date: '2025-01-06',
+        isRecurring: true,
+        recurrenceWeekInterval: 1,
+        // ~52 weeks from event date
+        recurrenceEndDate: '2026-01-05',
+        participantIds: ['user-2'],
+      };
+
+      mockPrismaService.user.findMany.mockResolvedValue([{ id: 'user-2' }]);
+
+      await service.create(dto, 'user-1');
+
+      // ≤3 prisma write statements:
+      // 1 create (parent) + 1 createMany (occurrences) + 1 createMany (participants)
+      const writeCount =
+        mockPrismaService.event.create.mock.calls.length +
+        mockPrismaService.event.createMany.mock.calls.length +
+        mockPrismaService.eventParticipant.createMany.mock.calls.length;
+      expect(writeCount).toBeLessThanOrEqual(3);
+    });
+
+    it('PER-005 — rejects recurrenceEndDate more than 2 years after event date', async () => {
+      const dto: CreateEventDto = {
+        title: 'Far future recurring',
+        date: '2025-01-01',
+        isRecurring: true,
+        recurrenceWeekInterval: 1,
+        recurrenceEndDate: '2028-01-02', // >2 years after 2025-01-01
+      };
+
+      await expect(service.create(dto, 'user-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
   describe('findAll', () => {
-    it('should return all events', async () => {
+    it('should return all events with pagination meta', async () => {
       const events = [mockEvent];
       mockPrismaService.event.findMany.mockResolvedValue(events);
+      mockPrismaService.event.count.mockResolvedValue(1);
 
       const result = await service.findAll('user-1', 'ADMIN');
 
-      expect(result).toEqual(events);
+      expect(result).toEqual({
+        data: events,
+        meta: expect.objectContaining({ total: 1 }),
+      });
       expect(prisma.event.findMany).toHaveBeenCalled();
     });
 
     it('should filter events by date range', async () => {
       const events = [mockEvent];
       mockPrismaService.event.findMany.mockResolvedValue(events);
+      mockPrismaService.event.count.mockResolvedValue(1);
 
-      const result = await service.findAll(
-        'user-1',
-        'ADMIN',
-        '2025-11-01',
-        '2025-11-30',
-      );
+      await service.findAll('user-1', 'ADMIN', '2025-11-01', '2025-11-30');
 
-      expect(result).toEqual(events);
       expect(prisma.event.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
@@ -289,16 +400,10 @@ describe('EventsService', () => {
     it('should filter events by user', async () => {
       const events = [mockEvent];
       mockPrismaService.event.findMany.mockResolvedValue(events);
+      mockPrismaService.event.count.mockResolvedValue(1);
 
-      const result = await service.findAll(
-        'user-1',
-        'ADMIN',
-        undefined,
-        undefined,
-        'user-1',
-      );
+      await service.findAll('user-1', 'ADMIN', undefined, undefined, 'user-1');
 
-      expect(result).toEqual(events);
       expect(prisma.event.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
@@ -309,6 +414,47 @@ describe('EventsService', () => {
             },
           }),
         }),
+      );
+    });
+
+    // PER-006 — findAll must enforce a max take of 200 (no unbounded findMany).
+    it('PER-006 — findAll enforces take ≤ 200 (unbounded query is capped)', async () => {
+      mockPrismaService.event.findMany.mockResolvedValue([]);
+      mockPrismaService.event.count.mockResolvedValue(0);
+
+      await service.findAll('user-1', 'ADMIN');
+
+      expect(prisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: expect.any(Number),
+        }),
+      );
+      const call = (prisma.event.findMany as ReturnType<typeof vi.fn>).mock
+        .calls[0][0];
+      expect(call.take).toBeLessThanOrEqual(200);
+    });
+
+    // PER-006 — findAll with page=2&pageSize=10 returns correct slice (skip=10, take=10).
+    it('PER-006 — findAll with page=2 pageSize=10 skips first 10 events', async () => {
+      mockPrismaService.event.findMany.mockResolvedValue([]);
+      mockPrismaService.event.count.mockResolvedValue(25);
+
+      const result = await service.findAll(
+        'user-1',
+        'ADMIN',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        2,
+        10,
+      );
+
+      expect(prisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 10, take: 10 }),
+      );
+      expect(result.meta).toEqual(
+        expect.objectContaining({ total: 25, page: 2, pageSize: 10 }),
       );
     });
   });
@@ -411,13 +557,17 @@ describe('EventsService', () => {
   });
 
   describe('getEventsByRange', () => {
-    it('should return events in date range', async () => {
+    it('should return events in date range with pagination meta', async () => {
       const events = [mockEvent];
       mockPrismaService.event.findMany.mockResolvedValue(events);
+      mockPrismaService.event.count.mockResolvedValue(1);
 
       const result = await service.getEventsByRange('2025-11-01', '2025-11-30');
 
-      expect(result).toEqual(events);
+      expect(result).toEqual({
+        data: events,
+        meta: expect.objectContaining({ total: 1 }),
+      });
       expect(prisma.event.findMany).toHaveBeenCalled();
     });
 

@@ -67,15 +67,18 @@ export class EventsController {
   @Get()
   @RequirePermissions('events:read')
   @ApiOperation({
-    summary: 'Récupérer tous les événements (avec filtres optionnels)',
+    summary:
+      'Récupérer tous les événements (avec filtres optionnels et pagination)',
   })
   @ApiQuery({ name: 'startDate', required: false, type: String })
   @ApiQuery({ name: 'endDate', required: false, type: String })
   @ApiQuery({ name: 'userId', required: false, type: String })
   @ApiQuery({ name: 'projectId', required: false, type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number })
   @ApiResponse({
     status: 200,
-    description: 'Liste des événements',
+    description: 'Liste des événements paginée',
   })
   findAll(
     @CurrentUser('id') currentUserId: string,
@@ -84,6 +87,8 @@ export class EventsController {
     @Query('endDate') endDate?: string,
     @Query('userId') userId?: string,
     @Query('projectId') projectId?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     return this.eventsService.findAll(
       currentUserId,
@@ -92,14 +97,21 @@ export class EventsController {
       endDate,
       userId,
       projectId,
+      page ? parseInt(page, 10) : undefined,
+      pageSize ? parseInt(pageSize, 10) : undefined,
     );
   }
 
   @Get('range')
   @RequirePermissions('events:read')
-  @ApiOperation({ summary: 'Récupérer les événements dans une plage de dates' })
+  @ApiOperation({
+    summary:
+      'Récupérer les événements dans une plage de dates (avec pagination)',
+  })
   @ApiQuery({ name: 'start', required: true, type: String })
   @ApiQuery({ name: 'end', required: true, type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number })
   @ApiResponse({
     status: 200,
     description: 'Liste des événements dans la plage',
@@ -113,18 +125,26 @@ export class EventsController {
     @Query('end') end: string,
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     return this.eventsService.getEventsByRange(
       start,
       end,
       currentUserId,
       currentUserRole,
+      page ? parseInt(page, 10) : undefined,
+      pageSize ? parseInt(pageSize, 10) : undefined,
     );
   }
 
   @Get('user/:userId')
   @RequirePermissions('events:read')
-  @ApiOperation({ summary: "Récupérer tous les événements d'un utilisateur" })
+  @ApiOperation({
+    summary: "Récupérer tous les événements d'un utilisateur (avec pagination)",
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number })
   @ApiResponse({
     status: 200,
     description: "Liste des événements de l'utilisateur",
@@ -137,6 +157,8 @@ export class EventsController {
     @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser('id') currentUserId: string,
     @CurrentUserRoleCode() currentUserRole: string | null,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     if (userId !== currentUserId) {
       const permissions =
@@ -147,7 +169,11 @@ export class EventsController {
         );
       }
     }
-    return this.eventsService.getEventsByUser(userId);
+    return this.eventsService.getEventsByUser(
+      userId,
+      page ? parseInt(page, 10) : undefined,
+      pageSize ? parseInt(pageSize, 10) : undefined,
+    );
   }
 
   @Get(':id')

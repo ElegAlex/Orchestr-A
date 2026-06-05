@@ -5,12 +5,16 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { OwnershipService } from '../common/services/ownership.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Prisma } from 'database';
+
+/** Maximum horizon for recurrenceEndDate: 2 years from the event date (PER-005). */
+const MAX_RECURRENCE_HORIZON_YEARS = 2;
 
 /**
  * COR-038 — detect a DAT-038 event parent-chain cycle violation, either the
@@ -129,66 +133,139 @@ export class EventsService {
       }
     }
 
-    // Créer l'événement
+    // PER-005: guard against an unbounded recurrence horizon (>2 years from
+    // event date generates hundreds of sequential writes on the request path).
+    if (isRecurring && recurrenceEndDate) {
+      const eventDate = new Date(date);
+      const horizon = new Date(eventDate);
+      horizon.setFullYear(horizon.getFullYear() + MAX_RECURRENCE_HORIZON_YEARS);
+      if (new Date(recurrenceEndDate) > horizon) {
+        throw new BadRequestException(
+          `La date de fin de récurrence ne peut pas dépasser ${MAX_RECURRENCE_HORIZON_YEARS} ans après la date de l'événement`,
+        );
+      }
+    }
+
+    // COR-012 + PER-005 — wrap parent create AND all occurrence writes in a
+    // single $transaction so that a mid-batch failure rolls back the parent
+    // instead of leaving an orphaned event (COR-012). Inside the transaction
+    // use createMany (PER-005): 1 parent event.create + 1 event.createMany for
+    // occurrences + 1 eventParticipant.createMany for participants = ≤3 statements
+    // instead of N sequential event.create calls.
+    //
     // COR-038 — DAT-038's BEFORE INSERT trigger `events_parent_no_cycle_trg`
-    // and CHECK `events_parent_no_self_ck` are the sole barrier against an
-    // event-parent cycle on insert. Without this catch the raw P0001 / 23514
-    // leaks as HTTP 500; map to ConflictException so the client receives a
-    // 409 with a proper FR message, mirroring COR-037's pattern for leaves.
+    // and CHECK `events_parent_no_self_ck` fire inside the transaction; the
+    // outer try/catch maps P0001 / 23514 to ConflictException(409).
     let event;
     try {
-      event = await this.prisma.event.create({
-        data: {
-          ...eventData,
-          date: new Date(date),
-          projectId: projectId || null,
-          createdById,
-          isRecurring: isRecurring || false,
-          recurrenceWeekInterval: recurrenceWeekInterval ?? null,
-          recurrenceDay: recurrenceDay ?? null,
-          recurrenceEndDate: recurrenceEndDate
-            ? new Date(recurrenceEndDate)
-            : null,
-          // Créer les participations
-          ...(participantIds &&
-            participantIds.length > 0 && {
-              participants: {
-                create: participantIds.map((userId) => ({ userId })),
+      event = await this.prisma.$transaction(async (tx) => {
+        // 1. Create the parent event with nested participants
+        const parentEvent = await tx.event.create({
+          data: {
+            ...eventData,
+            date: new Date(date),
+            projectId: projectId || null,
+            createdById,
+            isRecurring: isRecurring || false,
+            recurrenceWeekInterval: recurrenceWeekInterval ?? null,
+            recurrenceDay: recurrenceDay ?? null,
+            recurrenceEndDate: recurrenceEndDate
+              ? new Date(recurrenceEndDate)
+              : null,
+            // Créer les participations du parent
+            ...(participantIds &&
+              participantIds.length > 0 && {
+                participants: {
+                  create: participantIds.map((userId) => ({ userId })),
+                },
+              }),
+          },
+          include: {
+            project: {
+              select: {
+                id: true,
+                name: true,
               },
-            }),
-        },
-        include: {
-          project: {
-            select: {
-              id: true,
-              name: true,
             },
-          },
-          createdBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
-              email: true,
+            createdBy: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
+                email: true,
+              },
             },
-          },
-          participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  email: true,
-                  avatarUrl: true,
-                  avatarPreset: true,
+            participants: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    avatarUrl: true,
+                    avatarPreset: true,
+                  },
                 },
               },
             },
           },
-        },
+        });
+
+        // 2. Generate child occurrences in batch (PER-005)
+        if (isRecurring) {
+          const weekInterval = recurrenceWeekInterval || 1;
+          const eventDateObj = new Date(date);
+
+          const endDate = recurrenceEndDate
+            ? new Date(recurrenceEndDate)
+            : new Date(eventDateObj.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+          // Build all occurrence rows with pre-generated UUIDs so we can
+          // batch-insert participants without a round-trip to recover IDs.
+          const childRows: (Prisma.EventCreateManyInput & { id: string })[] =
+            [];
+          let currentDate = new Date(eventDateObj);
+          currentDate.setDate(currentDate.getDate() + weekInterval * 7);
+
+          while (currentDate <= endDate) {
+            childRows.push({
+              id: randomUUID(),
+              title: eventData.title || parentEvent.title,
+              description: eventData.description ?? null,
+              date: new Date(currentDate),
+              startTime: eventData.startTime ?? null,
+              endTime: eventData.endTime ?? null,
+              isAllDay: eventData.isAllDay ?? true,
+              isExternalIntervention: eventData.isExternalIntervention ?? false,
+              projectId: projectId || null,
+              createdById,
+              parentEventId: parentEvent.id,
+            });
+            currentDate = new Date(currentDate);
+            currentDate.setDate(currentDate.getDate() + weekInterval * 7);
+          }
+
+          if (childRows.length > 0) {
+            // PER-005: single batch insert for all occurrences
+            await tx.event.createMany({ data: childRows });
+
+            // PER-005: single batch insert for all participant rows
+            if (participantIds && participantIds.length > 0) {
+              const participantRows = childRows.flatMap((child) =>
+                participantIds.map((userId) => ({
+                  eventId: child.id,
+                  userId,
+                })),
+              );
+              await tx.eventParticipant.createMany({ data: participantRows });
+            }
+          }
+        }
+
+        return parentEvent;
       });
     } catch (err) {
       if (isEventParentCycleViolation(err)) {
@@ -197,59 +274,14 @@ export class EventsService {
       throw err;
     }
 
-    // Générer les occurrences si l'événement est récurrent
-    if (isRecurring) {
-      const weekInterval = recurrenceWeekInterval || 1;
-      const eventDate = new Date(date);
-
-      const endDate = recurrenceEndDate
-        ? new Date(recurrenceEndDate)
-        : new Date(eventDate.getTime() + 365 * 24 * 60 * 60 * 1000);
-
-      const occurrences: Prisma.EventCreateManyInput[] = [];
-      let currentDate = new Date(eventDate);
-      currentDate.setDate(currentDate.getDate() + weekInterval * 7);
-
-      while (currentDate <= endDate) {
-        occurrences.push({
-          title: eventData.title || event.title,
-          description: eventData.description ?? null,
-          date: new Date(currentDate),
-          startTime: eventData.startTime ?? null,
-          endTime: eventData.endTime ?? null,
-          isAllDay: eventData.isAllDay ?? true,
-          isExternalIntervention: eventData.isExternalIntervention ?? false,
-          projectId: projectId || null,
-          createdById,
-          parentEventId: event.id,
-        });
-        currentDate = new Date(currentDate);
-        currentDate.setDate(currentDate.getDate() + weekInterval * 7);
-      }
-
-      // PER-024: use per-occurrence event.create with nested participants to
-      // avoid the createMany→findMany(parentEventId) round-trip that was
-      // needed only to recover auto-generated child IDs.
-      for (const occ of occurrences) {
-        await this.prisma.event.create({
-          data: {
-            ...occ,
-            ...(participantIds &&
-              participantIds.length > 0 && {
-                participants: {
-                  create: participantIds.map((userId) => ({ userId })),
-                },
-              }),
-          },
-        });
-      }
-    }
-
     return event;
   }
 
   /**
-   * Récupérer tous les événements avec filtres optionnels
+   * Récupérer tous les événements avec filtres optionnels et pagination.
+   * PER-006: enforce take ≤ 200 to prevent unbounded result sets.
+   * Returns { data, meta } — callers (e.g. PlanningService) that previously
+   * used the raw array must unwrap `.data`.
    */
   async findAll(
     currentUserId: string,
@@ -258,7 +290,12 @@ export class EventsService {
     endDate?: string,
     userId?: string,
     projectId?: string,
+    page = 1,
+    pageSize = 100,
   ) {
+    const safePageSize = Math.min(pageSize || 100, 200);
+    const skip = (page - 1) * safePageSize;
+
     const where: Prisma.EventWhereInput = {};
 
     // Filtrage par plage de dates
@@ -294,44 +331,55 @@ export class EventsService {
       where.projectId = projectId;
     }
 
-    const events = await this.prisma.event.findMany({
-      where,
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
+    const [events, total] = await Promise.all([
+      this.prisma.event.findMany({
+        where,
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
-        },
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
-        },
-        participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                avatarUrl: true,
-                avatarPreset: true,
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  avatarUrl: true,
+                  avatarPreset: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: {
-        date: 'asc',
-      },
-    });
+        orderBy: { date: 'asc' },
+        skip,
+        take: safePageSize,
+      }),
+      this.prisma.event.count({ where }),
+    ]);
 
-    return events;
+    return {
+      data: events,
+      meta: {
+        total,
+        page,
+        pageSize: safePageSize,
+        totalPages: Math.ceil(total / safePageSize),
+      },
+    };
   }
 
   /**
@@ -585,9 +633,10 @@ export class EventsService {
   }
 
   /**
-   * Récupérer les événements d'un utilisateur
+   * Récupérer les événements d'un utilisateur avec pagination.
+   * PER-006: enforce take ≤ 200.
    */
-  async getEventsByUser(userId: string) {
+  async getEventsByUser(userId: string, page = 1, pageSize = 100) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -596,60 +645,74 @@ export class EventsService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    const events = await this.prisma.event.findMany({
-      where: {
-        participants: {
-          some: {
-            userId,
+    const safePageSize = Math.min(pageSize || 100, 200);
+    const skip = (page - 1) * safePageSize;
+    const where: Prisma.EventWhereInput = {
+      participants: { some: { userId } },
+    };
+
+    const [events, total] = await Promise.all([
+      this.prisma.event.findMany({
+        where,
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
-        },
-      },
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
-        },
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
-          },
-        },
-        participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                avatarUrl: true,
-                avatarPreset: true,
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  avatarUrl: true,
+                  avatarPreset: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: {
-        date: 'asc',
-      },
-    });
+        orderBy: { date: 'asc' },
+        skip,
+        take: safePageSize,
+      }),
+      this.prisma.event.count({ where }),
+    ]);
 
-    return events;
+    return {
+      data: events,
+      meta: {
+        total,
+        page,
+        pageSize: safePageSize,
+        totalPages: Math.ceil(total / safePageSize),
+      },
+    };
   }
 
   /**
-   * Récupérer les événements dans une plage de dates
+   * Récupérer les événements dans une plage de dates avec pagination.
+   * PER-006: enforce take ≤ 200.
    */
   async getEventsByRange(
     startDate: string,
     endDate: string,
     currentUserId?: string,
     currentUserRole?: string | null,
+    page = 1,
+    pageSize = 100,
   ) {
     if (!startDate || !endDate) {
       throw new BadRequestException(
@@ -670,6 +733,9 @@ export class EventsService {
       );
     }
 
+    const safePageSize = Math.min(pageSize || 100, 200);
+    const skip = (page - 1) * safePageSize;
+
     const where: Prisma.EventWhereInput = {
       date: {
         gte: start,
@@ -689,44 +755,55 @@ export class EventsService {
       }
     }
 
-    const events = await this.prisma.event.findMany({
-      where,
-      include: {
-        project: {
-          select: {
-            id: true,
-            name: true,
+    const [events, total] = await Promise.all([
+      this.prisma.event.findMany({
+        where,
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
-        },
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-            avatarPreset: true,
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatarUrl: true,
+              avatarPreset: true,
+            },
           },
-        },
-        participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                avatarUrl: true,
-                avatarPreset: true,
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  avatarUrl: true,
+                  avatarPreset: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: {
-        date: 'asc',
-      },
-    });
+        orderBy: { date: 'asc' },
+        skip,
+        take: safePageSize,
+      }),
+      this.prisma.event.count({ where }),
+    ]);
 
-    return events;
+    return {
+      data: events,
+      meta: {
+        total,
+        page,
+        pageSize: safePageSize,
+        totalPages: Math.ceil(total / safePageSize),
+      },
+    };
   }
 
   /**

@@ -87,7 +87,7 @@ export class PlanningService {
 
     const [
       leavesResult,
-      events,
+      eventsResult,
       telework,
       holidays,
       schoolVacations,
@@ -130,6 +130,11 @@ export class PlanningService {
     const leaves = Array.isArray(leavesResult)
       ? leavesResult
       : leavesResult.data;
+    // EventsService.findAll now returns a paginated { data, meta } (PER-005/006);
+    // the planning overview wants the raw event array. Cover both shapes.
+    const events = Array.isArray(eventsResult)
+      ? eventsResult
+      : eventsResult.data;
 
     return {
       users: usersResult.data,
