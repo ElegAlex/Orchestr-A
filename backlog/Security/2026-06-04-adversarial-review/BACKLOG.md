@@ -1160,7 +1160,7 @@ grep -n 'MaxLength\|bodyLimit' apps/api/src/auth/dto/login.dto.ts apps/api/src/m
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary SEC-003 ⇄ sessionA SEC-003).
 - Audit note: Adversarial check: main.ts line 96-98 sets bodyLimit=1048576 (1 MiB, SEC-025) which provides an outer bound — a single request body cannot exceed 1 MB. However, a 1 MB password still represents ~14,000 characters feeding into bcrypt. The DTO-level MaxLength is still absent and the defense-in-depth gap is real. Confidence downgraded from high to medium because the 1 MiB body limit substantially mitigates the worst-case payload size.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 000d3161
 
 ---
 
@@ -1208,7 +1208,7 @@ curl -s -X POST http://localhost:3000/api/comments -H 'Authorization: Bearer <to
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary SEC-005 ⇄ sessionA SEC-005).
 - Audit note: Adversarial review: verbatim code confirmed in create-comment.dto.ts lines 9-11 and update-comment.dto.ts lines 6-8. No @MaxLength present anywhere in either file. 1 MiB body limit in main.ts (SEC-025) provides a coarse cap but a single 1 MiB comment is still excessive. Same pattern exists for CreateTaskDto.description (no @MaxLength), ImportTaskDto.description and .title, CreatePredefinedTaskDto.name/description/color/icon, CreateSubtaskDto.description — all lack @MaxLength. This finding focuses on the comment vector as the most reachable by low-privilege users.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 000d3161
 
 ---
 
@@ -1601,7 +1601,7 @@ N/A — manual verification: grep -rn 'NoopErrorReporter\|SentryClient\|captureE
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary OBS-005 ⇄ sessionA OBS-007).
 - Audit note: ADVERSARIAL REVIEW: Fully confirmed. Code evidence at lines 33-40 is verbatim correct. The stub is intentionally documented. No mitigation found — no SENTRY_DSN env var wiring, no alternative reporter implementation. Finding stands at severity=important (intentional gap, not accidental).
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 000d3161
 
 ---
 
@@ -5062,7 +5062,7 @@ curl -s -X POST http://localhost:4000/api/telework -H 'Authorization: Bearer <ad
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verbatim code verified at create-telework.dto.ts lines 23-25 and create-recurring-rule.dto.ts lines 19-21. No upstream UUID coercion, pipe, or interceptor compensates for the missing @IsUUID(). taskId and projectId in CreateTimeEntryDto correctly use @IsUUID() confirming this is an inconsistency. Same pattern applies to CreateRecurringRuleDto (apps/api/src/telework/dto/create-recurring-rule.dto.ts lines 19-21). UpdateRecurringRuleDto inherits via PartialType so is implicitly affected.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 000d3161
 
 ---
 
@@ -8994,7 +8994,7 @@ N/A — manual verification
 - sessionA-only finding (99-run). Namespaced `SA-OBS-003` to avoid ID collision with the primary run; original id `OBS-003` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: The JwtAuthGuard path (unauthenticated 401) is a separate concern; only the post-auth 403 RBAC-denial path is flagged here.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 000d3161
 
 ---
 
