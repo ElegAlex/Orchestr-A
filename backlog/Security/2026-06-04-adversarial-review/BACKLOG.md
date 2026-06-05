@@ -2041,7 +2041,7 @@ grep -n 'assertCanAccessProject' apps/api/src/clients/clients.service.ts
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Pattern gap confirmed: grep of clients.service.ts and the controller (projects-clients.controller.ts) shows zero calls to assertCanAccessProject. DocumentsService.create() at line 57 and ProjectsService/TasksService/TimeTrackingService all enforce this check — absent only here.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 12d48876
 
 ---
 
@@ -2670,7 +2670,7 @@ grep -n '\$transaction' apps/api/src/clients/clients.service.ts
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The same pattern exists in update() (findUnique then update) but the consequence there is lower severity since update does not violate referential integrity.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 12d48876
 
 ---
 
