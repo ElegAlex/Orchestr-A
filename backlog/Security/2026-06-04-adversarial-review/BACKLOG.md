@@ -1986,7 +1986,7 @@ grep -n 'findForPlanningOverview\|expandRecurringRulesForRange' apps/api/src/tel
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ADVERSARIAL REVIEW: CONFIRMED. Verbatim code verified at lines 237-284. The call at line 246 `await this.expandRecurringRulesForRange(startDate, endDate)` passes no third argument. The function at line 292 shows `filterUserId?: string` — when absent, all active rules are processed regardless of which users are in scope.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 8fc2323f
 
 ---
 
@@ -3169,7 +3169,7 @@ grep -n 'prisma.teleworkSchedule.create\|P2002\|skipDuplicates' apps/api/src/tel
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ADVERSARIAL REVIEW: CONFIRMED. Full-file grep for 'P2002', 'skipDuplicates', 'upsert', 'catch' in telework.service.ts returned no results — no error-handling exists for the unique constraint violation. The @@unique([userId, date]) constraint on TeleworkSchedule (schema.prisma line 733) is confirmed. generateSchedulesFromRules lines 908-925 contain an identical copy of the same pattern and need the same fix.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 8fc2323f
 
 ---
 
@@ -3798,7 +3798,7 @@ time curl -s 'http://localhost:4000/api/telework?startDate=2020-01-01&endDate=20
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verbatim code verified at telework.service.ts lines 179-182 (comment on 179, if-block on 180-182). No range cap exists anywhere in the service, controller, or global pipes — startDate/endDate are raw @Query() strings with no DTO class-validator constraints. The expandRecurringRulesForRange private method (lines 292-362) confirms the O(days × rules) sequential DB I/O pattern with findUnique + create per matching day. The same issue exists in generateSchedulesFromRules (lines 855-942), triggered by POST /telework/recurring-rules/generate. findForPlanningOverview (line 246) uses internal callers … [truncated — full text in findings.json]
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 8fc2323f
 
 ---
 
@@ -4516,7 +4516,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verified verbatim at lines 328-361. findForPlanningOverview (line 246) also calls expandRecurringRulesForRange before its own findMany, confirming the fan-out fires on every planning read.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 8fc2323f
 
 ---
 
@@ -4577,7 +4577,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verified verbatim at lines 888-934. The await is inside both the for-rule loop and the while-day loop, confirming fully sequential execution.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 8fc2323f
 
 ---
 
@@ -7051,7 +7051,7 @@ TZ=Europe/Paris node -e "const d=new Date('2025-03-30');d.setHours(0,0,0,0);cons
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ADVERSARIAL REVIEW: CONFIRMED as stated. Verbatim code verified at lines 417-429. Note: the module-level constant TELEWORK_TZ = 'Europe/Paris' (line 18) and the use of formatInTimeZone for teleworkDayKey explicitly anchor all date computations to the Paris calendar. getWeeklySchedule deviates from this design contract by using local-TZ methods. Prod server is UTC per MEMORY.md (so on UTC, local midnight = UTC midnight and getDay() = UTC day), making this latent on prod but active on dev machines running Europe/Paris TZ. Severity correctly set to important rather than blocking given prod UTC mi … [truncated — full text in findings.json]
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 8fc2323f
 
 ---
 
@@ -7100,7 +7100,7 @@ TZ=Europe/Paris node -e "console.log(new Date(2026,0,1).toISOString())"
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ADVERSARIAL REVIEW: CONFIRMED as stated. Verbatim code verified at lines 463-466 (getUserStats) and 947-953 (getTeamSchedule — targetDate.setHours(0,0,0,0) then used as exact equality filter). Both deviate from the module's UTC-anchored design contract. Prod server is UTC so latent on prod, active on Europe/Paris dev machines. Same latency caveat as S6-5.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 8fc2323f
 
 ---
 
