@@ -3984,6 +3984,57 @@ describe('LeavesService', () => {
       // GREEN after fix: called exactly once (single bulk query).
       expect(mockPrismaService.leave.findMany).toHaveBeenCalledTimes(1);
     });
+
+    it('COR-015 — leave with endHalfDay uses stored days, not re-derived count', async () => {
+      // A leave Mon 2026-03-02 → Mon 2026-03-02 (same-day) with
+      // endHalfDay=AFTERNOON was stored as `days = 0.5`.  The schema has no
+      // endHalfDay column, so only `halfDay = null` survives.  Before the fix,
+      // splitLeaveByYear(startDate, endDate, null, null) → 1.0 workday, causing
+      // `available = total − 1` instead of `available = total − 0.5`.
+      // After the fix the stored `days = 0.5` is used directly (fraction = 1
+      // for a single-year leave), so `available = total − 0.5`.
+      const cy = new Date().getFullYear();
+      const cpLeaveType = { ...mockLeaveTypeConfig, code: 'CP' };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        cpLeaveType,
+      ]);
+      // 10 allocated days
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 10,
+      });
+
+      // Monday of the first full week in cy — guaranteed weekday, no risk of
+      // crossing a year boundary.
+      function firstMondayOf(year: number): Date {
+        const d = new Date(Date.UTC(year, 0, 1));
+        while (d.getUTCDay() !== 1) d.setUTCDate(d.getUTCDate() + 1);
+        return d;
+      }
+      const mon = firstMondayOf(cy);
+
+      // Stored days = 0.5 (endHalfDay=AFTERNOON was applied at create time).
+      // halfDay is null because only startHalfDay is persisted in the schema.
+      mockPrismaService.leave.findMany.mockResolvedValue([
+        {
+          days: 0.5,
+          startDate: mon,
+          endDate: mon,
+          halfDay: null,
+          status: 'APPROVED',
+          leaveTypeId: mockLeaveTypeConfig.id,
+        },
+      ]);
+
+      const result = await service.getLeaveBalance('user-1');
+      const entry = result.byType[0];
+
+      // RED before fix: splitLeaveByYear(mon, mon, null, null) → 1.0 workday
+      // (same-instant branch), so used = 1.0 and available = 9.0.
+      // GREEN after fix: stored days = 0.5 is used verbatim → available = 9.5.
+      expect(entry.used).toBeCloseTo(0.5, 5);
+      expect(entry.available).toBeCloseTo(9.5, 5);
+    });
   });
 
   // ============================================

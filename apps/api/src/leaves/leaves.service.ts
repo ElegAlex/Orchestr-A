@@ -2658,10 +2658,18 @@ export class LeavesService {
           ? { id: { not: options.excludeLeaveId } }
           : {}),
       },
-      select: { startDate: true, endDate: true, halfDay: true },
+      select: { startDate: true, endDate: true, halfDay: true, days: true },
     });
 
     const usedThisYear = intersecting.reduce((sum, l) => {
+      // COR-015 — endHalfDay is not persisted in the Leave schema; the stored
+      // `days` column is the authoritative count (it was computed at create/
+      // update time and already includes any endHalfDay deduction). Rather than
+      // re-deriving the full count via splitLeaveByYear (which would lose the
+      // endHalfDay), we compute the fraction of the leave that falls inside
+      // `year` from splitLeaveByYear's geometry and scale the stored `days`
+      // by that fraction. For single-year leaves the fraction is always 1 and
+      // stored days are used verbatim.
       const buckets = splitLeaveByYear(
         l.startDate,
         l.endDate,
@@ -2669,8 +2677,12 @@ export class LeavesService {
         null,
         holidayKeys,
       );
+      const totalRecomputed = buckets.reduce((s, b) => s + b.workDays, 0);
+      if (totalRecomputed === 0) return sum;
       const bucket = buckets.find((b) => b.year === year);
-      return sum + (bucket?.workDays ?? 0);
+      if (!bucket) return sum;
+      const fraction = bucket.workDays / totalRecomputed;
+      return sum + fraction * Number(l.days);
     }, 0);
 
     return Math.max(0, totalDays - usedThisYear);
@@ -2732,8 +2744,32 @@ export class LeavesService {
         startDate: true,
         endDate: true,
         halfDay: true,
+        days: true,
       },
     });
+
+    // COR-015 helper: compute the fraction of a leave that falls inside
+    // `targetYear`, then scale stored `days` by that fraction.  This correctly
+    // accounts for endHalfDay (which is not persisted in the schema but is
+    // already baked into the `days` column at create/update time).
+    const inYearDays = (
+      l: (typeof allLeaves)[number],
+      targetYear: number,
+    ): number => {
+      const buckets = splitLeaveByYear(
+        l.startDate,
+        l.endDate,
+        l.halfDay ?? null,
+        null,
+        holidayKeys,
+      );
+      const totalRecomputed = buckets.reduce((s, b) => s + b.workDays, 0);
+      if (totalRecomputed === 0) return 0;
+      const bucket = buckets.find((b) => b.year === targetYear);
+      if (!bucket) return 0;
+      const fraction = bucket.workDays / totalRecomputed;
+      return fraction * Number(l.days);
+    };
 
     // Pour chaque type, calculer le solde en filtrant le résultat en mémoire
     const balancesByType = await Promise.all(
@@ -2750,32 +2786,18 @@ export class LeavesService {
             (l.status === LeaveStatus.APPROVED ||
               l.status === LeaveStatus.CANCELLATION_REQUESTED),
         );
-        const usedDays = approvedLeaves.reduce((sum, l) => {
-          const buckets = splitLeaveByYear(
-            l.startDate,
-            l.endDate,
-            l.halfDay ?? null,
-            null,
-            holidayKeys,
-          );
-          const bucket = buckets.find((b) => b.year === currentYear);
-          return sum + (bucket?.workDays ?? 0);
-        }, 0);
+        const usedDays = approvedLeaves.reduce(
+          (sum, l) => sum + inYearDays(l, currentYear),
+          0,
+        );
 
         const pendingLeaves = allLeaves.filter(
           (l) => l.leaveTypeId === lt.id && l.status === LeaveStatus.PENDING,
         );
-        const pendingDays = pendingLeaves.reduce((sum, l) => {
-          const buckets = splitLeaveByYear(
-            l.startDate,
-            l.endDate,
-            l.halfDay ?? null,
-            null,
-            holidayKeys,
-          );
-          const bucket = buckets.find((b) => b.year === currentYear);
-          return sum + (bucket?.workDays ?? 0);
-        }, 0);
+        const pendingDays = pendingLeaves.reduce(
+          (sum, l) => sum + inYearDays(l, currentYear),
+          0,
+        );
 
         return {
           leaveTypeId: lt.id,

@@ -6807,7 +6807,7 @@ node -e "const d = new Date(Date.UTC(2025,2,29)); d.setDate(d.getDate()+1); cons
 
 ### COR-015 — getAvailableDays: existing leaves fetched without endHalfDay field — consumed days under-counted when stored leave has endHalfDay
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** J
 - **Confidence:** primary-only
