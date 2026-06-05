@@ -85,7 +85,7 @@ export default function TasksPage() {
             tasksData = await tasksService.getByAssignee(user.id);
             tasksData = Array.isArray(tasksData) ? tasksData : [];
           } else if (hasPermission("tasks:readAll")) {
-            const response = await tasksService.getAll(1, 1000);
+            const response = await tasksService.getAll(1, 200);
             tasksData = Array.isArray(response.data) ? response.data : [];
           } else {
             tasksData = await tasksService.getByAssignee(user.id);
@@ -141,7 +141,7 @@ export default function TasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, assigneeMeFilter]);
+  }, [user, assigneeMeFilter, hasPermission]);
 
   useEffect(() => {
     fetchData();

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // Mock next-intl
@@ -165,6 +165,12 @@ jest.mock("@/services/projects.service", () => ({
   },
 }));
 
+jest.mock("@/services/services.service", () => ({
+  servicesService: {
+    getAllWithMemberCounts: jest.fn().mockResolvedValue({ services: [], memberCounts: {} }),
+  },
+}));
+
 // Mock de react-hot-toast
 jest.mock("react-hot-toast", () => ({
   __esModule: true,
@@ -185,6 +191,7 @@ import TasksPage from "../page";
 import { tasksService } from "@/services/tasks.service";
 import { projectsService } from "@/services/projects.service";
 import { usersService } from "@/services/users.service";
+import { servicesService } from "@/services/services.service";
 import toast from "react-hot-toast";
 
 describe("TasksPage", () => {
@@ -204,6 +211,10 @@ describe("TasksPage", () => {
       data: mockProjects,
     });
     (projectsService.getByUser as jest.Mock).mockResolvedValue(mockProjects);
+    (servicesService.getAllWithMemberCounts as jest.Mock).mockResolvedValue({
+      services: [],
+      memberCounts: {},
+    });
   });
 
   it("should render the page title", async () => {
@@ -464,6 +475,10 @@ describe("TasksPage - Empty State", () => {
     (projectsService.getAll as jest.Mock).mockResolvedValue({
       data: [],
     });
+    (servicesService.getAllWithMemberCounts as jest.Mock).mockResolvedValue({
+      services: [],
+      memberCounts: {},
+    });
   });
 
   it("should display empty message when no tasks", async () => {
@@ -489,6 +504,10 @@ describe("TasksPage - Error Handling", () => {
     (projectsService.getAll as jest.Mock).mockResolvedValue({
       data: [],
     });
+    (servicesService.getAllWithMemberCounts as jest.Mock).mockResolvedValue({
+      services: [],
+      memberCounts: {},
+    });
   });
 
   it("should show error toast on fetch failure", async () => {
@@ -498,6 +517,104 @@ describe("TasksPage - Error Handling", () => {
     // the page still renders (loading clears, empty kanban columns visible)
     await waitFor(() => {
       expect(screen.getAllByText(/aucune tâche/i).length).toBeGreaterThan(0);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PER-034 — tasksService.getAll hard-coded limit of 1000
+// ---------------------------------------------------------------------------
+describe("TasksPage - PER-034 bounded fetch limit", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (tasksService.getAll as jest.Mock).mockResolvedValue({
+      data: [],
+      meta: { total: 0, page: 1, limit: 200, totalPages: 0 },
+    });
+    (tasksService.getByAssignee as jest.Mock).mockResolvedValue([]);
+    (tasksService.getOrphans as jest.Mock).mockResolvedValue([]);
+    (usersService.getAll as jest.Mock).mockResolvedValue([]);
+    (projectsService.getAll as jest.Mock).mockResolvedValue({ data: [] });
+    (projectsService.getByUser as jest.Mock).mockResolvedValue([]);
+    (servicesService.getAllWithMemberCounts as jest.Mock).mockResolvedValue({
+      services: [],
+      memberCounts: {},
+    });
+  });
+
+  it("PER-034 — getAll is called with a limit <= 200, not 1000", async () => {
+    render(<TasksPage />);
+
+    await waitFor(() => {
+      expect(tasksService.getAll).toHaveBeenCalled();
+    });
+
+    const callArgs = (tasksService.getAll as jest.Mock).mock.calls[0];
+    // callArgs[1] is the limit argument to getAll(page, limit)
+    expect(callArgs[1]).toBeLessThanOrEqual(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// COR-046 — fetchData useCallback missing hasPermission in deps (stale closure)
+// ---------------------------------------------------------------------------
+describe("TasksPage - COR-046 hasPermission in useCallback deps", () => {
+  // Save the original permissions so we can restore them after each test.
+  const originalPermissions = [...mockAuthState.permissions];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+
+    // Start with NO tasks:readAll so the initial fetch goes through getByAssignee
+    mockAuthState.permissions = ["projects:read"];
+
+    (tasksService.getAll as jest.Mock).mockResolvedValue({
+      data: mockTasks,
+      meta: { total: mockTasks.length, page: 1, limit: 200, totalPages: 1 },
+    });
+    (tasksService.getByAssignee as jest.Mock).mockResolvedValue([]);
+    (tasksService.getOrphans as jest.Mock).mockResolvedValue([]);
+    (usersService.getAll as jest.Mock).mockResolvedValue([]);
+    (projectsService.getAll as jest.Mock).mockResolvedValue({ data: [] });
+    (projectsService.getByUser as jest.Mock).mockResolvedValue([]);
+    (servicesService.getAllWithMemberCounts as jest.Mock).mockResolvedValue({
+      services: [],
+      memberCounts: {},
+    });
+  });
+
+  afterEach(() => {
+    // Restore the full permission set for other test suites
+    mockAuthState.permissions = originalPermissions;
+  });
+
+  it("COR-046 — fetchData re-runs with updated hasPermission after permission change", async () => {
+    const { rerender } = render(<TasksPage />);
+
+    // Initial render: no tasks:readAll — getAll should NOT be called
+    await waitFor(() => {
+      expect(tasksService.getByAssignee).toHaveBeenCalled();
+    });
+    expect(tasksService.getAll).not.toHaveBeenCalled();
+
+    // Simulate permission upgrade: grant tasks:readAll
+    mockAuthState.permissions = [
+      "projects:read",
+      "tasks:readAll",
+      "tasks:create",
+      "tasks:update",
+      "users:read",
+    ];
+
+    // Re-render — React will call usePermissions again with the new permissions
+    // array, producing a new hasPermission reference. With the fix (hasPermission
+    // in fetchData deps), useEffect fires again and getAll is called.
+    await act(async () => {
+      rerender(<TasksPage />);
+    });
+
+    await waitFor(() => {
+      expect(tasksService.getAll).toHaveBeenCalled();
     });
   });
 });

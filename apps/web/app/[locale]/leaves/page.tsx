@@ -773,9 +773,10 @@ export default function LeavesPage() {
                   🗑️
                 </button>
               )}
+            {/* SEC-029 — use API-computed canRequestCancel flag instead of
+                  client-side userId comparison, consistent with canEdit/canDelete */}
             {!showValidationActions &&
-              leave.status === LeaveStatus.APPROVED &&
-              leave.userId === user?.id && (
+              (leave as Leave & { canRequestCancel?: boolean }).canRequestCancel && (
                 <button
                   onClick={() => handleRequestCancel(leave.id)}
                   className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition"

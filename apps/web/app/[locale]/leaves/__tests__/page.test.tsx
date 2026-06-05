@@ -130,6 +130,7 @@ jest.mock("@/lib/csv-parser", () => ({
 // Import after mocks
 // ---------------------------------------------------------------------------
 import LeavesPage from "../page";
+import type { Leave } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -295,5 +296,84 @@ describe("TST-023 — LeavesPage: RBAC gated affordances", () => {
         { timeout: 10000 },
       );
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SEC-029 — Cancel-request button must use API canRequestCancel flag, not
+// client-side userId comparison. The test sets leave.userId to a different
+// user ("other-user") so the current code (userId === user?.id) would hide
+// the button, while the fixed code (canRequestCancel) shows it.
+// ---------------------------------------------------------------------------
+
+// Pull the mocked service so we can override per-test
+const { leavesService: mockedLeavesService } = jest.requireMock(
+  "@/services/leaves.service",
+);
+
+const approvedLeaveWithFlag = {
+  id: "leave-approved-1",
+  // Deliberately NOT the current user ("user-1") to prove client-side check fails
+  userId: "other-user",
+  status: "APPROVED",
+  type: "PAID_LEAVE",
+  startDate: "2026-07-01",
+  endDate: "2026-07-05",
+  days: 5,
+  createdAt: "2026-06-01T00:00:00Z",
+  updatedAt: "2026-06-01T00:00:00Z",
+  leaveType: { id: "lt-1", code: "CP", name: "Congé payé", color: "#3B82F6", icon: "🌴" },
+  // API-computed flag — the only affordance the frontend should rely on
+  canRequestCancel: true,
+} as unknown as Leave & { canRequestCancel: boolean };
+
+describe("SEC-029 — cancel-request button uses API canRequestCancel flag", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockPermissions = [];
+  });
+
+  it("SEC-029 — shows cancel-request button when canRequestCancel=true (regardless of userId)", async () => {
+    mockedLeavesService.getMyLeaves.mockResolvedValueOnce([approvedLeaveWithFlag]);
+
+    await act(async () => {
+      render(<LeavesPage />);
+    });
+
+    await waitFor(
+      () => {
+        // Title attribute of the cancel-request button
+        expect(
+          screen.getByTitle("Demander l'annulation"),
+        ).toBeInTheDocument();
+      },
+      { timeout: 10000 },
+    );
+  });
+
+  it("SEC-029 — hides cancel-request button when canRequestCancel=false even if userId matches", async () => {
+    const approvedLeaveNoFlag = {
+      ...approvedLeaveWithFlag,
+      // userId matches the current user ("user-1") but flag is false
+      userId: "user-1",
+      canRequestCancel: false,
+    };
+    mockedLeavesService.getMyLeaves.mockResolvedValueOnce([approvedLeaveNoFlag]);
+
+    await act(async () => {
+      render(<LeavesPage />);
+    });
+
+    await waitFor(
+      () => {
+        // Wait for loading to complete (tab renders)
+        expect(screen.getByText(/myLeaves/)).toBeInTheDocument();
+      },
+      { timeout: 10000 },
+    );
+
+    expect(
+      screen.queryByTitle("Demander l'annulation"),
+    ).not.toBeInTheDocument();
   });
 });

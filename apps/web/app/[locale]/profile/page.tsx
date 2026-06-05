@@ -15,6 +15,7 @@ import { IcsExportSection } from "@/components/planning-export/IcsExportSection"
 import { IcsImportSection } from "@/components/planning-export/IcsImportSection";
 import { PERSONA_PRESETS } from "@/constants/avatar-presets";
 import { logger } from '@/lib/logger';
+import type { User } from "@/types";
 
 const INITIALS_PRESET = "initials";
 
@@ -139,6 +140,10 @@ export default function ProfilePage() {
       </MainLayout>
     );
   }
+
+  // OBS-019: lastLoginAt will be present once the API exposes it; cast is safe
+  // because User type will gain this field (cross_file_needs: apps/web/src/types/index.ts)
+  const lastLoginAt = (user as User & { lastLoginAt?: string | null }).lastLoginAt;
 
   return (
     <MainLayout>
@@ -343,16 +348,19 @@ export default function ProfilePage() {
                 </h3>
                 <p className="text-sm text-gray-600">
                   {t("security.loginHistory.lastLogin")}{" "}
-                  {new Date().toLocaleDateString(
-                    locale === "en" ? "en-US" : "fr-FR",
-                    {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    },
-                  )}
+                  {/* OBS-019: use the server-recorded lastLoginAt, not new Date() */}
+                  {lastLoginAt
+                    ? new Date(lastLoginAt).toLocaleDateString(
+                        locale === "en" ? "en-US" : "fr-FR",
+                        {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )
+                    : t("security.loginHistory.never")}
                 </p>
               </div>
             </div>

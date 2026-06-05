@@ -2502,7 +2502,7 @@ grep -rn "users:reset_password\|users:manage_roles" apps/api/src/users/users.con
 
 ### SEC-029 — Leave cancellation request button gated by client-side userId comparison instead of API canRequestCancel flag
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -7106,7 +7106,7 @@ TZ=Europe/Paris node -e "console.log(new Date(2026,0,1).toISOString())"
 
 ### OBS-019 — Profile page shows `new Date()` (current time) as 'last login' instead of actual last-login timestamp
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** K
 - **Confidence:** primary-only
@@ -7763,7 +7763,7 @@ grep -n 'useLocale\|locale' apps/web/app/\[locale\]/reports/components/ProjectsD
 
 ### COR-046 — fetchData useCallback in tasks/page.tsx missing hasPermission dependency — stale permission closure
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7877,7 +7877,7 @@ grep -n 'usersService.getAll' apps/web/app/\[locale\]/telework/page.tsx
 
 ### OBS-018 — No React error boundary or Next.js error.tsx in any of the 6 scanned route segments
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -8104,7 +8104,7 @@ grep -n 'QueryClientProvider\|QueryClient' apps/web/app/\[locale\]/reports/compo
 
 ### PER-034 — tasksService.getAll(1, 1000) hard-coded limit of 1000 tasks loaded in single request
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
