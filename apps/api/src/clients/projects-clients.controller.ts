@@ -17,10 +17,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { IsNotEmpty, IsUUID } from 'class-validator';
-import {
-  CurrentUser,
-  AuthenticatedUser,
-} from '../auth/decorators/current-user.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { ClientsService } from './clients.service';
 
