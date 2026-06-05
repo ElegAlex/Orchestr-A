@@ -446,7 +446,7 @@ N/A — manual verification via concurrent HTTP test or integration test with pa
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary COR-007 ⇄ sessionA COR-003).
 - Audit note: refresh-token.service.ts rotate() avoids this correctly by using { isolationLevel: 'Serializable' } transaction. Adversarial check: no $transaction exists anywhere in auth.service.ts. schema.prisma confirms token field is @unique but usedAt has no DB-level unique partial constraint — no DB guard prevents dual usedAt writes.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 20425fb5
 
 ---
 
