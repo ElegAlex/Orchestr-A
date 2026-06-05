@@ -183,7 +183,7 @@ export const DayCell = React.memo(({
 
   return (
     <div
-      className={`relative overflow-hidden ${viewMode === "month" ? "px-0.5 py-1" : "px-1 py-2"} ${bgClass} ${showWeekSeparator ? "border-l-2 border-l-indigo-400" : ""}`}
+      className={`relative overflow-hidden ${viewMode === "month" ? "px-0.5 py-1" : "px-1 py-2"} ${isHalfDayLeave ? (viewMode === "month" ? "min-h-[44px]" : "min-h-[96px]") : ""} ${bgClass} ${showWeekSeparator ? "border-l-2 border-l-indigo-400" : ""}`}
       onDragOver={(e) => e.preventDefault()}
       onDrop={() => onDrop(userId, cell.date)}
       title={cell.isHoliday ? cell.holidayName : undefined}
@@ -205,8 +205,8 @@ export const DayCell = React.memo(({
         </div>
       )}
 
-      {/* Leave Overlay - couvre toute la cellule */}
-      {leaveVisible && (
+      {/* Leave Overlay (journée entière) - couvre toute la cellule */}
+      {fullDayLeaveVisible && (
         <div
           className="absolute inset-0 flex flex-col items-center justify-center z-10 border-2"
           style={{
@@ -241,6 +241,45 @@ export const DayCell = React.memo(({
             <span className="text-[8px]" style={{ color: leaveColor }}>
               ?
             </span>
+          )}
+        </div>
+      )}
+
+      {/* Leave Overlay (demi-journée) - moitié haute (matin) ou basse (après-midi) */}
+      {isHalfDayLeave && (
+        <div
+          className={`absolute inset-x-0 ${leaveHalfDay === HalfDay.MORNING ? "top-0" : "bottom-0"} h-1/2 flex flex-col items-center justify-center z-20 border-2`}
+          style={{
+            backgroundColor: isPending ? `${leaveColor}26` : `${leaveColor}4D`,
+            borderColor: leaveColor,
+            borderStyle: isPending ? "dashed" : "solid",
+          }}
+          title={`${leaveName} — ${
+            leaveHalfDay === HalfDay.MORNING
+              ? t("dayCell.halfDayMorning")
+              : t("dayCell.halfDayAfternoon")
+          }${isPending ? ` (${t("dayCell.pendingValidation")})` : ` (${t("dayCell.validated")})`}`}
+        >
+          <span className={`${viewMode === "month" ? "text-base" : "text-xl"}`}>
+            {leaveIcon}
+          </span>
+          {viewMode === "week" && (
+            <>
+              <span
+                className="font-medium text-[11px] leading-tight"
+                style={{ color: leaveColor }}
+              >
+                {leaveName}
+              </span>
+              <span
+                className="text-[9px] italic leading-tight"
+                style={{ color: leaveColor }}
+              >
+                {leaveHalfDay === HalfDay.MORNING
+                  ? t("dayCell.halfDayMorning")
+                  : t("dayCell.halfDayAfternoon")}
+              </span>
+            </>
           )}
         </div>
       )}
