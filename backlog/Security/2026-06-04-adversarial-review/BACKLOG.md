@@ -11402,7 +11402,7 @@ curl -s 'http://localhost:3001/comments' | jq '.meta.limit'
 **Notes:**
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary PER-041 ⇄ sessionA PERF-022).
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2ad3f201
 
 ---
 
@@ -12609,7 +12609,7 @@ curl -s 'http://localhost:3001/documents' | jq '.meta.limit'
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2ad3f201
 
 ---
 
@@ -12719,7 +12719,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verified verbatim at lines 1101-1139. No take, no skip, no orderBy year-scoping beyond desc startDate.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2ad3f201
 
 ---
 
@@ -12842,7 +12842,7 @@ N/A — manual verification
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2ad3f201
 
 ---
 
@@ -12898,7 +12898,7 @@ N/A — manual verification
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2ad3f201
 
 ---
 
@@ -13069,7 +13069,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verified verbatim at line 363 of time-tracking.service.ts.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2ad3f201
 
 ---
 
@@ -13237,7 +13237,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verified verbatim at lines 192-203 of leave-types.service.ts. Low priority: admin-only, small table.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2ad3f201
 
 ---
 
@@ -13300,7 +13300,7 @@ grep -n 'initializeDefaultSettings\|for.*DEFAULT_SETTINGS' apps/api/src/settings
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Also applies to `resetAllToDefaults` at line 300 which does sequential awaited `update` calls. Verified verbatim match at lines 109-126.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2ad3f201
 
 ---
 
