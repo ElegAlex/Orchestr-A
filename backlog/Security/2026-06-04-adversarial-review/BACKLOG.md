@@ -14605,8 +14605,8 @@ grep -n 'addMember\|removeMember\|updateMember\|auditPersistence' apps/api/src/p
 
 ### DAT-028 — audit_logs actorId FK retains ON UPDATE CASCADE after migration removes ON DELETE CASCADE — asymmetry can trigger immutability violation
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New migration: ALTER TABLE audit_logs DROP CONSTRAINT audit_logs_actorId_fkey; ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_actorId_fkey FOREIGN KEY (actorId) REFERENCES users(id) ON DELETE NO ACT
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 4
 - **Cluster:** H
 - **Confidence:** primary-only
@@ -14923,8 +14923,8 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='tasks'::regclass AND 
 
 ### DAT-024 — events.recurrenceDay has no CHECK constraint — invalid day-of-week/month values silently accepted
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). Add a migration: `ALTER TABLE "events" ADD CONSTRAINT "events_recurrenceDay_ck" CHECK ("recurrenceDay" IS NULL OR "recurrenceDay" BETWEEN 0 AND 6); ALTER TABLE "events" ADD CONSTRAINT "events_recurren
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -15071,8 +15071,8 @@ psql -c "\d predefined_tasks" | grep defaultDuration
 
 ### DAT-027 — telework_recurring_rules.dayOfWeek and predefined_task_recurring_rules.dayOfWeek have no CHECK BETWEEN 0 AND 6
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). Add a migration: `ALTER TABLE "telework_recurring_rules" ADD CONSTRAINT "twr_dayofweek_ck" CHECK ("dayOfWeek" BETWEEN 0 AND 6);`. Witness: integration spec inserting dayOfWeek=7 into telework_recurrin
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -15125,8 +15125,8 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='telework_recurring_ru
 
 ### DAT-029 — documents.contentSha256 is TEXT with no CHECK constraint — any arbitrary string can be stored as a SHA-256 hash
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). Add a migration: `ALTER TABLE "documents" ADD CONSTRAINT "documents_contentSha256_ck" CHECK ("contentSha256" ~ '^[0-9a-f]{64}$');`. Witness: insert a 32-char string or 'notahex' into documents.content
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -15182,8 +15182,8 @@ SELECT id, contentSha256 FROM documents WHERE contentSha256 IS NOT NULL AND cont
 
 ### PER-055 — TeleworkSchedule: no index on (userId, date) range queries — only unique constraint
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). Add `@@index([date, userId])` to TeleworkSchedule in schema.prisma, then run `pnpm run db:migrate`. Verify with EXPLAIN ANALYZE on a large table.
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -15237,8 +15237,8 @@ N/A — manual verification
 
 ### PER-060 — PredefinedTaskAssignment has no index on predefinedTaskId — per-task assignment lookups may seq-scan
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). Add `@@index([userId])` to PredefinedTaskAssignment in schema.prisma, then run `pnpm run db:migrate`.
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -17885,8 +17885,8 @@ N/A — manual verification
 
 ### DAT-031 — password_reset_tokens index (userId, usedAt) is non-partial — hot query path WHERE usedAt IS NULL will scan all rows including consumed tokens
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New raw SQL migration required (Prisma 6 PSL cannot express WHERE-clause partial indexes): `DROP INDEX IF EXISTS password_reset_tokens_userId_usedAt_idx; CREATE INDEX password_reset_tokens_userId_acti
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — Prisma 6 PSL cannot express partial indexes (WHERE usedAt IS NULL); a raw-SQL-only index becomes persistent migrate-dev drift (a spurious DROP on every diff). The existing full composite (userId, usedAt) index already serves the WHERE usedAt IS NULL hot path adequately. Low-value phase-5 micro-opt on a low-traffic table → declined.
 - **Phase:** 5
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -18105,8 +18105,8 @@ N/A — manual verification
 
 ### SA-PERF-025 — AuditLog has no index on createdAt+id — ORDER BY createdAt DESC, id DESC scans the full table
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New raw SQL migration: `CREATE INDEX CONCURRENTLY audit_logs_created_at_id_desc_idx ON audit_logs (createdAt DESC, id DESC);`. Use CONCURRENTLY to avoid locking the append-only table in production. Ve
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 5
 - **Cluster:** F
 - **Confidence:** secondary-only
@@ -18204,8 +18204,8 @@ grep -n 'roleId.*NOT NULL\|roleId.*SET NOT NULL' /home/alex/Documents/REPO/ORCHE
 
 ### SA-DAT-008 — Event.recurrenceDay, TeleworkRecurringRule.dayOfWeek, and PredefinedTaskRecurringRule.dayOfWeek have no BETWEEN 0 AND 6 DB CHECK
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New migration adding: `ALTER TABLE events ADD CONSTRAINT events_recurrenceDay_ck CHECK (recurrenceDay IS NULL OR recurrenceDay BETWEEN 0 AND 6); ALTER TABLE telework_recurring_rules ADD CONSTRAINT tel
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** secondary-only
@@ -18255,8 +18255,8 @@ grep -rn 'recurrenceDay.*BETWEEN\|dayOfWeek.*BETWEEN\|recurrenceDay.*ck\|dayOfWe
 
 ### SA-DAT-009 — PredefinedTaskRecurringRule.weekInterval, monthlyOrdinal, monthlyDayOfMonth and Event.recurrenceWeekInterval have no DB-level range CHECKs
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New migration: `ALTER TABLE events ADD CONSTRAINT events_recurrenceweekinterval_ck CHECK (recurrenceWeekInterval IS NULL OR recurrenceWeekInterval > 0);`. Failing-test witness: int.spec.ts — INSERT ev
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** secondary-only
@@ -18307,8 +18307,8 @@ grep -rn 'weekInterval.*CHECK\|monthlyOrdinal.*CHECK\|monthlyDayOfMonth.*CHECK\|
 
 ### SA-DAT-010 — startTime/endTime string columns have no DB CHECK enforcing endTime >= startTime
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New migration (after pre-flight: SELECT COUNT(*) WHERE startTime IS NOT NULL AND endTime IS NOT NULL AND endTime < startTime — if zero, safe to add): `ALTER TABLE tasks ADD CONSTRAINT tasks_time_order
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** secondary-only
@@ -18358,8 +18358,8 @@ grep -rn 'tasks_time_order\|events_time_order\|predefined_tasks_time_order' /hom
 
 ### SA-DAT-011 — ProjectMember.startDate/endDate has no date-ordering CHECK (endDate >= startDate)
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New migration: `ALTER TABLE project_members ADD CONSTRAINT project_members_dates_ck CHECK (endDate IS NULL OR startDate IS NULL OR endDate >= startDate);`. Failing-test witness: int.spec.ts — INSERT p
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch C)
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** secondary-only

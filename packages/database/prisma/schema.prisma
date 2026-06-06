@@ -743,6 +743,7 @@ model TeleworkSchedule {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
+  @@index([date, userId]) // PER-055: (userId,date) range scans in findForPlanningOverview
   @@map("telework_schedules")
 }
 
@@ -1117,6 +1118,7 @@ model PredefinedTaskAssignment {
   @@unique([predefinedTaskId, userId, date, period])
   @@index([date, userId])
   @@index([completionStatus, date])
+  @@index([userId]) // PER-060: per-user assignment lookups (FK reverse-scan)
   @@map("predefined_task_assignments")
 }
 
@@ -1246,7 +1248,7 @@ model AuditLog {
   entityId   String
   /// Utilisateur à l'origine de l'action, nullable pour actions système (cron, job).
   actorId    String?
-  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: NoAction)
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   /// Email de l'acteur figé au moment du log (RGPD : snapshot, pas de JOIN). NULL si action système.
   actorEmail String?
   /// Libellé lisible de l'acteur (prénom + nom) figé au moment du log. NULL si action système.
@@ -1272,6 +1274,8 @@ model AuditLog {
   /// Declared in PSL so `prisma migrate dev --create-only` does not see the raw-SQL
   /// index (migration 20260526120000) as drift and emit a spurious DROP.
   @@index([payload(ops: JsonbPathOps)], type: Gin, map: "audit_logs_payload_gin")
+  // SA-PERF-025: hash-chain tip lookup (ORDER BY createdAt DESC, id DESC LIMIT 1 on every audit write).
+  @@index([createdAt(sort: Desc), id(sort: Desc)], map: "audit_logs_created_at_id_desc_idx")
   @@map("audit_logs")
 }
 
