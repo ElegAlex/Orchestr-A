@@ -35,8 +35,13 @@ import {
 // Distribué via CATALOG_PERMISSIONS à ADMIN (catalogue complet) et ADMIN_DELEGATED
 // (catalogue moins exclusions). La permission n'est pas dans la liste d'exclusions
 // d'ADMIN_DELEGATED, donc les deux templates gagnent +1.
+// Mise à jour 2026-06-06 : ajout de leaves:read_balance_any (catalogue 117 → 118),
+// grant read-scoped org-wide balance read (SEC-030 follow-up, décision opérateur).
+// ADMIN +1 (catalogue complet) ; HR_OFFICER +1 (grant inline). ADMIN_DELEGATED
+// l'EXCLUT (without(...)) pour rester scoped périmètre → reste à 114. MANAGER /
+// MANAGER_HR_FOCUS ne le reçoivent pas → balance reste perimeter-scoped (SEC-030).
 const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
-  ADMIN: 117,
+  ADMIN: 118,
   ADMIN_DELEGATED: 114,
   PORTFOLIO_MANAGER: 82,
   MANAGER: 85,
@@ -48,7 +53,7 @@ const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
   PROJECT_CONTRIBUTOR: 58,
   PROJECT_CONTRIBUTOR_LIGHT: 49,
   FUNCTIONAL_REFERENT: 44,
-  HR_OFFICER: 40,
+  HR_OFFICER: 41,
   HR_OFFICER_LIGHT: 21,
   THIRD_PARTY_MANAGER: 55,
   CONTROLLER: 29,
@@ -65,8 +70,8 @@ const EXPECTED_COUNTS: Record<RoleTemplateKey, number> = {
 };
 
 describe("rbac — conformité contrats Phase 1", () => {
-  it("CATALOG_PERMISSIONS contient exactement 117 permissions", () => {
-    expect(CATALOG_PERMISSIONS.length).toBe(117);
+  it("CATALOG_PERMISSIONS contient exactement 118 permissions", () => {
+    expect(CATALOG_PERMISSIONS.length).toBe(118);
   });
 
   it("CATALOG_PERMISSIONS sans doublon", () => {

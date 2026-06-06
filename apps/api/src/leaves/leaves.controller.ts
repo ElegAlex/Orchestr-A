@@ -344,22 +344,33 @@ export class LeavesController {
       const permissions = await this.permissionsService.getPermissionsForRole(
         caller.role?.code ?? '',
       );
-      // D6 #2 PO : `leaves:validate` n'existe pas au catalogue ; le check
-      // historique était cassé (toujours faux). La permission métier
-      // équivalente est `leaves:approve`.
-      if (!permissions.includes('leaves:approve')) {
-        throw new ForbiddenException(
-          "Permission leaves:approve requise pour consulter le solde d'un autre utilisateur",
-        );
-      }
-      // SEC-030 — `leaves:approve` is held by MANAGER / MANAGER_HR_FOCUS /
-      // HR_OFFICER and grants it GLOBALLY; without a scope check any of them
-      // could read ANY user's balance, bypassing the SuiviPage's managed-service
-      // gate (which is browser-side only). Enforce the managed-service perimeter
-      // server-side: only ADMIN-tier global readers (`leaves:manage_any`, the
-      // ADMIN-only org-wide grant) skip it; everyone else must be within scope
-      // of the target (ADMIN template, shared service, or managed department).
-      if (!permissions.includes('leaves:manage_any')) {
+      // Org-wide leave-balance read bypass. Two distinct grants lift the
+      // managed-service perimeter to the whole organisation:
+      //   - `leaves:manage_any` — the ADMIN-tier org-wide leave authority
+      //     (read + approve + modify);
+      //   - `leaves:read_balance_any` — a READ-scoped org-wide balance grant
+      //     (SEC-030 operator follow-up 2026-06-06: HR_OFFICER must read every
+      //     user's balance without gaining approve/modify power). Deliberately
+      //     NOT `leaves:readAll` — that permission is near-universal (23/26
+      //     templates incl. MANAGER), so honouring it here would re-open SEC-030
+      //     for MANAGER. The discriminator must be a grant MANAGER does not hold.
+      const orgWideBalanceRead =
+        permissions.includes('leaves:manage_any') ||
+        permissions.includes('leaves:read_balance_any');
+
+      if (!orgWideBalanceRead) {
+        // D6 #2 PO : `leaves:validate` n'existe pas au catalogue ; le check
+        // historique était cassé (toujours faux). La permission métier
+        // équivalente est `leaves:approve` — plancher pour lire le solde d'autrui.
+        if (!permissions.includes('leaves:approve')) {
+          throw new ForbiddenException(
+            "Permission leaves:approve requise pour consulter le solde d'un autre utilisateur",
+          );
+        }
+        // SEC-030 — `leaves:approve` is GLOBAL and also held by MANAGER /
+        // MANAGER_HR_FOCUS; enforce the managed-service perimeter server-side so
+        // a scoped approver only reads balances within scope (ADMIN template,
+        // shared service, or managed department).
         await this.accessScope.assertCanManageUser(userId, caller);
       }
     }

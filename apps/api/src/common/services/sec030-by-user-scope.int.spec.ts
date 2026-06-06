@@ -30,11 +30,21 @@ import type { SkillsService } from '../../skills/skills.service';
  *   - GET /skills/user/:userId     — gated only by `skills:read` with NO per-user
  *     scope at all → any reader could read any user's skills.
  *
- * The other five were already equal-or-stronger and are NOT re-touched:
- *   - GET /tasks/assignee/:userId   → service requires GLOBAL `tasks:readAll`
- *                                     (MANAGER lacks it → 403).
- *   - GET /leaves?userId=           → service forces self unless `leaves:readAll`.
- *   - GET /telework?userId=         → service forces self unless `telework:readAll`.
+ * Two genuinely had NO `*:readAll`-style gate and ARE the ones this fix scopes:
+ * leaves-balance and skills (below).
+ *
+ * **CORRECTION (2026-06-06):** the original SEC-030 note claimed three other
+ * endpoints "force self / 403 for MANAGER" and were already-safe. That is WRONG —
+ * runtime resolution shows the `*:readAll` permissions are near-universal:
+ *   - `tasks:readAll` → 21/26 templates (incl. BASIC_USER)
+ *   - `telework:readAll` → 23/26
+ *   - `leaves:readAll` → 23/26
+ * so GET /tasks/assignee/:userId, GET /leaves?userId=, and GET /telework?userId=
+ * are in fact ORG-WIDE reads for ~all authenticated roles, not perimeter-scoped.
+ * They are NOT touched here (broadly-granted, likely deliberate transparency, and
+ * scoping them would be a 21-role RBAC change) but are flagged for operator review
+ * as a separate finding (possible RGPD over-exposure on tasks/leaves/telework
+ * lists). The remaining two:
  *   - GET /time-tracking/.../report → guarded by `time_tracking:read_reports`
  *                                     (CONTROLLER/BUDGET_ANALYST only; MANAGER
  *                                     lacks it). The suivi page's `/stats` route
@@ -45,6 +55,10 @@ import type { SkillsService } from '../../skills/skills.service';
  * The scope predicate is the existing `AccessScopeService.canManageUser`
  * (ADMIN-template bypass + shared-service-membership + managed-department),
  * the same write-scope used for user update/deactivate.
+ *
+ * 2026-06-06 operator follow-up appended below: HR_OFFICER must read leave
+ * balances ORG-WIDE → new read-scoped `leaves:read_balance_any` (NOT
+ * `leaves:manage_any`, which would over-grant approve/modify).
  *
  * RED capture (discriminating)
  * ----------------------------
@@ -68,6 +82,10 @@ const prisma = new PrismaService();
 const permsByCode: Record<string, readonly PermissionCode[]> = {
   MANAGER: ROLE_TEMPLATES.MANAGER.permissions,
   ADMIN: ROLE_TEMPLATES.ADMIN.permissions,
+  // SEC-030 follow-up: HR_OFFICER holds the new `leaves:read_balance_any`
+  // (org-wide leave-balance READ). Resolved from the live template so the test
+  // breaks if the grant is ever removed.
+  HR_OFFICER: ROLE_TEMPLATES.HR_OFFICER.permissions,
 };
 const permissionsStub = {
   getPermissionsForRole: async (
@@ -107,6 +125,19 @@ function manager(id: string): AuthenticatedUser {
       code: 'MANAGER',
       label: 'Manager',
       templateKey: 'MANAGER',
+      isSystem: false,
+    },
+  } as unknown as AuthenticatedUser;
+}
+
+function hrOfficer(id: string): AuthenticatedUser {
+  return {
+    id,
+    role: {
+      id: 'role-hr',
+      code: 'HR_OFFICER',
+      label: 'Gestionnaire RH',
+      templateKey: 'HR_OFFICER',
       isSystem: false,
     },
   } as unknown as AuthenticatedUser;
@@ -206,6 +237,34 @@ describe('SEC-030 — server-side managed-scope on by-user read endpoints (real 
       await expect(
         leavesController.getUserBalance(cId, manager(aId)),
       ).resolves.toMatchObject({ userId: cId });
+    });
+
+    // -- SEC-030 follow-up: HR_OFFICER org-wide balance read (operator decision) --
+    // A2 is an HR_OFFICER in service S1 (same fixtures as A); B is out of its
+    // perimeter (service S2, dept not managed). The new read-scoped
+    // `leaves:read_balance_any` must lift the perimeter for HR_OFFICER ONLY.
+    it('HR_OFFICER reads an OUT-OF-PERIMETER balance (the org-wide read grant)', async () => {
+      await expect(
+        leavesController.getUserBalance(bId, hrOfficer(aId)),
+      ).resolves.toMatchObject({ userId: bId });
+    });
+
+    it('nothing else widened: MANAGER (shares leaves:approve+readAll, lacks the new grant) is STILL perimeter-scoped on B', async () => {
+      // If the bypass keyed on a shared permission (e.g. leaves:readAll), MANAGER
+      // would have been widened too. It must still 403 — proving the new
+      // read-scoped grant, not a shared one, is doing the work.
+      await expect(
+        leavesController.getUserBalance(bId, manager(aId)),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('read-only grant: HR_OFFICER still CANNOT manage out-of-perimeter B (no write/approve widening)', async () => {
+      // The grant conferred READ, not manage. assertCanManageUser is the
+      // write-scope predicate (used for approve/modify/deactivate) and must
+      // still reject for an out-of-perimeter target.
+      await expect(
+        accessScope.assertCanManageUser(bId, hrOfficer(aId)),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 

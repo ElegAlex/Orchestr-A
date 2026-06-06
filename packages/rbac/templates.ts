@@ -335,6 +335,11 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
       "users:manage_roles",
       "settings:update",
       "leaves:manage_any", // Scope périmètre préservé (memory)
+      // SEC-030 follow-up (2026-06-06): the new org-wide leave-balance READ grant
+      // is excluded here too, so RESPONSABLE stays perimeter-scoped on balance
+      // reads — consistent with project_responsable_scope_perimeter (only ADMIN
+      // and HR_OFFICER read balances org-wide). Keeps ADMIN_DELEGATED at 114.
+      "leaves:read_balance_any",
     ]),
   },
 
@@ -624,6 +629,12 @@ export const ROLE_TEMPLATES: Record<RoleTemplateKey, RoleTemplate> = {
         "school_vacations:create",
         "school_vacations:update",
         "school_vacations:delete",
+        // SEC-030 follow-up (operator decision 2026-06-06): HR must read leave
+        // balances ORG-WIDE. Granted as a read-scoped permission INLINE (not via a
+        // shared bundle) so it reaches HR_OFFICER only — MANAGER/MANAGER_HR_FOCUS
+        // stay perimeter-scoped on balance reads (SEC-030 preserved). NOT
+        // `leaves:manage_any`, which would over-grant org-wide approve/modify.
+        "leaves:read_balance_any",
       ],
     ),
   },

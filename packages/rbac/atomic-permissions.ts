@@ -31,7 +31,7 @@
  */
 
 // ============================================================================
-// 1. PermissionCode — type union strict (117 entrées)
+// 1. PermissionCode — type union strict (118 entrées)
 // ============================================================================
 
 export type PermissionCode =
@@ -74,7 +74,8 @@ export type PermissionCode =
   | "holidays:delete"
   | "holidays:read"
   | "holidays:update"
-  // leaves (11 — :view supprimé D4 A ; :self_approve ajouté 2026-05-23)
+  // leaves (12 — :view supprimé D4 A ; :self_approve ajouté 2026-05-23 ;
+  //          :read_balance_any ajouté 2026-06-06 — SEC-030 HR org-wide balance read)
   | "leaves:approve"
   | "leaves:create"
   | "leaves:declare_for_others"
@@ -84,6 +85,7 @@ export type PermissionCode =
   | "leaves:manage_delegations"
   | "leaves:read"
   | "leaves:readAll"
+  | "leaves:read_balance_any"
   | "leaves:self_approve"
   | "leaves:update"
   // milestones (4)
@@ -620,7 +622,7 @@ export const SETTINGS_READ = [
 // ============================================================================
 
 /**
- * Liste exhaustive des 117 permissions canoniques, triée alphabétiquement par
+ * Liste exhaustive des 118 permissions canoniques, triée alphabétiquement par
  * `module:action`. Sert de source unique pour :
  *   - le seed DB (Spec 2 Vague 0) ;
  *   - la génération de migrations (drop permissions mortes, rename
@@ -680,6 +682,7 @@ export const CATALOG_PERMISSIONS = [
   "leaves:manage_delegations",
   "leaves:read",
   "leaves:readAll",
+  "leaves:read_balance_any",
   "leaves:self_approve",
   "leaves:update",
   // milestones
