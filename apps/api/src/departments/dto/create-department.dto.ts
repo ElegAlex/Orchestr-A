@@ -26,6 +26,7 @@ export class CreateDepartmentDto {
     example: 'Département en charge de la gestion des ressources humaines',
     required: false,
   })
+  @MaxLength(1000)
   @IsString()
   @IsOptional()
   description?: string;

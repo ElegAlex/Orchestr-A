@@ -7,6 +7,7 @@ import {
   IsArray,
   ArrayMaxSize,
   ValidateNested,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { HalfDay } from 'database';
@@ -54,6 +55,7 @@ export class ImportLeaveDto {
   halfDay?: HalfDay;
 
   @ApiProperty({ description: 'Commentaire', required: false })
+  @MaxLength(2000)
   @IsString()
   @IsOptional()
   comment?: string;

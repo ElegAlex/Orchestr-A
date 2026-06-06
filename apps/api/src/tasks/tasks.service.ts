@@ -1232,47 +1232,47 @@ export class TasksService {
       where,
       take: safeLimit,
       include: {
-          project: {
-            select: {
-              id: true,
-              name: true,
-            },
+        project: {
+          select: {
+            id: true,
+            name: true,
           },
-          assignee: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
-            },
+        },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
           },
-          assignees: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  avatarUrl: true,
-                  avatarPreset: true,
-                },
+        },
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
               },
             },
           },
-          _count: {
-            select: {
-              dependencies: true,
-              dependents: true,
-              raci: true,
-              comments: true,
-            },
-          },
-          timeEntries: {
-            where: { isDismissal: false },
-            select: { hours: true },
+        },
+        _count: {
+          select: {
+            dependencies: true,
+            dependents: true,
+            raci: true,
+            comments: true,
           },
         },
+        timeEntries: {
+          where: { isDismissal: false },
+          select: { hours: true },
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -1350,57 +1350,57 @@ export class TasksService {
       where: { projectId },
       take: safeLimit,
       include: {
-          assignee: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
-            },
+        assignee: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
           },
-          assignees: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  avatarUrl: true,
-                  avatarPreset: true,
-                },
+        },
+        assignees: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
               },
-            },
-          },
-          epic: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          dependencies: {
-            select: {
-              id: true,
-              dependsOnTaskId: true,
-              dependsOnTask: {
-                select: {
-                  id: true,
-                  title: true,
-                  status: true,
-                  endDate: true,
-                },
-              },
-            },
-          },
-          subtasks: {
-            orderBy: { position: 'asc' },
-          },
-          _count: {
-            select: {
-              comments: true,
             },
           },
         },
+        epic: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        dependencies: {
+          select: {
+            id: true,
+            dependsOnTaskId: true,
+            dependsOnTask: {
+              select: {
+                id: true,
+                title: true,
+                status: true,
+                endDate: true,
+              },
+            },
+          },
+        },
+        subtasks: {
+          orderBy: { position: 'asc' },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },

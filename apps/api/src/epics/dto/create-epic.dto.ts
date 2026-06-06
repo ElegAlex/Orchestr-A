@@ -22,6 +22,7 @@ export class CreateEpicDto {
   name: string;
 
   @ApiProperty({ description: 'Description', required: false })
+  @MaxLength(2000)
   @IsString()
   @IsOptional()
   description?: string;

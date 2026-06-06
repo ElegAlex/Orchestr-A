@@ -11462,8 +11462,8 @@ N/A — manual verification
 
 ### SEC-042 — CreateLeaveDto.reason and ImportLeaveDto.comment lack @MaxLength, allowing oversized free-text storage
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/leaves/dto/create-leave.dto.ts: add MaxLength to the import from class-validator and add @MaxLength(2000) to the reason field (line 79). apps/api/src/leaves/dto/import-leaves.dto.ts: add 
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** cross-validated
@@ -11516,8 +11516,8 @@ N/A — manual verification: POST /leaves with reason=<2001-char string>, expect
 
 ### SEC-047 — description fields lack @MaxLength on CreateProjectDto, CreateEpicDto, CreateMilestoneDto
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). Add @MaxLength(2000) to description in CreateProjectDto (line 36), CreateEpicDto (line 27), CreateMilestoneDto (line 22). In ImportMilestoneDto add @MaxLength(200) @MinLength(1) to name (line 16) and 
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** cross-validated
@@ -13306,8 +13306,8 @@ grep -n 'initializeDefaultSettings\|for.*DEFAULT_SETTINGS' apps/api/src/settings
 
 ### SEC-035 — QueryClientsDto.search and QueryThirdPartyDto.search missing @MaxLength — unbounded query string parameter
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). Add MaxLength to the class-validator import in both files and apply @MaxLength(200) to the search field in QueryClientsDto and QueryThirdPartyDto. Failing test: GET /clients?search=<201-char string> s
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13357,8 +13357,8 @@ grep -n 'search\|MaxLength' apps/api/src/clients/dto/query-clients.dto.ts apps/a
 
 ### SEC-037 — CreateDocumentDto.description missing @MaxLength — unbounded free-text field
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). Add @MaxLength(2000) above the @IsString() @IsOptional() decorators on the description field in CreateDocumentDto at line 59. MaxLength is already imported in the file. Failing test: POST /documents w
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13511,8 +13511,8 @@ grep -n 'projectId' apps/api/src/epics/epics.controller.ts apps/api/src/mileston
 
 ### SEC-040 — CreateEventDto.description has no @MaxLength — unbounded DB write
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). Add @MaxLength(2000) to the description field in CreateEventDto at line 35, before @IsString(). MaxLength is already imported. Failing test: POST /events with description.length = 2001 should return 4
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13768,8 +13768,8 @@ N/A — manual verification
 
 ### SEC-046 — CreatePredefinedTaskDto free-text fields (name, description, color, icon) lack @MaxLength
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/predefined-tasks/dto/create-predefined-task.dto.ts: add MaxLength to imports from class-validator, then add @MaxLength(200) on name, @MaxLength(2000) on description, @MaxLength(20) on col
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14004,8 +14004,8 @@ curl -s -o /dev/null -w '%{http_code}' 'http://localhost:4000/api/services?depar
 
 ### SEC-052 — UpdateSettingDto.value and .description lack @MaxLength — unbounded strings stored to DB
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/settings/dto/update-setting.dto.ts: add MaxLength to imports from class-validator; add @MaxLength(10000) to value and @MaxLength(500) to description. Failing test: PATCH /settings/:key wi
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14066,8 +14066,8 @@ grep -n 'MaxLength\|IsString\|IsNotEmpty' apps/api/src/settings/dto/update-setti
 
 ### SEC-053 — description fields in CreateSkillDto, CreateDepartmentDto, CreateServiceDto have no @MaxLength
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). Add @MaxLength(1000) to description in create-department.dto.ts, create-service.dto.ts, and create-skill.dto.ts. MaxLength is already imported in all three files. Failing test: POST /api/departments w
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14116,8 +14116,8 @@ N/A — manual verification
 
 ### SEC-054 — ImportSkillDto.name and .description lack @MaxLength — inconsistent with CreateSkillDto which enforces @MaxLength(100)
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/skills/dto/import-skills.dto.ts: add MinLength, MaxLength to imports from class-validator; add @MinLength(2) @MaxLength(100) to name and @MaxLength(500) to description in ImportSkillDto. 
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14227,8 +14227,8 @@ N/A — manual verification
 
 ### SEC-057 — CreateThirdPartyDto.contactEmail missing @MaxLength
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/third-parties/dto/create-third-party.dto.ts: add @MaxLength(254) before @IsEmail() on contactEmail. MaxLength is already imported at line 8. Failing test: POST /third-parties with contact
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14277,8 +14277,8 @@ grep -n 'contactEmail\|MaxLength\|IsEmail' apps/api/src/third-parties/dto/create
 
 ### SEC-058 — description field in CreateTimeEntryDto lacks @MaxLength constraint
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/time-tracking/dto/create-time-entry.dto.ts: add MaxLength to imports from class-validator; add @MaxLength(2000) to description field. Failing test: POST /api/time-tracking with descriptio
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14331,8 +14331,8 @@ python3 -c "import sys; print('a'*2001)" | xargs -I{} curl -s -X POST http://loc
 
 ### SEC-059 — CreateUserDto.login and ImportUserDto.login missing @MaxLength — unbounded login field
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/users/dto/create-user.dto.ts and apps/api/src/users/dto/import-users.dto.ts: add @MaxLength(50) after @MinLength(3) on the login field in both DTOs. MaxLength is already imported in both 
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -16643,8 +16643,8 @@ grep -n 'recalcTaskProgress\|getTaskProgress\|progress' apps/api/src/tasks/tasks
 
 ### SA-SEC-004 — RefreshTokenDto missing @MaxLength — unbounded refresh token in POST /auth/refresh
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). In refresh-token.dto.ts, add `MaxLength` to the import and apply `@MaxLength(256)` to both refreshToken fields (generous headroom above the 64-char token). Failing test: POST /auth/refresh with 10KB b
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** secondary-only
@@ -16759,8 +16759,8 @@ grep -A3 'leaveTypeId' packages/database/prisma/schema.prisma apps/api/src/leave
 
 ### SA-SEC-010 — CreateEpicDto.description and CreateMilestoneDto.description missing @MaxLength
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). In both create-epic.dto.ts and create-milestone.dto.ts, add `@MaxLength(5000)` to the description field. Failing tests: POST /epics and POST /milestones with 5001-char description expect 400. No shape
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** secondary-only
@@ -17778,8 +17778,8 @@ N/A — manual verification
 
 ### SEC-066 — ICS import processes unbounded VEVENT count with sequential DB writes and no per-field length cap
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/planning-export/planning-export.service.ts: After stripHtml(strVal(vevent.summary)), apply .slice(0, 200) for title and .slice(0, 5000) for description before pushing to batch. Failing te
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch A)
 - **Phase:** 5
 - **Cluster:** F
 - **Confidence:** primary-only

@@ -5,6 +5,7 @@ import {
   IsDateString,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { LeaveType, HalfDay } from 'database';
 
@@ -76,6 +77,7 @@ export class CreateLeaveDto {
     example: "Vacances d'été",
     required: false,
   })
+  @MaxLength(2000)
   @IsString()
   @IsOptional()
   reason?: string;

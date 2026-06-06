@@ -30,6 +30,7 @@ export class CreateSkillDto {
       'Bibliothèque JavaScript pour construire des interfaces utilisateur',
     required: false,
   })
+  @MaxLength(1000)
   @IsString()
   @IsOptional()
   description?: string;

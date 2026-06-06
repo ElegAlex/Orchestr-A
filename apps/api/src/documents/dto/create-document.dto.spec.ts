@@ -78,6 +78,34 @@ describe('UpdateDocumentDto — SEC-009 validation propagates via PartialType', 
   });
 });
 
+describe('CreateDocumentDto — SEC-037 description MaxLength(2000)', () => {
+  it('rejects a description longer than 2000 chars', async () => {
+    const dto = plainToInstance(CreateDocumentDto, {
+      ...base,
+      description: 'x'.repeat(2001),
+    });
+    const errors = await validate(dto);
+    expect(
+      errors.find((e) => e.property === 'description')?.constraints,
+    ).toHaveProperty('maxLength');
+  });
+
+  it('accepts a valid description within limit', async () => {
+    const dto = plainToInstance(CreateDocumentDto, {
+      ...base,
+      description: 'Document de spécifications techniques.',
+    });
+    const errors = await validate(dto);
+    expect(errors.find((e) => e.property === 'description')).toBeUndefined();
+  });
+
+  it('accepts omitted description (@IsOptional)', async () => {
+    const dto = plainToInstance(CreateDocumentDto, base);
+    const errors = await validate(dto);
+    expect(errors.find((e) => e.property === 'description')).toBeUndefined();
+  });
+});
+
 describe('CreateDocumentDto — COR-011 size field validation', () => {
   it('COR-011 — rejects a negative size', async () => {
     const dto = plainToInstance(CreateDocumentDto, { ...base, size: -1 });

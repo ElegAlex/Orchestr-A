@@ -31,6 +31,7 @@ export class CreateProjectDto {
       "Refonte complète de l'application de gestion RH avec migration vers une architecture moderne",
     required: false,
   })
+  @MaxLength(2000)
   @IsString()
   @IsOptional()
   description?: string;

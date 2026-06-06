@@ -478,6 +478,59 @@ describe('PlanningExportService', () => {
       );
     });
 
+    it('SEC-066 — truncates SUMMARY > 200 chars to 200 in the batch title', async () => {
+      mockPrisma.event.createMany.mockResolvedValue({ count: 1 });
+
+      const longTitle = 'T'.repeat(500);
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        `SUMMARY:${longTitle}`,
+        'DTSTART:20260301T100000Z',
+        'DTEND:20260301T110000Z',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n');
+
+      await service.importIcs(ics, 'user-1');
+
+      expect(mockPrisma.event.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              title: expect.stringMatching(/^.{1,200}$/),
+            }),
+          ]),
+        }),
+      );
+      const call = mockPrisma.event.createMany.mock.calls[0][0];
+      expect(call.data[0].title.length).toBeLessThanOrEqual(200);
+    });
+
+    it('SEC-066 — truncates DESCRIPTION > 5000 chars to 5000 in the batch', async () => {
+      mockPrisma.event.createMany.mockResolvedValue({ count: 1 });
+
+      const longDesc = 'D'.repeat(6000);
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'SUMMARY:Normal Title',
+        `DESCRIPTION:${longDesc}`,
+        'DTSTART:20260301T100000Z',
+        'DTEND:20260301T110000Z',
+        'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n');
+
+      await service.importIcs(ics, 'user-1');
+
+      const call = mockPrisma.event.createMany.mock.calls[0][0];
+      expect(call.data[0].description).not.toBeNull();
+      expect(call.data[0].description.length).toBeLessThanOrEqual(5000);
+    });
+
     it('imports timed events with endTime', async () => {
       // PER-011 — batch insert via createMany
       mockPrisma.event.createMany.mockResolvedValue({ count: 1 });

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, MaxLength } from 'class-validator';
 
 export class RefreshTokenDto {
   @ApiProperty({
@@ -7,6 +7,7 @@ export class RefreshTokenDto {
     required: false,
   })
   @IsOptional()
+  @MaxLength(256)
   @IsString()
   refreshToken?: string;
 }
@@ -17,6 +18,7 @@ export class LogoutDto {
     required: false,
   })
   @IsOptional()
+  @MaxLength(256)
   @IsString()
   refreshToken?: string;
 }

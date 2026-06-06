@@ -6,12 +6,14 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 
 export class QueryClientsDto {
   @ApiPropertyOptional({ description: 'Search on name (ilike)' })
   @IsOptional()
+  @MaxLength(200)
   @IsString()
   search?: string;
 

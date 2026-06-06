@@ -293,8 +293,14 @@ export class PlanningExportService {
         }
 
         batch.push({
-          title: stripHtml(strVal(vevent.summary)) || 'Evenement importe',
-          description: stripHtml(strVal(vevent.description)) || null,
+          // SEC-066: truncate imported title and description to prevent
+          // oversized values from reaching the database.
+          title: (
+            stripHtml(strVal(vevent.summary)) || 'Evenement importe'
+          ).slice(0, 200),
+          description:
+            (stripHtml(strVal(vevent.description)) || null)?.slice(0, 5000) ??
+            null,
           date: start,
           startTime: startTime ?? null,
           endTime: endTime ?? null,

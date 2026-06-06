@@ -35,6 +35,7 @@ export class CreateThirdPartyDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @MaxLength(254)
   @IsEmail()
   contactEmail?: string;
 

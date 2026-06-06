@@ -6,16 +6,21 @@ import {
   IsArray,
   ValidateNested,
   ArrayMaxSize,
+  MinLength,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ImportMilestoneDto {
   @ApiProperty({ description: 'Nom du jalon', example: 'Alpha Release' })
+  @MinLength(1)
+  @MaxLength(200)
   @IsString()
   @IsNotEmpty()
   name: string;
 
   @ApiProperty({ description: 'Description', required: false })
+  @MaxLength(2000)
   @IsString()
   @IsOptional()
   description?: string;

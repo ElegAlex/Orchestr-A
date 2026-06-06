@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CreateClientDto } from './create-client.dto';
 import { UpdateClientDto } from './update-client.dto';
+import { QueryClientsDto } from './query-clients.dto';
 
 describe('CreateClientDto validation', () => {
   it('rejects empty name', async () => {
@@ -76,5 +77,27 @@ describe('UpdateClientDto validation', () => {
     });
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
+  });
+});
+
+describe('QueryClientsDto — SEC-035 search MaxLength(200)', () => {
+  it('rejects a search string longer than 200 chars', async () => {
+    const dto = plainToInstance(QueryClientsDto, { search: 'x'.repeat(201) });
+    const errors = await validate(dto);
+    expect(
+      errors.find((e) => e.property === 'search')?.constraints,
+    ).toHaveProperty('maxLength');
+  });
+
+  it('accepts a valid search string within limit', async () => {
+    const dto = plainToInstance(QueryClientsDto, { search: 'Mairie' });
+    const errors = await validate(dto);
+    expect(errors.find((e) => e.property === 'search')).toBeUndefined();
+  });
+
+  it('accepts omitted search (@IsOptional)', async () => {
+    const dto = plainToInstance(QueryClientsDto, {});
+    const errors = await validate(dto);
+    expect(errors.find((e) => e.property === 'search')).toBeUndefined();
   });
 });

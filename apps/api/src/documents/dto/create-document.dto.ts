@@ -57,6 +57,7 @@ export class CreateDocumentDto {
     example: 'Document de spécifications techniques',
     required: false,
   })
+  @MaxLength(2000)
   @IsString()
   @IsOptional()
   description?: string;

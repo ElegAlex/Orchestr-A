@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { ThirdPartyType } from 'database';
@@ -29,6 +30,7 @@ export class QueryThirdPartyDto {
 
   @ApiPropertyOptional({ description: 'Search on organizationName (ilike)' })
   @IsOptional()
+  @MaxLength(200)
   @IsString()
   search?: string;
 

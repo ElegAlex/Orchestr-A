@@ -33,6 +33,7 @@ export class CreateEventDto {
     example: "Revue de l'avancement du projet avec l'équipe",
     required: false,
   })
+  @MaxLength(2000)
   @IsString()
   @IsOptional()
   description?: string;

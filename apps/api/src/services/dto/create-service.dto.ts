@@ -27,6 +27,7 @@ export class CreateServiceDto {
     example: "Service en charge du recrutement et de l'intégration",
     required: false,
   })
+  @MaxLength(1000)
   @IsString()
   @IsOptional()
   description?: string;

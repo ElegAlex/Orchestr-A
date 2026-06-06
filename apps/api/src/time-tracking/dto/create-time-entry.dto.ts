@@ -11,6 +11,7 @@ import {
   Min,
   Max,
   ValidateIf,
+  MaxLength,
 } from 'class-validator';
 import { ActivityType } from 'database';
 
@@ -68,6 +69,7 @@ export class CreateTimeEntryDto {
     example: 'Développement du module Auth',
     required: false,
   })
+  @MaxLength(2000)
   @IsString()
   @IsOptional()
   description?: string;

@@ -9,6 +9,8 @@ import {
   ArrayMaxSize,
   ValidateNested,
   Min,
+  MinLength,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SkillCategory } from 'database';
@@ -18,6 +20,8 @@ export class ImportSkillDto {
     description: 'Nom de la compétence',
     example: 'React',
   })
+  @MinLength(2)
+  @MaxLength(100)
   @IsString()
   @IsNotEmpty()
   name: string;
@@ -30,6 +34,7 @@ export class ImportSkillDto {
   category: SkillCategory;
 
   @ApiProperty({ description: 'Description', required: false })
+  @MaxLength(500)
   @IsString()
   @IsOptional()
   description?: string;

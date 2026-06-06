@@ -187,6 +187,25 @@ describe('SEC-025 — departmentId / serviceIds must be UUIDs v4', () => {
   });
 });
 
+describe('CreateUserDto — SEC-059 login MaxLength(50)', () => {
+  it('rejects a login longer than 50 chars', async () => {
+    const dto = plainToInstance(CreateUserDto, {
+      ...base,
+      login: 'a'.repeat(51),
+    });
+    const errors = await validate(dto);
+    expect(
+      errors.find((e) => e.property === 'login')?.constraints,
+    ).toHaveProperty('maxLength');
+  });
+
+  it('accepts a valid login within 50 chars', async () => {
+    const dto = plainToInstance(CreateUserDto, base); // base.login = 'marie.martin'
+    const errors = await validate(dto);
+    expect(errors.find((e) => e.property === 'login')).toBeUndefined();
+  });
+});
+
 describe('UpdateUserDto — SEC-010 propagation via PartialType', () => {
   it('rejects a javascript: scheme avatarUrl on the PATCH path', async () => {
     const dto = plainToInstance(UpdateUserDto, {

@@ -27,6 +27,7 @@ export class ImportUserDto {
   })
   @IsString()
   @MinLength(3)
+  @MaxLength(50)
   login: string;
 
   @ApiProperty({

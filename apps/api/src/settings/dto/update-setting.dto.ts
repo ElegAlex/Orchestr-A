@@ -1,11 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsObject,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateSettingDto {
   @ApiProperty({
     description: 'La valeur du paramètre (JSON stringifié)',
     example: '"dd/MM/yyyy"',
   })
+  @MaxLength(10000)
   @IsString()
   @IsNotEmpty()
   value: string;
@@ -14,6 +21,7 @@ export class UpdateSettingDto {
     description: 'Description du paramètre',
     example: "Format de date utilisé dans l'application",
   })
+  @MaxLength(500)
   @IsString()
   @IsOptional()
   description?: string;
