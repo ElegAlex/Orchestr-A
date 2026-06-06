@@ -1318,8 +1318,9 @@ grep -n 'auditPersistence\|auditService\|AuditAction' apps/api/src/users/users.s
 **Notes:**
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary OBS-016 ⇄ sessionA OBS-002).
 - Audit note: Verified: lines 1400-1437 confirmed verbatim. Grep of entire users.service.ts confirms no audit call between lines 1398-1448. Finding confirmed.
+- **2026-06-06 — DONE `d0ca9124`.** The emit was already wired via a `'USER_CREATED' as AuditAction` cast; this fold promoted it to a real enum member with a strict payload schema (source 'admin' | 'import') + entityType 'User'. Witness: `users.service.spec` OBS-016 test asserts `validatePayloadForAction(USER_CREATED, importPayload)` does not throw (discriminating on schema correctness). Folded with OBS-017 + OBS-003 in the cluster's first cross-module batch slice.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d0ca9124
 
 ---
 
@@ -1379,8 +1380,9 @@ grep -n 'USER_CREATED\|auditPersistence\|auditService' apps/api/src/users/users.
 **Notes:**
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary OBS-017 ⇄ sessionA OBS-001).
 - Audit note: Verified: grep of all audit calls in users.service.ts shows the first audit emission is at line 683 (update path). Lines 140-220 (create()) contain zero audit calls. USER_CREATED absent from audit-action.enum.ts. No global interceptor. Finding confirmed.
+- **2026-06-06 — DONE `d0ca9124`.** create() emit promoted from the `'USER_CREATED' as AuditAction` cast to the real enum member + strict schema + entityType 'User'. Witness: `users.service.spec` OBS-017 test asserts the admin-source payload satisfies the real schema. Folded with OBS-016 + OBS-003.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d0ca9124
 
 ---
 
@@ -5245,8 +5247,9 @@ grep -n 'LOGOUT' apps/api/src/audit/audit-action.enum.ts apps/api/src/auth/auth.
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verified: auth.controller.ts lines 220-243 contain no audit emission. audit-action.enum.ts has no LOGOUT member (confirmed). No global audit interceptor exists in the codebase. Finding is structural.
+- **2026-06-06 — DONE `d0ca9124`.** Added LOGOUT enum member + securityEnvelope schema + entityType 'Auth'; AuthController injects AuditService and emits a fire-and-forget LOGOUT row in logout() (opaque-id only, no PII). Witness: `auth.controller.spec` OBS-003 test asserts the emit (RED captured with a wrong action) + envelope schema conformance. Folded with OBS-016 + OBS-017.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d0ca9124
 
 ---
 
