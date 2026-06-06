@@ -3877,7 +3877,8 @@ N/A — manual verification
 
 ### PER-003 — assertCanAssignRole executes 4 DB queries when the caller is not ADMIN (resolveTemplateKey called twice in assertCanAssignRole + twice again in canAssignRole)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). apps/api/src/common/services/role-hierarchy.service.ts: extract private `_canAssignRoleFromKeys(callerTplKey: string | null, targetTplKey: string | null): boole
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -4976,6 +4977,7 @@ N/A — manual verification: craft a body with 1001 task objects and POST to the
 ### SEC-021 — DELETE /tasks/:taskId/raci/:userId/:role — :role path param is unvalidated (no ParseEnumPipe)
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/tasks/tasks.controller.ts line 422: change to `@Param('role', new ParseEnumPipe(RACIRole)) role: RACIRole`. Failing witness: send DELETE /tasks/:validId/raci/:validUserId/INVALID_ROLE wit
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -7192,6 +7194,7 @@ N/A — manual verification: note displayed date, reload page, confirm it does N
 ### SEC-007 — Unauthenticated health endpoint reveals per-component infrastructure status (DB/Redis) to any caller
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/health/health.service.ts: define a public `HealthStatus = { status: 'ok' | 'degraded' }` return shape; keep per-component status in a private type. Log component detail server-side (alrea
 - **Phase:** 2
 - **Cluster:** K
 - **Confidence:** primary-only
@@ -7417,6 +7420,7 @@ grep -n 'labels\|route\|method' apps/api/src/metrics/metrics.service.ts | head -
 ### SEC-031 — API proxy forwards `host` header to internal backend (host-header injection)
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Add `'host'`, `'x-forwarded-host'`, `'x-real-ip'` to `HOP_BY_HOP` in `apps/web/app/api/[...path]/route.ts:4-12`. No response-shape risk — header-only change. RED test: send request with `Host: evil.co
 - **Phase:** 2
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -7481,6 +7485,7 @@ curl -s -X POST http://localhost:3000/api/auth/login -H 'Host: evil.com' -H 'Con
 ### COR-041 — Login/register: JWT stored in localStorage before permissions fetch — broken auth state on network error
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Option A (cleanest): remove the `/auth/me/permissions` call from login and register handlers — `useAuthBootstrap` in layout already fetches it on mount; just `router.push` after `authService.login`. O
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7540,6 +7545,7 @@ N/A — manual verification: throttle /auth/me/permissions in devtools; confirm 
 ### COR-042 — handleUpdateProject has no error handling — silent failure on project update
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Wrap lines 953-959 in try/catch matching `handleHardDeleteProject` pattern: catch, extract `axiosError.response?.data?.message`, call `toast.error(...)`. Re-throw to keep the modal open if the caller 
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7605,6 +7611,7 @@ N/A — manual verification
 ### COR-043 — onArchive / onUnarchive in projects/page.tsx have no error handling
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Wrap each body in try/catch with toast.error matching the file's existing pattern. For `onArchive`: `try { await projectsService.archive(id); toast.success('Projet archivé'); await fetchProjects(); } 
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7677,6 +7684,7 @@ N/A — manual verification
 ### COR-044 — fetchProjects useCallback missing hasPermission dependency — stale permission closure
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Add `hasPermission` to the dep array at line 130: `}, [user, memberMeFilter, showArchived, hasPermission]);`. Because `hasPermission` is already memoized by `usePermissions`, this only triggers re-cre
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7739,6 +7747,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && npx eslint apps/web/app/\[locale\]/pro
 ### COR-045 — ProjectsDetailTable: Link href and router.push use locale-less paths, breaking client-side navigation
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Add `import { useLocale } from 'next-intl';` and `const locale = useLocale();` inside the component. Replace line 379 with `href={\`/${locale}/projects/${row.id}\`}` and line 428 with `router.push(\`/
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7849,6 +7858,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && npx eslint apps/web/app/\[locale\]/tas
 ### COR-047 — usersService.getAll() in telework/page.tsx has no .catch() — silent failure in user selector
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Add `.catch(err => { logger.error('Error fetching users for telework:', err); toast.error(tc('errors.serverError')); setAllUsers([]); })` after the `.then()`, or convert to async/await with try/catch.
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7956,6 +7966,7 @@ find apps/web/app/\[locale\]/{leaves,telework,time-tracking,clients,third-partie
 ### PER-031 — handleExportExcel fires Promise.all over all active clients without concurrency cap (up to 200 requests)
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Replace `Promise.all` with a concurrency-limited chunked loop (chunks of 10): `for (const chunk of chunkArray(cap, 10)) { const chunkResults = await Promise.all(chunk.map(...)); results.push(...chunkR
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -8010,6 +8021,7 @@ grep -n 'Promise.all' apps/web/app/\[locale\]/clients/page.tsx
 ### PER-032 — milestonesService.getAll() fetches ALL milestones system-wide then filters client-side in two pages
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). In `apps/web/app/[locale]/tasks/[id]/page.tsx` replace lines 97-100 with `const projectMilestones = await milestonesService.getByProject(taskData.projectId); setMilestones(projectMilestones);`. CAUTIO
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -8064,6 +8076,7 @@ grep -n 'milestonesService.getAll' apps/web/app/\[locale\]/projects/\[id\]/page.
 ### PER-033 — AdvancedAnalyticsTab creates a module-scope QueryClient inside its own QueryClientProvider, bypassing the app-level cache
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Remove the `QueryClientProvider` wrapper from `AdvancedAnalyticsTab`. Child components `WorkloadChart`, `RecentActivity`, `MilestonesCompletion` will use the app-level QueryProvider already in layout.
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -8179,7 +8192,8 @@ grep -n 'getAll(1, 1000)' apps/web/app/\[locale\]/tasks/page.tsx
 
 ### TST-002 — 13 controllers have no sibling *.spec.ts file
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Create *.controller.spec.ts for each of the 12 uncovered controllers following apps/api/src/tasks/tasks.controller.spec.ts as template. Priority: rbac/roles.con
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** primary-only
@@ -8239,7 +8253,8 @@ find apps/api/src -name '*.controller.ts' | sort | while read f; do base=$(echo 
 
 ### TST-003 — analytics.controller.spec.ts has only happy-path tests — no error/auth failure coverage
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Add to analytics.controller.spec.ts: (1) test where mockService.getAnalytics rejects with NotFoundException; (2) test where mockService.exportAnalytics rejects 
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** primary-only
@@ -8297,7 +8312,8 @@ grep -c 'rejects\|throw\|Forbidden\|NotFound\|403\|404\|400' apps/api/src/analyt
 
 ### TST-004 — events.controller.spec.ts, clients.controller.spec.ts, and third-parties.controller.spec.ts have zero error-path tests
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). For each of the three controller specs, add at least one it() block where the mocked service rejects with a typed NestJS exception (NotFoundException for findOn
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** primary-only
@@ -8358,7 +8374,8 @@ grep -c 'rejects\|throw\|Forbidden\|NotFound\|403\|404\|400\|409\|Conflict' apps
 
 ### TST-005 — LeaveTypesService.reorder() method has zero test coverage — $transaction branch untested
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Add `describe('reorder')` block to leave-types.service.spec.ts covering: (1) happy path asserting $transaction called with N update promises each with correct s
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** primary-only
@@ -8417,7 +8434,8 @@ grep -c 'reorder\|Reorder' apps/api/src/leave-types/leave-types.service.spec.ts
 
 ### TST-006 — planning-export.controller.spec.ts has only happy-path tests — no error propagation tests
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Add: (1) test for exportIcs controller method; (2) test where previewImport service rejects with BadRequestException; (3) test where importIcs service rejects w
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** primary-only
@@ -8479,7 +8497,8 @@ grep -c 'rejects\|throw\|Forbidden\|NotFound\|403\|404\|400\|exportIcs' apps/api
 
 ### TST-007 — Root-level e2e specs use UI login helper with hardcoded admin/admin123 credentials
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Add `dependencies: ['setup']` and `storageState: authPath('admin')` to the chromium project, or migrate the 5 specs to e2e/tests/ using the storageState pattern
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** primary-only
@@ -8535,7 +8554,8 @@ grep -rn 'import.*helpers\|await login(' e2e/*.spec.ts
 
 ### TST-008 — api-permissions.spec.ts — the core RBAC matrix test has zero @smoke tags despite covering all permission codes
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Confirmed: `grep -c '@smoke' e2e/tests/rbac/api-permissions.spec.ts` returns 0. However the WONT-FIX is justified: the RBAC matrix tests run on every CI push anyway; the only missed scenario is a pre-deploy `--grep @smoke` quick-check which
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** primary-only
@@ -9027,7 +9047,8 @@ N/A — manual verification
 
 ### SA-OBS-004 — DOCUMENT_DOWNLOADED action is defined but wired to no emitter (binary egress unobservable)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Option (a): apps/api/src/documents/documents.service.ts — add a proxied download endpoint that streams from Document.url through the API and emits AuditAction.D
 - **Phase:** 2
 - **Cluster:** E
 - **Confidence:** secondary-only
@@ -9137,7 +9158,8 @@ grep -n 'auditPersistence.log\|\$transaction\|USER_DELETED' /home/alex/Documents
 
 ### SA-DAT-005 — DAT-021 hash-chain recompute is operator-manual with no CI/migration guard that it executed
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Minimal: add a witness assertion to apps/api/src/audit/audit-immutability.int.spec.ts that verifies chain integrity over all seeded audit_logs rows after migrat
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** secondary-only
@@ -9188,7 +9210,8 @@ grep -rn 'recompute\|schema-bump\|schemaVersion' /home/alex/Documents/REPO/ORCHE
 
 ### SA-PERF-014 — audit_logs advisory lock serialises ALL audit writes globally — creates a bottleneck under concurrent mutations
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Confirmed in current code. `audit-persistence.service.ts` lines 141-151 contains an inline comment that explicitly documents the tradeoff: 'SELECT FOR UPDATE on the prior row option forks the chain under READ COMMITTED: lock release re-chec
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** secondary-only
@@ -9290,7 +9313,8 @@ curl -s -H 'Authorization: Bearer <token>' 'http://localhost:3000/projects' | jq
 
 ### SA-PERF-015 — planning.getOverview loads up to 1000 users and 1000 leaves in a single blocking request
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Confirmed in current code. `planning.service.ts` lines 66-76: `usersService.findAll(1, 1000, undefined, undefined, { allowFullScan: true })` and `servicesService.findAll(1, 1000)` are deliberate — `allowFullScan: true` explicitly bypasses t
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** secondary-only
@@ -9560,7 +9584,8 @@ grep -n 'timeEntry.findMany\|userTimeEntries\|thirdPartyTimeEntries' apps/api/sr
 
 ### SA-DAT-002 — UserSkill.validatedBy is an untyped String? with no FK to users — dangling reference risk
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). packages/database/prisma/schema.prisma: rename 'validatedBy String?' to 'validatedBySnapshot String?' (frozen UUID or display-name at write time, matching the a
 - **Phase:** 2
 - **Cluster:** J
 - **Confidence:** secondary-only
@@ -9734,7 +9759,8 @@ grep -n 'epicId\|milestoneId\|projectId' apps/api/src/tasks/tasks.service.ts | g
 
 ### SA-OBS-005 — getRequestId() has zero call sites: ALS request-ID never reaches audit payloads or structured logs
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream c9a1e7e5). Fix confirmed in current code. audit.service.ts line 5 imports getRequestId from '../common/fastify/request-id.context'. Lines 269-270 call it with a conditional spread: '...(getRequestId() !== undefined ? { requestId: getRequestId() } : {}
 - **Phase:** 2
 - **Cluster:** N
 - **Confidence:** secondary-only
@@ -9778,7 +9804,7 @@ grep -rn 'getRequestId()' /home/alex/Documents/REPO/ORCHESTRA/apps/api/src --inc
 - sessionA-only finding (99-run). Namespaced `SA-OBS-005` to avoid ID collision with the primary run; original id `OBS-005` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: payload-schemas.ts:57-70 confirms the schema slot is prepared; the gap is purely in the call-site wiring.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
@@ -9889,7 +9915,8 @@ curl -s http://localhost:4000/api/metrics | grep -E 'db_|redis_|prisma_|pool_'
 
 ### SA-TEST-004 — settings.controller.ts has no controller spec (8 endpoints, all @RequirePermissions)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Create apps/api/src/settings/settings.controller.spec.ts following tasks.controller.spec.ts pattern: mock SettingsService, test all 8 endpoints for happy path a
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** secondary-only
@@ -9945,7 +9972,8 @@ find /home/alex/Documents/REPO/ORCHESTRA/apps/api/src/settings -name 'settings.c
 
 ### SA-TEST-005 — leave-types.controller.ts has no controller spec (7 endpoints, all @RequirePermissions)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Create apps/api/src/leave-types/leave-types.controller.spec.ts: mock LeaveTypesService, test all 7 endpoints including reorder happy-path, NotFoundException on 
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** secondary-only
@@ -10000,7 +10028,8 @@ find /home/alex/Documents/REPO/ORCHESTRA/apps/api/src/leave-types -name '*.contr
 
 ### SA-TEST-006 — rbac/roles.controller.ts has no controller spec (6 endpoints, all @RequirePermissions)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Create apps/api/src/rbac/__tests__/roles.controller.spec.ts: mock RolesService, test listTemplates/create/findAll/findOne/update/delete with happy paths plus Fo
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** secondary-only
@@ -10056,7 +10085,8 @@ find /home/alex/Documents/REPO/ORCHESTRA/apps/api/src/rbac -name 'roles.controll
 
 ### SA-TEST-007 — analytics-advanced.controller.ts has no controller spec (6 endpoints, all @RequirePermissions)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Create apps/api/src/analytics/advanced/analytics-advanced.controller.spec.ts: mock all 6 analytics services, verify each endpoint forwards currentUser context c
 - **Phase:** 2
 - **Cluster:** O
 - **Confidence:** secondary-only
@@ -10110,7 +10140,8 @@ find /home/alex/Documents/REPO/ORCHESTRA/apps/api/src/analytics/advanced -name '
 
 ### SA-TEST-002 — e2e/leaves.spec.ts: tautological assertions — test always passes even when page is broken
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Replace `expect(hasList || hasEmptyMessage || isOnLeavesPage).toBeTruthy()` with `await expect(page.locator('h1')).toContainText(/congés/i)`. Remove catch swall
 - **Phase:** 2
 - **Cluster:** P
 - **Confidence:** secondary-only
@@ -10162,7 +10193,8 @@ grep -n 'isOnLeavesPage\|catch(() => {})' /home/alex/Documents/REPO/ORCHESTRA/e2
 
 ### SA-TEST-003 — e2e/planning.spec.ts: two `expect(true).toBeTruthy()` assertions — tests can never fail
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Replace `expect(true).toBeTruthy()` with meaningful assertions (e.g., `expect(page.url()).toContain('/planning')` as a floor, or add data-testid to planning gri
 - **Phase:** 2
 - **Cluster:** P
 - **Confidence:** secondary-only
@@ -10215,7 +10247,8 @@ grep -n 'expect(true).toBeTruthy' /home/alex/Documents/REPO/ORCHESTRA/e2e/planni
 
 ### SA-TEST-013 — e2e/tasks.spec.ts: task-list test swallows selector failure and asserts only URL
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Replace the catch+URL-only assertion with `await expect(page.locator('h1')).toContainText(/tâches|tasks/i)` consistent with the first test. RED witness: grep -c
 - **Phase:** 2
 - **Cluster:** P
 - **Confidence:** secondary-only
@@ -10273,7 +10306,8 @@ grep -n 'catch(() => {})' /home/alex/Documents/REPO/ORCHESTRA/e2e/tasks.spec.ts
 
 ### SA-TEST-001 — 5 legacy E2E specs use UI login (helpers.ts) instead of API-based storageState
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Same fix as TST-007: add storageState+dependencies to chromium playwright project, replace login() calls with storageState. RED witness: grep -rn 'import.*helpe
 - **Phase:** 2
 - **Cluster:** Q
 - **Confidence:** secondary-only
@@ -10329,7 +10363,8 @@ grep -rn 'import.*helpers' /home/alex/Documents/REPO/ORCHESTRA/e2e --include='*.
 
 ### SA-PERF-023 — All app pages are 'use client' — no RSC, no TanStack Query, no incremental hydration
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Triage WONT-FIX is justified. Confirmed from code: the finding's premise ('TanStack Query is not used in any page component') is already outdated — `useQuery` is used in `WorkloadChart.tsx:40`, `RecentActivity.tsx:37`, `MilestonesCompletion
 - **Phase:** 2
 - **Cluster:** T
 - **Confidence:** secondary-only
@@ -10448,7 +10483,8 @@ grep -n '_count\|leaveBalance\|balance' /home/alex/Documents/REPO/ORCHESTRA/apps
 
 ### SA-DAT-006 — scripts/backup-database.sh produces unencrypted .gz dumps with no restore-verification step
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). WONT-FIX holds, though the triage's characterization of the script as 'dev-targeted' is inaccurate — the script explicitly targets CONTAINER_NAME=orchestr-a-postgres-prod and DATABASE_NAME=orchestr_a_prod (confirmed at backup-database.sh:12
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** secondary-only
@@ -10498,7 +10534,8 @@ grep -n 'gpg\|openssl\|AES\|encrypt\|restore\|verify' /home/alex/Documents/REPO/
 
 ### SA-PERF-013 — Analytics cache has no mutation invalidation — stale data served for up to 60s after changes
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). apps/api/src/common/services/cache.service.ts: add `async delByPattern(pattern: string)` using Redis SCAN + DEL pipeline. apps/api/src/tasks/tasks.service.ts an
 - **Phase:** 2
 - **Cluster:** —
 - **Confidence:** secondary-only
@@ -10547,7 +10584,8 @@ grep -rn 'cache.*analytics\|analytics.*cache\|CacheService' apps/api/src/ | grep
 
 ### COR-023 — captureSnapshots() uses server-local midnight instead of UTC midnight for deduplication query
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** J
 - **Confidence:** cross-validated
@@ -10603,7 +10641,8 @@ grep -n 'setHours\|setUTCHours' apps/api/src/projects/projects.service.ts
 
 ### SEC-032 — nginx forwards client-supplied X-Forwarded-Proto ($http_x_forwarded_proto) instead of $scheme, enabling proto spoofing
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** L
 - **Confidence:** cross-validated
@@ -10654,7 +10693,8 @@ N/A — manual verification: grep 'X-Forwarded-Proto' nginx/nginx.conf
 
 ### SEC-033 — No Strict-Transport-Security header emitted by nginx, web middleware, or API helmet
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** L
 - **Confidence:** cross-validated
@@ -10705,7 +10745,8 @@ curl -sI https://orchestr-a.com | grep -i strict-transport
 
 ### DAT-014 — 25 CREATE INDEX statements in dat011_fk_indexes run without CONCURRENTLY — ACCESS EXCLUSIVE lock on every indexed table
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -10762,7 +10803,8 @@ SELECT schemaname, tablename, indexname FROM pg_indexes WHERE indexname IN ('com
 
 ### OBS-001 — AUDIT_HASH_KEY never set in CI — API cannot boot in E2E jobs
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** K
 - **Confidence:** primary-only
@@ -10823,7 +10865,8 @@ grep -n 'AUDIT_HASH_KEY' .github/workflows/ci.yml
 
 ### SEC-002 — CI e2e-smoke and e2e-tests jobs start the API without AUDIT_HASH_KEY, causing assertAuditHashKey() to abort in all environments
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** K
 - **Confidence:** primary-only
@@ -10881,7 +10924,8 @@ grep -A 15 'Start Backend API' .github/workflows/ci.yml | grep AUDIT_HASH_KEY
 
 ### SEC-001 — Committed nginx.conf has no :443 TLS block; live TLS is terminated by an out-of-repo host nginx (IaC drift) and HSTS is absent
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -10939,7 +10983,8 @@ curl -sSI --resolve orchestr-a.com:443:92.222.35.25 https://orchestr-a.com/ | gr
 
 ### TST-001 — clients.spec.ts Suite 6 asserts HTTP 200 for contributeur on GET /api/clients, contradicting the permission matrix and the generated INTERDIT test
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** O
 - **Confidence:** primary-only
@@ -10999,7 +11044,8 @@ grep -A20 'Lecture autorisée pour tous les rôles' e2e/clients.spec.ts | grep c
 
 ### SEC-063 — nginx sets X-Frame-Options: SAMEORIGIN but CSP sets frame-ancestors: 'none' — conflicting framing policies
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -11046,7 +11092,8 @@ curl -sI http://localhost/ | grep -iE 'x-frame-options|content-security-policy'
 
 ### SEC-064 — nginx rate limiting applies only to /api — frontend / and /_next/static locations are unthrottled
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -11110,7 +11157,8 @@ grep -n 'limit_req' nginx/nginx.conf
 
 ### SA-OBS-013 — AUDIT_HASH_KEY is absent from .env.production.example and from init-env.sh output
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** R
 - **Confidence:** secondary-only
@@ -11162,7 +11210,8 @@ grep 'AUDIT_HASH_KEY' /home/alex/Documents/REPO/ORCHESTRA/.env.production.exampl
 
 ### SA-SEC-014 — docker-compose.prod.yml uses deprecated ALLOWED_ORIGINS env var instead of canonical CORS_ORIGIN
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** R
 - **Confidence:** secondary-only
@@ -11208,7 +11257,8 @@ grep -n 'CORS_ORIGIN\|ALLOWED_ORIGINS' docker-compose.prod.yml .env.production.e
 
 ### SA-SEC-018 — JWT_ACCESS_TTL undocumented in prod template — effective access token TTL is 7d not 15m as SEC-019 assumes
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (cycle tag 'requires-live-verification'): truth depends on runtime/deploy/CI/TLS/nginx/env state — routed to a separate live pass, not rated from static evidence.
 - **Phase:** 3
 - **Cluster:** R
 - **Confidence:** secondary-only
@@ -11259,7 +11309,8 @@ grep -n 'JWT_ACCESS_TTL\|JWT_EXPIRES_IN\|JWT_REFRESH_TTL' .env.production.exampl
 
 ### COR-062 — findAll: default limit is 1000 but page default is 1 — no hard cap when limit param is omitted via service default
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream d41e8566). Confirmed at tasks.service.ts:322: `const safeLimit = Math.min(limit ?? 10, 100); // PER-027 — hard cap at 100 rows (was 1000; callers requesting >100 get capped)`. The default is now 10 (not 1000) and the hard cap is 100 (not 1000). The by
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** cross-validated
@@ -11299,13 +11350,14 @@ grep -n 'PLANNING_HARD_CAP\|safeLimit\|Math.min' apps/api/src/tasks/tasks.servic
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary COR-062 ⇄ sessionA PERF-002).
 - Audit note: comments/comments.service.ts has the same pattern with default 1000.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### PER-041 — findAll comments uses default limit=1000 — very high default page size
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/comments/comments.service.ts line 65: change Math.min(limit || 1000, 1000) to Math.min(limit ?? 1000, 100). Keep the default parameter at 1000 until web callers are audited. The envelope 
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** cross-validated
@@ -11356,7 +11408,8 @@ curl -s 'http://localhost:3001/comments' | jq '.meta.limit'
 
 ### PER-051 — captureSnapshots fetches ALL active projects with full task/milestone arrays — no pagination
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Confirmed at projects.service.ts lines 1216-1223: captureSnapshots fetches all ACTIVE projects in one findMany with tasks and milestones included, no take. The comment at lines 1211-1214 documents PER-003 batching (2 DB queries regardless o
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** cross-validated
@@ -11410,6 +11463,7 @@ N/A — manual verification
 ### SEC-042 — CreateLeaveDto.reason and ImportLeaveDto.comment lack @MaxLength, allowing oversized free-text storage
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/leaves/dto/create-leave.dto.ts: add MaxLength to the import from class-validator and add @MaxLength(2000) to the reason field (line 79). apps/api/src/leaves/dto/import-leaves.dto.ts: add 
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** cross-validated
@@ -11463,6 +11517,7 @@ N/A — manual verification: POST /leaves with reason=<2001-char string>, expect
 ### SEC-047 — description fields lack @MaxLength on CreateProjectDto, CreateEpicDto, CreateMilestoneDto
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). Add @MaxLength(2000) to description in CreateProjectDto (line 36), CreateEpicDto (line 27), CreateMilestoneDto (line 22). In ImportMilestoneDto add @MaxLength(200) @MinLength(1) to name (line 16) and 
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** cross-validated
@@ -11517,6 +11572,7 @@ grep -n 'MaxLength\|description' apps/api/src/projects/dto/create-project.dto.ts
 ### OBS-021 — generateResetToken() logs PASSWORD_CHANGED (wrong action) — action mislabeling confirmed, non-persistence claim refuted
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). 1. apps/api/src/audit/audit-action.enum.ts: add `PASSWORD_RESET_TOKEN_ISSUED = 'PASSWORD_RESET_TOKEN_ISSUED'`. 2. apps/api/src/audit/audit.service.ts ENTITY_TYPE_BY_ACTION: add entry 'User'. 3. apps/a
 - **Phase:** 4
 - **Cluster:** G
 - **Confidence:** cross-validated
@@ -11567,7 +11623,8 @@ grep -n 'generateResetToken\|PASSWORD_CHANGED\|auditService.log\|auditPersistenc
 
 ### TST-009 — expect(res.statusCode).not.toBe(401) in uploads-auth.hook.spec.ts passes on 200/500/404 — intent is ambiguous
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). In uploads-auth.hook.spec.ts line 95, replace `expect(res.statusCode).not.toBe(401)` with `expect(res.statusCode).toBe(404)` and update the comment to explain 4
 - **Phase:** 4
 - **Cluster:** O
 - **Confidence:** cross-validated
@@ -11626,7 +11683,8 @@ grep -n 'not.toBe(401)' apps/api/src/common/fastify/uploads-auth.hook.spec.ts
 
 ### TST-010 — describe.skipIf in leaves-balance-gating.int.spec.ts silently disables mutation witness in default CI
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Add a dedicated CI job (or scheduled workflow step) that sets MUTATION_WITNESS=1 and runs `pnpm --filter api test:integration`. Alternatively, document it as a 
 - **Phase:** 4
 - **Cluster:** O
 - **Confidence:** cross-validated
@@ -11675,7 +11733,8 @@ grep -rn 'MUTATION_WITNESS' .github/workflows/ 2>/dev/null || echo 'Not in CI'
 
 ### COR-051 — listProjectClients, listTaskAssignees, listProjectMembers return empty list for non-existent parent — should return 404
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream 12d48876). All three methods have guards that throw 404 for non-existent parents. `listProjectClients` at clients.service.ts:352 calls `this.accessScope.assertCanAccessProject(projectId, currentUser)`. `listTaskAssignees` at third-parties.service.ts:4
 - **Phase:** 4
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -11724,13 +11783,14 @@ grep -n 'listProjectClients\|listTaskAssignees\|listProjectMembers' apps/api/src
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The same list methods in the same codebase for getClientProjects (line 119) DO correctly check existence first.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### COR-057 — milestones complete() bypasses project membership authorization check
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream 006605b3). Confirmed at milestones.service.ts:162-175: `async complete(id: string, currentUserId?: string, currentUserRole?: string | null)` with `if (currentUserId) { await this.assertProjectMembership(id, currentUserId, currentUserRole); }` at lines
 - **Phase:** 4
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -11775,13 +11835,14 @@ grep -n 'complete\|assertProjectMembership' apps/api/src/milestones/milestones.s
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### SEC-056 — PATCH/DELETE recurring-rules/:id routes lack @OwnershipCheck decorator (rely solely on service-layer check)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Verified in current code: apps/api/src/telework/telework.service.ts lines 913-920 implement `if (rule.userId !== currentUserId) { const permissions = await this.permissionsService.getPermissionsForRole(currentUserRole); if (!permissions.inc
 - **Phase:** 4
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -11841,6 +11902,7 @@ N/A — manual verification (service-level check already enforces this; guard ab
 ### COR-053 — update() recurrenceEndDate child-prune runs outside the update transaction, creating a window where pruned children exist alongside a committed new endDate
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/events/events.service.ts — move the `event.deleteMany` block inside the `$transaction` callback (before returning from `tx.event.update`), using `tx.event.deleteMany`. Test: unit test tha
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** primary-only
@@ -11901,6 +11963,7 @@ grep -n 'deleteMany\|\$transaction' apps/api/src/events/events.service.ts
 ### COR-055 — importLeaves catch block resets result.created=0 but not result.skipped — error response reports misleading skipped count after full tx rollback
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/leaves/leaves.service.ts — add `result.skipped = 0;` in the catch block at line 3813 alongside `result.created = 0;`. Optionally clear `result.errorDetails` before pushing the 'Import ann
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** primary-only
@@ -11956,7 +12019,8 @@ N/A — manual verification
 
 ### COR-060 — SettingsService.bulkUpdate performs sequential un-transacted upserts — partial failure leaves inconsistent state
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). apps/api/src/settings/settings.service.ts — wrap the loop in `this.prisma.$transaction(async (tx) => {...})`. Refactor `update()` to accept an optional Prisma t
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** primary-only
@@ -12012,6 +12076,7 @@ N/A — manual verification
 ### COR-050 — auth.service register() and users.service create(): duplicate-check race condition surfaces as 500 instead of 409 when two concurrent registrations collide on the DB unique constraint
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/auth/auth.service.ts and apps/api/src/users/users.service.ts — wrap each `prisma.user.create()` in try/catch: catch PrismaClientKnownRequestError with code 'P2002', throw ConflictExceptio
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -12074,6 +12139,7 @@ grep -n 'PrismaClientKnownRequestError\|P2002' apps/api/src/auth/auth.service.ts
 ### COR-052 — epics.service update()/remove(): double-read TOCTOU — epic fetched in membership check then again in findOne()
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/epics/epics.service.ts — catch PrismaClientKnownRequestError with code 'P2025' around epic.update/delete and re-throw as NotFoundException('Epic introuvable'). Test: mock prisma.epic.upda
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -12126,6 +12192,7 @@ grep -n 'findOne\|assertProjectMembership\|epic.update\|epic.delete' apps/api/sr
 ### COR-054 — addParticipant uses check-then-create pattern susceptible to race; duplicate concurrent request leaks P2002 as HTTP 500
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/events/events.service.ts — wrap `prisma.eventParticipant.create()` in try/catch: map P2002 to BadRequestException('Cet utilisateur est déjà participant'). Alternatively use `upsert` or `c
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -12193,6 +12260,7 @@ grep -n 'P2002\|skipDuplicates\|existingParticipation' apps/api/src/events/event
 ### COR-056 — milestones.service update()/remove(): same double-read TOCTOU as epics — unhandled P2025 on concurrent delete
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/milestones/milestones.service.ts — catch PrismaClientKnownRequestError P2025 around milestone.update/delete and re-throw as NotFoundException('Milestone introuvable'). Test: mock prisma.m
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -12250,6 +12318,7 @@ grep -n 'findOne\|assertProjectMembership\|milestone.update\|milestone.delete' a
 ### COR-059 — roles.service createRole()/updateRole(): isDefault singleton management is non-atomic — two concurrent requests can create two roles with isDefault=true
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/rbac/roles.service.ts — wrap `unsetCurrentDefault()` + `role.create/update` in `this.prisma.$transaction(async (tx) => {...})` passing tx to both operations. Consider adding a DB-level pa
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -12311,6 +12380,7 @@ N/A — manual verification via concurrent HTTP test.
 ### COR-061 — SettingsService.remove throws unhandled Prisma P2025 for non-existent non-default keys
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/settings/settings.service.ts:353 — insert `if (!previous) throw new NotFoundException(\`Setting '${key}' not found\`);` after the findUnique null check. Test: call remove('nonexistent-cus
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -12373,6 +12443,7 @@ curl -s -o /dev/null -w '%{http_code}' -X DELETE http://localhost:3000/api/setti
 ### PER-037 — SnapshotsQueryDto.projectIds and TasksBreakdownQueryDto.projectIds have no array size limit — unbounded IN-clause fan-out
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/analytics/advanced/dto/snapshots-query.dto.ts and apps/api/src/analytics/advanced/dto/tasks-breakdown.dto.ts: add `import { ArrayMaxSize } from 'class-validator'` and place `@ArrayMaxSize
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12427,7 +12498,8 @@ grep -n 'ArrayMaxSize\|projectIds' apps/api/src/analytics/advanced/dto/snapshots
 
 ### PER-040 — JwtStrategy.validate makes a full user.findUnique on every authenticated request
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Confirmed at jwt.strategy.ts lines 60-91: select includes email, login, firstName, lastName, departmentId, avatarUrl, avatarPreset, createdAt, updatedAt, roleId, role (with code/label/templateKey/isSystem), isActive, forcePasswordChange — a
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12493,6 +12565,7 @@ N/A — manual verification
 ### PER-043 — findAll documents uses default limit=1000 — very high default page size
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/documents/documents.service.ts line 95: change Math.min(limit || 1000, 1000) to Math.min(limit ?? 1000, 100). Keep the default parameter at 1000 until web callers are audited. Envelope sh
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12542,7 +12615,8 @@ curl -s 'http://localhost:3001/documents' | jq '.meta.limit'
 
 ### PER-044 — holidays findAll: unbounded findMany — no limit, no pagination
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Confirmed at holidays.service.ts lines 116-125: findMany with no take. However, the holidays table is structurally bounded — French public holidays are ~11 per year per zone. Even with 20 years of history the full table is ~220 rows. The fi
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12597,6 +12671,7 @@ N/A — manual verification
 ### PER-046 — getOwnLeaves: unbounded findMany on leave history — no limit
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/leaves/leaves.service.ts: add take: 200 to the findMany call in getOwnLeaves at line 1151. Keep the bare-array return shape — do NOT add envelope or pagination (PER-021 regression risk si
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12651,6 +12726,7 @@ N/A — manual verification
 ### PER-047 — findAll leaves: default limit 1000 with effective cap 500 — higher than recommended 100
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/leaves/leaves.service.ts line 825: lower cap to 200 — Math.min(limit || 500, 200). Do NOT change the default parameter of 1000, since the web service explicitly passes limit=1000 at lines
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12717,6 +12793,7 @@ N/A — manual verification
 ### PER-049 — findAssignments (predefined-tasks): no pagination and no maximum result cap
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/predefined-tasks/predefined-tasks.service.ts: add take: 1000 to the findMany call in findAssignments at line 225. Keep bare-array return shape (the web service AssignmentsResponse unwraps
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12772,6 +12849,7 @@ N/A — manual verification
 ### PER-050 — findRecurringRules: no pagination — unbounded findMany with includes
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/predefined-tasks/predefined-tasks.service.ts: add take: 500 to the findMany call in findRecurringRules at line 394. Keep bare-array return shape. Failing-test witness: create 501 active r
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12826,7 +12904,8 @@ N/A — manual verification
 
 ### PER-052 — findAll school-vacations: unbounded findMany — no pagination for year-scoped list
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Confirmed at school-vacations.service.ts lines 36-46: findAll(year?: number) with no take. Structurally bounded — approximately 10 rows per zone per year in France (5 zones: A, B, C, Corse, Outre-mer). Even at 20 years × 5 zones the full ta
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12881,7 +12960,8 @@ N/A — manual verification
 
 ### PER-054 — getSkillsMatrix() loads all active users and all skills without pagination — response size grows as O(users × skills)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Confirmed at skills.service.ts lines 396-432: getSkillsMatrix runs two unbounded findMany calls (users with isActive filter + skills with optional category filter) with no take on either. However, the endpoint requires skills:manage_matrix 
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12949,6 +13029,7 @@ N/A — manual verification
 ### PER-056 — findAll time-tracking: effective cap is 1000 rows — far exceeds recommended 100
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/time-tracking/time-tracking.service.ts line 455: change Math.min(limit || 1000, 1000) to Math.min(limit || 10, 100). The web service getAll() sends no explicit limit so uses the default=1
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12994,7 +13075,8 @@ N/A — manual verification
 
 ### PER-057 — validateImport fetches ALL users (email+login) for duplicate detection — unbounded full-table scan
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). In `validateImport`, before the Promise.all, extract `const allEmails = users.map(u => u.email); const allLogins = users.map(u => u.login);` and replace the unb
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -13041,7 +13123,8 @@ N/A — manual verification
 
 ### PER-039 — recomputeChainFrom() issues one UPDATE per audit row in a serial for-loop — O(N) round-trips hold the advisory lock for the full duration
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Compute all (id, prevHash, rowHash) pairs in the JS loop first (chain dependency requires serial computation), then issue batched UPDATE using `FROM (VALUES ...
 - **Phase:** 4
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -13104,6 +13187,7 @@ N/A — manual verification
 ### PER-045 — leave-types reorder: N individual update queries instead of bulk upsert
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). Replace with a single `$executeRaw` CASE-based UPDATE, or at minimum add `@ArrayMaxSize(50)` guard on the DTO. No response-shape risk (returns findAll() result unchanged).
 - **Phase:** 4
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -13160,6 +13244,7 @@ N/A — manual verification
 ### PER-053 — settings.service `initializeDefaultSettings` issues N×2 sequential DB queries at every module init
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). Replace with `await this.prisma.appSettings.createMany({ data: Object.entries(DEFAULT_SETTINGS).map(([key, config]) => ({ key, value: JSON.stringify(config.value), category: config.category, descripti
 - **Phase:** 4
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -13222,6 +13307,7 @@ grep -n 'initializeDefaultSettings\|for.*DEFAULT_SETTINGS' apps/api/src/settings
 ### SEC-035 — QueryClientsDto.search and QueryThirdPartyDto.search missing @MaxLength — unbounded query string parameter
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). Add MaxLength to the class-validator import in both files and apply @MaxLength(200) to the search field in QueryClientsDto and QueryThirdPartyDto. Failing test: GET /clients?search=<201-char string> s
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13272,6 +13358,7 @@ grep -n 'search\|MaxLength' apps/api/src/clients/dto/query-clients.dto.ts apps/a
 ### SEC-037 — CreateDocumentDto.description missing @MaxLength — unbounded free-text field
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). Add @MaxLength(2000) above the @IsString() @IsOptional() decorators on the description field in CreateDocumentDto at line 59. MaxLength is already imported in the file. Failing test: POST /documents w
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13324,7 +13411,8 @@ grep -n 'MaxLength\|description' apps/api/src/documents/dto/create-document.dto.
 
 ### SEC-038 — CreateDocumentDto.size missing @IsInt() and @Min(0) — negative or non-integer values accepted
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream f8ef9b67). Verified in current code: apps/api/src/documents/dto/create-document.dto.ts lines 90-95 — `// COR-011: byte count must be a non-negative integer; floats and negative\n// values are semantically invalid and would corrupt quota calculations.\
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13367,13 +13455,14 @@ grep -n 'IsInt\|IsNumber\|@Min\|@Max' apps/api/src/documents/dto/create-document
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: UpdateDocumentDto inherits this gap via PartialType(CreateDocumentDto). GlobalValidationPipe uses transform:true but NOT enableImplicitConversion, so JSON-native negative numbers pass through as-is. Service-layer check only guards the upper bound (>200_000_000), not negative values.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### SEC-039 — projectId query filter in epics/milestones findAll not validated as UUID
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). In epics.controller.ts line 54 replace `@Query('projectId') projectId?: string` with `@Query('projectId', new ParseUUIDPipe({ optional: true })) projectId?: string`. Apply the same change to milestone
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13423,6 +13512,7 @@ grep -n 'projectId' apps/api/src/epics/epics.controller.ts apps/api/src/mileston
 ### SEC-040 — CreateEventDto.description has no @MaxLength — unbounded DB write
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). Add @MaxLength(2000) to the description field in CreateEventDto at line 35, before @IsString(). MaxLength is already imported. Failing test: POST /events with description.length = 2001 should return 4
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13471,6 +13561,7 @@ N/A — manual verification
 ### SEC-041 — GET /holidays/import-french: year query param parsed via parseInt without range bounds or ParseIntPipe
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). Replace `@Query('year') year: string` with `@Query('year', new ParseIntPipe({ optional: true })) year?: number` in the importFrenchHolidays handler (controller line 127). ParseIntPipe is already impor
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13521,6 +13612,7 @@ N/A — manual verification: POST /holidays/import-french?year=NaN (as admin), o
 ### SEC-043 — ImportLeaveDto.userEmail uses @IsString/@IsNotEmpty instead of @IsEmail, and CreateLeaveDto.leaveTypeId / ImportLeaveDto lack @IsUUID
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). Add IsEmail to imports in import-leaves.dto.ts and apply @IsEmail() to ImportLeaveDto.userEmail. Add IsUUID to imports in create-leave.dto.ts and apply @IsUUID() to leaveTypeId and targetUserId. Add I
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13573,7 +13665,8 @@ N/A — manual verification: POST /leaves with leaveTypeId='INJECTION_ATTEMPT', 
 
 ### SEC-044 — Milestone bulk import array has no @ArrayMaxSize — DoS via oversized payload
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream 006605b3). Verified in current code: apps/api/src/milestones/dto/import-milestones.dto.ts lines 38-39 — `@ArrayMaxSize(500)` decorator is present on the milestones field, with `maxItems: 500` in the @ApiProperty at line 36. Commit 006605b3 (fix(milest
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13621,13 +13714,14 @@ grep -n 'ArrayMaxSize\|milestones' apps/api/src/milestones/dto/import-milestones
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: import-milestones.dto.ts lines 31-39 confirmed verbatim. No @ArrayMaxSize decorator present. Only @IsArray, @ValidateNested, @Type decorators on the array field.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### SEC-045 — Unvalidated date query strings passed to new Date() in exportIcs — possible HTTP 500 instead of 400
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). Create a PlanningExportQueryDto with `@IsISO8601() @IsOptional() start?: string` and `@IsISO8601() @IsOptional() end?: string` and use `@Query() query: PlanningExportQueryDto` in the controller. Or ad
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13675,6 +13769,7 @@ N/A — manual verification
 ### SEC-046 — CreatePredefinedTaskDto free-text fields (name, description, color, icon) lack @MaxLength
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/predefined-tasks/dto/create-predefined-task.dto.ts: add MaxLength to imports from class-validator, then add @MaxLength(200) on name, @MaxLength(2000) on description, @MaxLength(20) on col
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13737,6 +13832,7 @@ N/A — manual verification
 ### SEC-048 — managerId and sponsorId in CreateProjectDto use @IsString instead of @IsUUID
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/projects/dto/create-project.dto.ts: add IsUUID to imports from class-validator; replace @IsString() with @IsUUID() on both managerId and sponsorId. Failing test: POST /projects with manag
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13799,6 +13895,7 @@ grep -n 'managerId\|sponsorId\|IsString\|IsUUID' apps/api/src/projects/dto/creat
 ### SEC-049 — visibleStatuses in UpdateProjectDto uses @IsString (not @IsEnum) allowing arbitrary status strings
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/projects/dto/update-project.dto.ts: replace @IsString({ each: true }) with @IsEnum(TaskStatus, { each: true }) on visibleStatuses; change type from string[] to TaskStatus[]. Failing test:
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13854,6 +13951,7 @@ grep -n 'visibleStatuses\|hiddenStatuses\|IsEnum\|IsString' apps/api/src/project
 ### SEC-051 — departmentId query parameter in GET /services and GET /skills/matrix is not validated as UUID — invalid values cause DB-level errors surfaced as 500
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/services/services.controller.ts:72 and apps/api/src/skills/skills.controller.ts:99: change to @Query('departmentId', new ParseUUIDPipe({ optional: true })) departmentId?: string. Failing 
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13907,6 +14005,7 @@ curl -s -o /dev/null -w '%{http_code}' 'http://localhost:4000/api/services?depar
 ### SEC-052 — UpdateSettingDto.value and .description lack @MaxLength — unbounded strings stored to DB
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/settings/dto/update-setting.dto.ts: add MaxLength to imports from class-validator; add @MaxLength(10000) to value and @MaxLength(500) to description. Failing test: PATCH /settings/:key wi
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13968,6 +14067,7 @@ grep -n 'MaxLength\|IsString\|IsNotEmpty' apps/api/src/settings/dto/update-setti
 ### SEC-053 — description fields in CreateSkillDto, CreateDepartmentDto, CreateServiceDto have no @MaxLength
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). Add @MaxLength(1000) to description in create-department.dto.ts, create-service.dto.ts, and create-skill.dto.ts. MaxLength is already imported in all three files. Failing test: POST /api/departments w
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14017,6 +14117,7 @@ N/A — manual verification
 ### SEC-054 — ImportSkillDto.name and .description lack @MaxLength — inconsistent with CreateSkillDto which enforces @MaxLength(100)
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/skills/dto/import-skills.dto.ts: add MinLength, MaxLength to imports from class-validator; add @MinLength(2) @MaxLength(100) to name and @MaxLength(500) to description in ImportSkillDto. 
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14075,6 +14176,7 @@ N/A — manual verification
 ### SEC-055 — ImportTaskDto.assigneeEmail has no @IsEmail — email validation is done by case-insensitive Map lookup instead
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/tasks/dto/import-tasks.dto.ts: add IsEmail to imports from class-validator; replace @IsString() with @IsEmail() and add @MaxLength(254) on assigneeEmail. Failing test: POST /tasks/project
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14126,6 +14228,7 @@ N/A — manual verification
 ### SEC-057 — CreateThirdPartyDto.contactEmail missing @MaxLength
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/third-parties/dto/create-third-party.dto.ts: add @MaxLength(254) before @IsEmail() on contactEmail. MaxLength is already imported at line 8. Failing test: POST /third-parties with contact
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14175,6 +14278,7 @@ grep -n 'contactEmail\|MaxLength\|IsEmail' apps/api/src/third-parties/dto/create
 ### SEC-058 — description field in CreateTimeEntryDto lacks @MaxLength constraint
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/time-tracking/dto/create-time-entry.dto.ts: add MaxLength to imports from class-validator; add @MaxLength(2000) to description field. Failing test: POST /api/time-tracking with descriptio
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14228,6 +14332,7 @@ python3 -c "import sys; print('a'*2001)" | xargs -I{} curl -s -X POST http://loc
 ### SEC-059 — CreateUserDto.login and ImportUserDto.login missing @MaxLength — unbounded login field
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/users/dto/create-user.dto.ts and apps/api/src/users/dto/import-users.dto.ts: add @MaxLength(50) after @MinLength(3) on the login field in both DTOs. MaxLength is already imported in both 
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14280,6 +14385,7 @@ grep -n 'MaxLength\|MinLength' apps/api/src/users/dto/create-user.dto.ts apps/ap
 ### SEC-060 — getUsersPresence accepts arbitrary dateStr with no format validation — invalid date causes NaN Date passed to $queryRaw
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). Option 1 (service guard): at top of getUsersPresence add `if (dateStr && isNaN(new Date(dateStr).getTime())) throw new BadRequestException('Invalid date format — use YYYY-MM-DD')`. Option 2 (controlle
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14330,7 +14436,8 @@ N/A — manual verification
 
 ### OBS-022 — comments: create/update/delete emit no audit_log row
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Inject AuditPersistenceService into CommentsService. Emit COMMENT_DELETED (with comment.id, comment.authorId, actorId) in remove() after the DB delete, specific
 - **Phase:** 4
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -14386,7 +14493,8 @@ N/A — manual verification
 
 ### OBS-024 — events: create/update/delete and participant mutations emit no audit_log row
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Inject AuditPersistenceService into EventsService. Add EVENT_CREATED, EVENT_UPDATED, EVENT_DELETED, EVENT_PARTICIPANT_ADDED, EVENT_PARTICIPANT_REMOVED to AuditA
 - **Phase:** 4
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -14440,7 +14548,8 @@ N/A — manual verification
 
 ### OBS-025 — Project member add/update/remove emit no audit rows
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Add PROJECT_MEMBER_ADDED, PROJECT_MEMBER_UPDATED, PROJECT_MEMBER_REMOVED to AuditAction enum and ENTITY_TYPE_BY_ACTION. Emit in each method after the DB write u
 - **Phase:** 4
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -14497,6 +14606,7 @@ grep -n 'addMember\|removeMember\|updateMember\|auditPersistence' apps/api/src/p
 ### DAT-028 — audit_logs actorId FK retains ON UPDATE CASCADE after migration removes ON DELETE CASCADE — asymmetry can trigger immutability violation
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New migration: ALTER TABLE audit_logs DROP CONSTRAINT audit_logs_actorId_fkey; ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_actorId_fkey FOREIGN KEY (actorId) REFERENCES users(id) ON DELETE NO ACT
 - **Phase:** 4
 - **Cluster:** H
 - **Confidence:** primary-only
@@ -14552,7 +14662,8 @@ psql $DATABASE_URL -c "SELECT confupdtype FROM pg_constraint WHERE conname='audi
 
 ### DAT-019 — project_members.allocation has no CHECK BETWEEN 0 AND 100 — negative or impossible percentages accepted
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream 62c2fc40). Verified packages/database/prisma/migrations/20260527120000_dat003_dat004_business_invariants/migration.sql:65-66: `ALTER TABLE project_members ADD CONSTRAINT project_members_allocation_ck CHECK (allocation BETWEEN 0 AND 100)`. Confirmed no
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -14596,13 +14707,14 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='project_members'::reg
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at line 112 of init migration. Fixed by migration 20260527120000_dat003_dat004_business_invariants which adds project_members_allocation_ck CHECK (allocation BETWEEN 0 AND 100). Downgraded to low confidence — issue resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### DAT-020 — tasks.progress and epics.progress have no CHECK BETWEEN 0 AND 100 — negative or >100 values accepted
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream 62c2fc40). Verified packages/database/prisma/migrations/20260527120000_dat003_dat004_business_invariants/migration.sql:56-60: `ALTER TABLE tasks ADD CONSTRAINT tasks_progress_ck CHECK (progress BETWEEN 0 AND 100)` and `ALTER TABLE epics ADD CONSTRAINT
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -14650,13 +14762,14 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='tasks'::regclass AND 
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at lines 126 and 161 of init migration. Fixed by migration 20260527120000_dat003_dat004_business_invariants which adds tasks_progress_ck CHECK (progress BETWEEN 0 AND 100) and epics_progress_ck CHECK (progress BETWEEN 0 AND 100). Downgraded to low confidence — issue resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### DAT-021 — time_entries.hours has no CHECK for positive value or daily cap — zero and negative entries accepted
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream 7af1991b). Verified packages/database/prisma/migrations/20260528120000_dat032_dat033_position_and_hours_bounds/migration.sql:45-46: `ALTER TABLE time_entries ADD CONSTRAINT time_entries_hours_ck CHECK (hours >= 0 AND hours <= 24)`. No subsequent migra
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -14702,13 +14815,14 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='time_entries'::regcla
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at line 198 of init migration. Fixed by migration 20260528120000_dat032_dat033_position_and_hours_bounds which adds time_entries_hours_ck CHECK (hours >= 0 AND hours <= 24). Note: the fix uses >= 0 (not > 0) to accommodate legitimate dismissal rows with hours=0 (101 such rows existed in dev DB at time of migration). Downgraded to low confidence — issue resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### DAT-022 — leaves.days has no CHECK > 0 — zero-day and negative leave records accepted
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream 62c2fc40). Verified packages/database/prisma/migrations/20260527120000_dat003_dat004_business_invariants/migration.sql:53-54: `ALTER TABLE leaves ADD CONSTRAINT leaves_days_ck CHECK (days > 0)`. No subsequent migration drops this constraint (grep for 
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -14754,13 +14868,14 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='leaves'::regclass AND
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at line 215 of init migration. Fixed by migration 20260527120000_dat003_dat004_business_invariants which adds leaves_days_ck CHECK (days > 0). Downgraded to low confidence — issue resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### DAT-023 — tasks.startTime, tasks.endTime, events.startTime, events.endTime stored as TEXT without format validation at DB level
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream c0189c18). Migration 20260527140000_dat013_time_format_check/migration.sql confirmed present and read. All six ADD CONSTRAINT statements are present: tasks_startTime_format_ck, tasks_endTime_format_ck, events_startTime_format_ck, events_endTime_format
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -14802,13 +14917,14 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='tasks'::regclass AND 
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at lines 12-13 of add_holidays_and_task_fields migration. Fixed by migration 20260527140000_dat013_time_format_check which adds tasks_startTime_format_ck, tasks_endTime_format_ck, events_startTime_format_ck, events_endTime_format_ck, predefined_tasks_startTime_format_ck, predefined_tasks_endTime_format_ck with regex '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'. Downgraded to low confidence — issue resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### DAT-024 — events.recurrenceDay has no CHECK constraint — invalid day-of-week/month values silently accepted
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). Add a migration: `ALTER TABLE "events" ADD CONSTRAINT "events_recurrenceDay_ck" CHECK ("recurrenceDay" IS NULL OR "recurrenceDay" BETWEEN 0 AND 6); ALTER TABLE "events" ADD CONSTRAINT "events_recurren
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -14856,7 +14972,8 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='events'::regclass AND
 
 ### DAT-025 — password_reset_tokens.createdById CASCADE — deleting admin who created token cascades to delete active token
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream db1efdfa). Migration 20260604103344_dat008_026_user_fk_full_erasure/migration.sql confirmed present and read. It drops password_reset_tokens_createdById_fkey (the CASCADE FK), makes createdById nullable, and re-adds it as `ON DELETE SET NULL ON UPDATE
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -14896,13 +15013,14 @@ psql -c "SELECT confdeltype FROM pg_constraint WHERE conname='password_reset_tok
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at line 121 of add_predefined_tasks_telework_recurring_password_reset migration. Fixed by migration 20260604103344_dat008_026_user_fk_full_erasure which drops password_reset_tokens_createdById_fkey, makes createdById nullable, and re-adds it with ON DELETE SET NULL. Downgraded to low confidence — issue resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### DAT-026 — predefined_tasks.defaultDuration and predefined_task_assignments.period stored as TEXT — any string accepted
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream c8b618ed). Migration 20260527130000_dat012_promote_string_enums/migration.sql confirmed present and read. It creates PredefinedTaskDuration ENUM ('HALF_DAY','FULL_DAY','TIME_SLOT') and DayPeriod ENUM ('MORNING','AFTERNOON','FULL_DAY'), then ALTERs pre
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -14947,13 +15065,14 @@ psql -c "\d predefined_tasks" | grep defaultDuration
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at lines 24 and 37 of add_predefined_tasks_telework_recurring_password_reset migration. Fixed by migration 20260527130000_dat012_promote_string_enums which creates PredefinedTaskDuration, DayPeriod, AssignmentCompletionStatus, RecurrenceType, AppSettingsCategory enums and converts columns accordingly. Downgraded to low confidence — issue resolved in current schema state; retained as historical record only.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### DAT-027 — telework_recurring_rules.dayOfWeek and predefined_task_recurring_rules.dayOfWeek have no CHECK BETWEEN 0 AND 6
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). Add a migration: `ALTER TABLE "telework_recurring_rules" ADD CONSTRAINT "twr_dayofweek_ck" CHECK ("dayOfWeek" BETWEEN 0 AND 6);`. Witness: integration spec inserting dayOfWeek=7 into telework_recurrin
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -15007,6 +15126,7 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='telework_recurring_ru
 ### DAT-029 — documents.contentSha256 is TEXT with no CHECK constraint — any arbitrary string can be stored as a SHA-256 hash
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). Add a migration: `ALTER TABLE "documents" ADD CONSTRAINT "documents_contentSha256_ck" CHECK ("contentSha256" ~ '^[0-9a-f]{64}$');`. Witness: insert a 32-char string or 'notahex' into documents.content
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -15063,6 +15183,7 @@ SELECT id, contentSha256 FROM documents WHERE contentSha256 IS NOT NULL AND cont
 ### PER-055 — TeleworkSchedule: no index on (userId, date) range queries — only unique constraint
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). Add `@@index([date, userId])` to TeleworkSchedule in schema.prisma, then run `pnpm run db:migrate`. Verify with EXPLAIN ANALYZE on a large table.
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -15117,6 +15238,7 @@ N/A — manual verification
 ### PER-060 — PredefinedTaskAssignment has no index on predefinedTaskId — per-task assignment lookups may seq-scan
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). Add `@@index([userId])` to PredefinedTaskAssignment in schema.prisma, then run `pnpm run db:migrate`.
 - **Phase:** 4
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -15180,6 +15302,7 @@ docker exec orchestr-a-db psql -U postgres -d orchestra -c "EXPLAIN SELECT * FRO
 ### COR-048 — daysFromNow in MilestonesCompletionService uses fixed MS_PER_DAY, off-by-one across DST transitions
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). milestones-completion.service.ts lines 101-102: replace with UTC midnight diff — `const nowMidnightUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()); const dueMidnightUTC = Dat
 - **Phase:** 4
 - **Cluster:** J
 - **Confidence:** primary-only
@@ -15229,6 +15352,7 @@ N/A — manual verification
 ### COR-064 — getUsersPresence(): setHours(0,0,0,0) uses local server timezone — presence window is offset when Node.js process timezone differs from UTC
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). users.service.ts lines 1753 and 1755: replace `setHours(0, 0, 0, 0)` with `setUTCHours(0, 0, 0, 0)` and `setHours(23, 59, 59, 999)` with `setUTCHours(23, 59, 59, 999)`. Failing-test: integration test 
 - **Phase:** 4
 - **Cluster:** J
 - **Confidence:** primary-only
@@ -15279,6 +15403,7 @@ TZ=Europe/Paris node -e "const d=new Date('2026-06-04'); d.setHours(0,0,0,0); co
 ### OBS-023 — req.body.login not in Fastify redact paths — user identifier would appear in logs if body serialization is enabled
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/common/fastify/redact.config.ts: add 'req.body.login' to the paths array under the auth/token block. Test: assert `fastifyLoggerOptions.redact.paths` contains 'req.body.login'.
 - **Phase:** 4
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -15340,6 +15465,7 @@ grep 'req.body.login' apps/api/src/common/fastify/redact.config.ts
 ### SEC-034 — Stdout audit log uses unkeyed plain SHA256 (8 chars) for attempted-login identifier — rainbow-table reversible for common emails
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). In audit.service.ts, replace `hashAttemptedLogin`: `const hashAttemptedLogin = (value: string): string => createHmac('sha256', process.env['AUDIT_HASH_KEY']!).update(value.trim().toLowerCase()).digest
 - **Phase:** 4
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -15387,7 +15513,8 @@ N/A — manual verification: inspect audit.service.ts hashAttemptedLogin impleme
 
 ### SEC-036 — uploads-auth.hook.ts skips jti blacklist and nbf checks — logged-out tokens remain valid for avatar reads up to access TTL
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Verified in current code: uploads-auth.hook.ts:21-22 explicitly documents the design decision — 'a logged-out-but-unexpired token revealing a profile photo for ≤ the access TTL is negligible vs. the anonymous hole'. The hook correctly rejec
 - **Phase:** 4
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -15439,6 +15566,7 @@ N/A — manual verification
 ### SEC-061 — CSP policy missing `object-src 'none'` and `base-uri 'self'` directives
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch G-webcheap). In apps/web/src/lib/csp.ts, add two entries to the directives array: `object-src 'none'` and `base-uri 'self'`. Failing test: snapshot test on buildCsp() output asserting both directives present. No r
 - **Phase:** 4
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -15494,7 +15622,8 @@ curl -s -I https://localhost:3000/ | grep -i content-security-policy
 
 ### SEC-062 — Dev docker-compose.yml exposes Redis (6379) and PostgreSQL (5432) on all host interfaces without authentication
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Verified in current code: docker-compose.prod.yml uses `expose:` (not `ports:`) at line 16 for postgres and line 57 for redis — neither is bound to a host interface in production. The dev docker-compose.yml bare port bindings are intentiona
 - **Phase:** 4
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -15546,6 +15675,7 @@ docker compose up -d && ss -tlnp | grep -E '5432|6379'
 ### COR-049 — SnapshotSchedulerService creates a Redis connection in constructor with no shutdown hook
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). snapshot-scheduler.service.ts: add `OnModuleDestroy` to imports from `@nestjs/common`, add `implements OnModuleDestroy` to class declaration, add `async onModuleDestroy() { await this.redis.quit(); }`
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15604,7 +15734,8 @@ N/A — manual verification
 
 ### COR-065 — Login/register pages fetch `/auth/me/permissions` redundantly — useAuthBootstrap does this on every mount
 
-- **Status:** TODO
+- **Status:** FALSE_POSITIVE
+- **Disposition:** FALSE-POSITIVE — FALSE-POSITIVE. The `permsRes` fetch and `setAuth` call in login/page.tsx (lines 29-32) and register/page.tsx (lines 41-44) are NOT redundant — they are necessary. `useAuthBootstrap` in AuthProvider.tsx runs with deps=`[]` (line 74 of useAuthBootstrap.ts),
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15653,7 +15784,8 @@ N/A — manual verification via network tab in devtools
 
 ### COR-066 — Profile 'Preferences' tab has a Save button with no onClick handler — button does nothing
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). profile/page.tsx lines 527-531: remove the Save button entirely (changes are already applied on change). Alternatively add a toast/confirmation `onClick` if vis
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15703,7 +15835,8 @@ N/A — manual verification
 
 ### COR-067 — fetchThirdPartyMembers and fetchProjectClients close over canRead* flags but effect deps are suppressed
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). projects/[id]/page.tsx: wrap `fetchThirdPartyMembers` and `fetchProjectClients` in `useCallback` with deps `[canReadThirdParties, projectId]` and `[canReadClien
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15771,7 +15904,8 @@ grep -n 'eslint-disable-next-line react-hooks/exhaustive-deps' apps/web/app/\[lo
 
 ### COR-068 — reports/page.tsx: canView = !permissionsLoaded || hasPermission('reports:view') — the !permissionsLoaded branch is dead code
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). reports/page.tsx line 49: replace `const canView = !permissionsLoaded || hasPermission('reports:view');` with `const canView = hasPermission('reports:view');` a
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15817,7 +15951,8 @@ grep -n 'canView' apps/web/app/\[locale\]/reports/page.tsx
 
 ### COR-069 — UsersPage: role filter useEffect fires a redundant re-fetch on initial mount when roleFilter='' and availableRoles just loaded
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). users/page.tsx: pass `roleFilter` to the initial mount `fetchUsers(roleFilter)` call (line 185), remove the secondary roleFilter effect (lines 190-195). Filter 
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15869,6 +16004,7 @@ N/A — manual verification
 ### OBS-026 — No error boundary anywhere in the [locale] subtree — unhandled render errors crash the entire app
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch G-webcheap). Create apps/web/app/[locale]/error.tsx as a 'use client' component with `useEffect(() => console.error(error), [error])` and a user-facing fallback UI with a retry button (Next.js App Router signature
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15915,6 +16051,7 @@ find apps/web/app/\[locale\] -name 'error.tsx'
 ### OBS-027 — Profile page (`profile/page.tsx`) has no error boundary — uncaught render errors cause a blank screen
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch G-webcheap). Resolved by the [locale]/error.tsx from OBS-026, or create a dedicated apps/web/app/[locale]/profile/error.tsx for finer granularity. No API shape change, no PER-021 risk.
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15967,6 +16104,7 @@ N/A — manual verification: throw in IcsExportSection render, confirm error bou
 ### OBS-028 — No error boundary wrapping any of the three page-level components
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch G-webcheap). Resolved by the [locale]/error.tsx from OBS-026, covering all three subroutes. No API shape change.
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -16017,7 +16155,8 @@ find apps/web/app/\[locale\]/projects apps/web/app/\[locale\]/tasks apps/web/app
 
 ### PER-038 — Six advanced analytics endpoints have no caching despite being identical in contract to the cached main analytics endpoint
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Add CacheService to analytics-advanced.module.ts providers and inject into each of the 6 service constructors, wrapping results with per-user per-params cache k
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -16073,7 +16212,8 @@ grep -rn 'CacheService\|cache.get\|cache.set' apps/api/src/analytics/advanced/se
 
 ### PER-042 — CacheService uses TTL-only eviction — no mutation invalidation for analytics endpoints
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). In ProjectsService.create/update/archive/delete, call cacheService.del() using the same key schema as buildAnalyticsCacheKey to invalidate the caller's analytic
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -16119,7 +16259,8 @@ N/A — manual verification
 
 ### PER-048 — findByUser() (GET /personal-todos) issues an unconditional DELETE on every read — unnecessary write roundtrip on each list call
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Add a count-gate before deleteMany: `const staleCount = await this.prisma.personalTodo.count({ where: { userId, completed: true, completedAt: { lt: cutoffDate }
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -16176,7 +16317,8 @@ N/A — manual verification
 
 ### PER-058 — All 6 pages use manual fetch + useState with no TanStack Query caching — repeated fetches on every navigation
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Migrate each data-fetch useEffect to useQuery with domain-scoped query keys and staleTime:30_000. Replace fetchAll() calls in mutation handlers with queryClient
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -16233,7 +16375,8 @@ grep -rn 'useQuery\|useMutation' apps/web/app/\[locale\]/leaves/page.tsx apps/we
 
 ### PER-059 — planning/page.tsx is entirely a shell that could be an RSC with a single client import
 
-- **Status:** TODO
+- **Status:** NEEDS_LIVE_VERIFY
+- **Disposition:** NEEDS-LIVE-VERIFY — NEEDS-LIVE-VERIFY (depends on runtime/build state). Verified: apps/web/app/[locale]/planning/page.tsx has `"use client"` at line 1 and only renders `<MainLayout><PlanningView ssr:false /></MainLayout>` with no client hooks. The triage itself acknowledges 'medium confidence because this requi
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -16300,7 +16443,8 @@ grep -n '"use client"' apps/web/app/\[locale\]/planning/page.tsx
 
 ### TST-011 — No migration-level e2e test exists inside e2e/; schema-constraint coverage lives only in apps/api/src/schema-constraints/*.int.spec.ts
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream 69dc1549). CI ordering requirement confirmed from .github/workflows/ci.yml: backend-tests job (line 48) runs `pnpm --filter api test:integration` at line 122; e2e-tests job (line 326) declares `needs: [backend-tests, e2e-smoke]` at line 329 — strictly
 - **Phase:** 4
 - **Cluster:** O
 - **Confidence:** primary-only
@@ -16347,13 +16491,14 @@ find apps/api/src/schema-constraints -name '*.int.spec.ts' | wc -l
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: 17 schema-constraint integration test files found at apps/api/src/schema-constraints/. This is not a gap in test existence, only a location note. VERIFIED: code_evidence verbatim confirmed in e2e/global-setup.ts lines 20-30 (the exact export default function and request.newContext/post lines match). Design-by-intent architectural observation, not a defect.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### SEC-050 — $executeRawUnsafe used with string-interpolated constant for DDL trigger name — unsafe API pattern in maintenance scripts
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Verified in current code: `IMMUTABILITY_TRIGGER = 'audit_logs_no_update_delete'` is a module-level compile-time string literal at normalize-action-codes.ts:64 and recompute-chain-on-schema-bump.ts:48. It is never derived from user input, en
 - **Phase:** 4
 - **Cluster:** P
 - **Confidence:** primary-only
@@ -16402,6 +16547,7 @@ grep -n 'executeRawUnsafe' apps/api/src/scripts/normalize-action-codes.ts apps/a
 ### COR-058 — captureSnapshots() uses hardcoded string literal 'ACTIVE' instead of ProjectStatus enum
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). projects.service.ts line 1218: replace `{ status: 'ACTIVE' }` with `{ status: ProjectStatus.ACTIVE }`. No frontend response-shape change. TypeScript compile verification: rename `ProjectStatus.ACTIVE`
 - **Phase:** 4
 - **Cluster:** —
 - **Confidence:** primary-only
@@ -16448,6 +16594,7 @@ grep -n "status: 'ACTIVE'" apps/api/src/projects/projects.service.ts
 ### COR-063 — update(): progress not recalculated when status changes and subtasks exist
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). tasks.service.ts update() method: after the existing progress spread (lines 838-841), add an unconditional override when status is DONE: `...(taskData.status === TaskStatus.DONE && { progress: 100 })`
 - **Phase:** 4
 - **Cluster:** —
 - **Confidence:** primary-only
@@ -16497,6 +16644,7 @@ grep -n 'recalcTaskProgress\|getTaskProgress\|progress' apps/api/src/tasks/tasks
 ### SA-SEC-004 — RefreshTokenDto missing @MaxLength — unbounded refresh token in POST /auth/refresh
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). In refresh-token.dto.ts, add `MaxLength` to the import and apply `@MaxLength(256)` to both refreshToken fields (generous headroom above the 64-char token). Failing test: POST /auth/refresh with 10KB b
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** secondary-only
@@ -16560,6 +16708,7 @@ grep -n 'MaxLength' apps/api/src/auth/dto/refresh-token.dto.ts
 ### SA-SEC-009 — CreateLeaveDto.leaveTypeId uses @IsString() instead of @IsUUID()
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). In create-leave.dto.ts, replace `@IsString() @IsNotEmpty()` on leaveTypeId with `@IsUUID('4') @IsNotEmpty()`. Update Swagger example to a UUID v4 placeholder. Failing test: POST /leaves with leaveType
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** secondary-only
@@ -16611,6 +16760,7 @@ grep -A3 'leaveTypeId' packages/database/prisma/schema.prisma apps/api/src/leave
 ### SA-SEC-010 — CreateEpicDto.description and CreateMilestoneDto.description missing @MaxLength
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). In both create-epic.dto.ts and create-milestone.dto.ts, add `@MaxLength(5000)` to the description field. Failing tests: POST /epics and POST /milestones with 5001-char description expect 400. No shape
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** secondary-only
@@ -16661,7 +16811,8 @@ grep -n 'MaxLength' apps/api/src/epics/dto/create-epic.dto.ts apps/api/src/miles
 
 ### SA-OBS-012 — No declared retention policy or partitioning for audit_logs; unbounded table growth
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Minimum: add a SQL COMMENT ON TABLE audit_logs documenting a retention policy. Better: migration implementing pg_partman range partitioning by month on createdA
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** secondary-only
@@ -16712,7 +16863,8 @@ docker exec orchestr-a-db psql -U orchestr_a -d orchestr_a_prod -c "SELECT count
 
 ### SA-DAT-007 — project_snapshots.progress has no DB-level floor CHECK (>= 0) — Decimal(5,2) admits negatives
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream 7f5b715a). Migration 20260605192741_dat008_015_check_constraints adds `project_snapshots_progress_ck CHECK ("progress" >= 0 AND "progress" <= 100)` — confirmed read. The core defect (no floor, negatives admitted) is closed. The ceiling at 100 is consi
 - **Phase:** 4
 - **Cluster:** K
 - **Confidence:** secondary-only
@@ -16752,13 +16904,14 @@ grep -rn 'project_snapshots.*progress.*ck\|project_snapshots.*CHECK.*progress' /
 - sessionA-only finding (99-run). Namespaced `SA-DAT-007` to avoid ID collision with the primary run; original id `DAT-007` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: DAT-005 comment at schema line 216 explicitly documents >100 headroom as intentional. The floor-only fix is non-controversial and does not conflict with that intent.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### SA-SEC-016 — CI workflow hardcodes DB password and JWT secret in plaintext — appropriate for ephemeral CI but not using GitHub Secrets
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Verified in current code: ci.yml uses `POSTGRES_PASSWORD: orchestr_a_dev_password` for ephemeral GitHub Actions service containers destroyed after each run. .env.production.example requires actual secrets. docker-compose.prod.yml uses `${DA
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** secondary-only
@@ -16810,7 +16963,8 @@ grep -n 'orchestr_a_dev_password' .github/workflows/ci.yml
 
 ### SA-OBS-014 — No OpenTelemetry or distributed tracing; requestId correlation stops at the API layer
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Verified: apps/api/src/main.ts lines 103-111 show requestIdStore.enterWith({requestId: request.id}) via AsyncLocalStorage for per-request correlation. No @opentelemetry package in apps/api/package.json. OpenTelemetry distributed tracing is 
 - **Phase:** 4
 - **Cluster:** N
 - **Confidence:** secondary-only
@@ -16868,7 +17022,8 @@ N/A — manual verification
 
 ### SA-TEST-008 — planning.controller.ts has no controller spec (1 endpoint, @RequirePermissions)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Create apps/api/src/planning/planning.controller.spec.ts. Mock PlanningService; assert getOverview forwards startDate, endDate from query and user.id from @Curr
 - **Phase:** 4
 - **Cluster:** O
 - **Confidence:** secondary-only
@@ -16921,7 +17076,8 @@ find /home/alex/Documents/REPO/ORCHESTRA/apps/api/src/planning -name '*.controll
 
 ### SA-TEST-009 — personal-todos.controller.ts has no controller spec (@AllowSelfService on all 4 endpoints)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Create apps/api/src/personal-todos/personal-todos.controller.spec.ts. Mock PersonalTodosService; assert each endpoint passes currentUser.id to the service. Witn
 - **Phase:** 4
 - **Cluster:** O
 - **Confidence:** secondary-only
@@ -16976,7 +17132,8 @@ find /home/alex/Documents/REPO/ORCHESTRA/apps/api/src/personal-todos -name '*.co
 
 ### SA-TEST-010 — holidays.controller.ts has no controller spec (9 endpoints, all @RequirePermissions)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Create apps/api/src/holidays/holidays.controller.spec.ts. Mock HolidaysService; test that GET / calls service.findAll and passes query params. Witness: RED if t
 - **Phase:** 4
 - **Cluster:** O
 - **Confidence:** secondary-only
@@ -17026,7 +17183,8 @@ find /home/alex/Documents/REPO/ORCHESTRA/apps/api/src/holidays -name '*.controll
 
 ### SA-TEST-011 — school-vacations.controller.ts has no controller spec (6 endpoints, all @RequirePermissions)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Create apps/api/src/school-vacations/school-vacations.controller.spec.ts. Mock both SchoolVacationsService and SettingsService; test that importFromOpenData cal
 - **Phase:** 4
 - **Cluster:** O
 - **Confidence:** secondary-only
@@ -17078,7 +17236,8 @@ find /home/alex/Documents/REPO/ORCHESTRA/apps/api/src/school-vacations -name '*.
 
 ### SA-TEST-012 — Three sub-controllers have no specs: projects-clients, projects-third-party-members, tasks-third-party-assignees
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Add specs to apps/api/src/clients/ and apps/api/src/third-parties/ for the sub-resource controllers. Mock parent services; assert assign endpoint forwards proje
 - **Phase:** 4
 - **Cluster:** O
 - **Confidence:** secondary-only
@@ -17133,7 +17292,8 @@ find /home/alex/Documents/REPO/ORCHESTRA/apps/api/src -name 'projects-clients.co
 
 ### SA-TEST-019 — e2e/tests/avatar-screenshots.spec.ts: 8 tests with zero assertions (screenshot-only)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Delete e2e/tests/avatar-screenshots.spec.ts. If visual regression on avatar rendering is desired, promote assertions from e2e/tests/avatar-unification.spec.ts t
 - **Phase:** 4
 - **Cluster:** P
 - **Confidence:** secondary-only
@@ -17186,7 +17346,8 @@ grep -c 'expect' /home/alex/Documents/REPO/ORCHESTRA/e2e/tests/avatar-screenshot
 
 ### SA-TEST-015 — e2e/tests/kanban.spec.ts: two unconditional test.skip(true, ...) due to seed-dependency
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). In kanban.spec.ts, add a beforeAll that creates at least 2 TODO tasks via POST /api/tasks (with admin Bearer token) and an afterAll that deletes them. Remove th
 - **Phase:** 4
 - **Cluster:** Q
 - **Confidence:** secondary-only
@@ -17240,6 +17401,7 @@ grep -n 'test.skip(true' /home/alex/Documents/REPO/ORCHESTRA/e2e/tests/kanban.sp
 ### SA-SEC-012 — METRICS_TOKEN not documented in env templates — metrics endpoint is open by default
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). Add `METRICS_TOKEN=` with a generation comment to .env.example (MONITORING section) and as required (`METRICS_TOKEN=` with comment 'REQUIRED: generate with openssl rand -hex 32') to .env.production.ex
 - **Phase:** 4
 - **Cluster:** R
 - **Confidence:** secondary-only
@@ -17296,6 +17458,7 @@ grep -n 'METRICS_TOKEN' .env.example .env.production.example
 ### SA-OBS-010 — console.error() in UsersService.create() bypasses NestJS Logger and Fastify log redaction
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/users/users.service.ts:151: replace `console.error(...)` with `this.logger.error('[CRITICAL] bcrypt hash verification failed (login redacted)')` omitting the raw login value. Verify `priv
 - **Phase:** 4
 - **Cluster:** S
 - **Confidence:** secondary-only
@@ -17345,6 +17508,7 @@ grep -rn 'console\.' /home/alex/Documents/REPO/ORCHESTRA/apps/api/src --include=
 ### SA-OBS-011 — console.warn() in SettingsService.onModuleInit() bypasses NestJS Logger
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/settings/settings.service.ts: add `private readonly logger = new Logger(SettingsService.name);` and replace console.warn() with `this.logger.warn(...)`. Failing test: same grep assertion 
 - **Phase:** 4
 - **Cluster:** S
 - **Confidence:** secondary-only
@@ -17394,7 +17558,8 @@ grep -n 'console\.' /home/alex/Documents/REPO/ORCHESTRA/apps/api/src/settings/se
 
 ### SA-PERF-024 — fetchManagersAndDepartments called on every Create button click — not cached between invocations
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Fetch users and departments once on component mount via useEffect with empty deps array, or use TanStack Query with `staleTime: 5 * 60 * 1000`. No response-shap
 - **Phase:** 4
 - **Cluster:** T
 - **Confidence:** secondary-only
@@ -17451,6 +17616,7 @@ grep -n 'fetchManagersAndDepartments' apps/web/app/[locale]/projects/page.tsx
 ### SA-COR-009 — validateImport (tasks): end <= start is classified as a warning, but create() rejects end < start as an error — inconsistent boundary semantics
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). tasks.service.ts line 1847: change `end <= start` to `end < start` and update the message at line 1850 from 'La date de fin est antérieure ou égale à la date de début' to 'La date de fin est antérieur
 - **Phase:** 4
 - **Cluster:** —
 - **Confidence:** secondary-only
@@ -17503,6 +17669,7 @@ grep -n 'end <= start\|end < start' apps/api/src/tasks/tasks.service.ts
 ### SEC-065 — getEventsByRange and findOne RBAC filter defaults to unscoped on null role — inconsistent with findAll
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/events/events.service.ts: In getEventsByRange, replace `if (currentUserId && currentUserRole)` with an unconditional getPermissionsForRole(currentUserRole) call; guard only the where.OR a
 - **Phase:** 5
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -17558,7 +17725,8 @@ N/A — manual verification
 
 ### PER-061 — getLeaveBalance: Promise.all fan-out issues N×2 DB queries, one resolveAllocatedDays per leave type
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). apps/api/src/leaves/leaves.service.ts: Add resolveAllocatedDaysForAll(userId, leaveTypeIds, year) issuing 2 findMany queries total (individual overrides + globa
 - **Phase:** 5
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -17611,6 +17779,7 @@ N/A — manual verification
 ### SEC-066 — ICS import processes unbounded VEVENT count with sequential DB writes and no per-field length cap
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch A-maxlength). apps/api/src/planning-export/planning-export.service.ts: After stripHtml(strVal(vevent.summary)), apply .slice(0, 200) for title and .slice(0, 5000) for description before pushing to batch. Failing te
 - **Phase:** 5
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -17664,7 +17833,8 @@ N/A — manual verification
 
 ### DAT-030 — dat037 cascade UPDATE of task.projectId produces no audit_logs rows — N tasks silently rewritten under Cour-des-Comptes scope
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Verified in current code. Migration file packages/database/prisma/migrations/20260528150000_dat037_task_project_consistency/migration.sql lines 40-47 contains the verbatim 'NOT added here — the existing OBS-002 trigger pipeline doesn't cove
 - **Phase:** 5
 - **Cluster:** H
 - **Confidence:** primary-only
@@ -17716,6 +17886,7 @@ N/A — manual verification
 ### DAT-031 — password_reset_tokens index (userId, usedAt) is non-partial — hot query path WHERE usedAt IS NULL will scan all rows including consumed tokens
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New raw SQL migration required (Prisma 6 PSL cannot express WHERE-clause partial indexes): `DROP INDEX IF EXISTS password_reset_tokens_userId_usedAt_idx; CREATE INDEX password_reset_tokens_userId_acti
 - **Phase:** 5
 - **Cluster:** I
 - **Confidence:** primary-only
@@ -17766,7 +17937,8 @@ EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM password_reset_tokens WHERE "userId" = 
 
 ### OBS-029 — CI pipeline has no real VPS deployment step — 'notify-success' job only echoes, docker-publish does not SSH to prod
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). Verified in current code. .github/workflows/ci.yml lines 579-592 contain only echo statements in the notify-success job. grep for 'ssh|rsync|appleboy' across all workflow files returns no matches. docker-publish.yml has no SSH action. This 
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** primary-only
@@ -17825,7 +17997,8 @@ grep -n 'ssh\|rsync\|appleboy/ssh-action' .github/workflows/*.yml
 
 ### TST-012 — Permission matrix has no entry for GET /api/analytics/advanced/* endpoints (6 routes using reports:view)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). e2e/fixtures/permission-matrix.ts: Add at least one entry for /api/analytics/advanced/workload with allowedRoles: ['admin','responsable','manager','observateur'
 - **Phase:** 5
 - **Cluster:** O
 - **Confidence:** primary-only
@@ -17879,7 +18052,8 @@ grep -n 'analytics/advanced' e2e/fixtures/permission-matrix.ts
 
 ### SA-OBS-015 — PermissionsGuardV2 deny due to missing decorator (uncovered route in enforce mode) logs but does not audit
 
-- **Status:** TODO
+- **Status:** DONE
+- **Disposition:** ALREADY-DONE — ALREADY-DONE / superseded (verified vs current code; upstream 000d3161). Verified in current code. permissions.guard.ts:69 injects AuditService. Lines 117-124 show the no-decorator enforce path reads `noDecoratorRequest?.user?.id` via `context.switchToHttp().getRequest()` and calls `this.emitAccessDenied(noDecor
 - **Phase:** 5
 - **Cluster:** E
 - **Confidence:** secondary-only
@@ -17925,13 +18099,14 @@ N/A — manual verification
 - sessionA-only finding (99-run). Namespaced `SA-OBS-015` to avoid ID collision with the primary run; original id `OBS-015` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: This is distinct from OBS-003 (which covers the permission-check failure path); both paths share the remediation approach.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 76de6e6e
 
 ---
 
 ### SA-PERF-025 — AuditLog has no index on createdAt+id — ORDER BY createdAt DESC, id DESC scans the full table
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New raw SQL migration: `CREATE INDEX CONCURRENTLY audit_logs_created_at_id_desc_idx ON audit_logs (createdAt DESC, id DESC);`. Use CONCURRENTLY to avoid locking the append-only table in production. Ve
 - **Phase:** 5
 - **Cluster:** F
 - **Confidence:** secondary-only
@@ -17979,7 +18154,8 @@ grep -A10 'model AuditLog' packages/database/prisma/schema.prisma
 
 ### SA-DAT-012 — User.roleId remains nullable — users without a role bypass RBAC entirely
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). packages/database/prisma/schema.prisma: change line 37 to `roleId String` (non-optional). New migration: pre-flight Assert `SELECT COUNT(*) FROM users WHERE rol
 - **Phase:** 5
 - **Cluster:** J
 - **Confidence:** secondary-only
@@ -18029,6 +18205,7 @@ grep -n 'roleId.*NOT NULL\|roleId.*SET NOT NULL' /home/alex/Documents/REPO/ORCHE
 ### SA-DAT-008 — Event.recurrenceDay, TeleworkRecurringRule.dayOfWeek, and PredefinedTaskRecurringRule.dayOfWeek have no BETWEEN 0 AND 6 DB CHECK
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New migration adding: `ALTER TABLE events ADD CONSTRAINT events_recurrenceDay_ck CHECK (recurrenceDay IS NULL OR recurrenceDay BETWEEN 0 AND 6); ALTER TABLE telework_recurring_rules ADD CONSTRAINT tel
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** secondary-only
@@ -18079,6 +18256,7 @@ grep -rn 'recurrenceDay.*BETWEEN\|dayOfWeek.*BETWEEN\|recurrenceDay.*ck\|dayOfWe
 ### SA-DAT-009 — PredefinedTaskRecurringRule.weekInterval, monthlyOrdinal, monthlyDayOfMonth and Event.recurrenceWeekInterval have no DB-level range CHECKs
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New migration: `ALTER TABLE events ADD CONSTRAINT events_recurrenceweekinterval_ck CHECK (recurrenceWeekInterval IS NULL OR recurrenceWeekInterval > 0);`. Failing-test witness: int.spec.ts — INSERT ev
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** secondary-only
@@ -18130,6 +18308,7 @@ grep -rn 'weekInterval.*CHECK\|monthlyOrdinal.*CHECK\|monthlyDayOfMonth.*CHECK\|
 ### SA-DAT-010 — startTime/endTime string columns have no DB CHECK enforcing endTime >= startTime
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New migration (after pre-flight: SELECT COUNT(*) WHERE startTime IS NOT NULL AND endTime IS NOT NULL AND endTime < startTime — if zero, safe to add): `ALTER TABLE tasks ADD CONSTRAINT tasks_time_order
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** secondary-only
@@ -18180,6 +18359,7 @@ grep -rn 'tasks_time_order\|events_time_order\|predefined_tasks_time_order' /hom
 ### SA-DAT-011 — ProjectMember.startDate/endDate has no date-ordering CHECK (endDate >= startDate)
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch C-dbmigrate). New migration: `ALTER TABLE project_members ADD CONSTRAINT project_members_dates_ck CHECK (endDate IS NULL OR startDate IS NULL OR endDate >= startDate);`. Failing-test witness: int.spec.ts — INSERT p
 - **Phase:** 5
 - **Cluster:** K
 - **Confidence:** secondary-only
@@ -18234,6 +18414,7 @@ grep -rn 'project_members.*dates_ck\|project_members.*CHECK.*date' /home/alex/Do
 ### SA-SEC-017 — AppController GET / exposes docs and internal API endpoint list publicly without auth
 
 - **Status:** TODO
+- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/app.controller.ts: replace the return value with `{ status: 'operational', message: 'API is running. Access endpoints via /api/*' }` (remove version string and endpoints object). Failing-
 - **Phase:** 5
 - **Cluster:** M
 - **Confidence:** secondary-only
@@ -18295,7 +18476,8 @@ curl -s http://localhost:4000/ | jq .
 
 ### SA-TEST-014 — e2e/tests/reports/analytics-advanced.spec.ts: no RBAC denial test for contributeur/observateur
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (consciously declined). The finding's premise is factually wrong on a key point: e2e/fixtures/permission-matrix.ts:390-398 shows `allowedRoles: ['admin', 'responsable', 'manager', 'observateur']` and `deniedRoles: ['referent', 'contributeur']` for reports:view on 
 - **Phase:** 5
 - **Cluster:** Q
 - **Confidence:** secondary-only
@@ -18347,7 +18529,8 @@ grep -c 'contributeur\|observateur\|403\|denied' /home/alex/Documents/REPO/ORCHE
 
 ### SA-TEST-018 — 73 migrations total; 50 have no dedicated integration spec (only schema-constraint-named ones covered)
 
-- **Status:** TODO
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — WONT-FIX (real but lower-priority/cosmetic/large-refactor/test-debt; deferred). Create apps/api/src/schema-constraints/dat015-email-case-insensitive.int.spec.ts: INSERT user with email 'test@example.com', then attempt INSERT with email 'TES
 - **Phase:** 5
 - **Cluster:** Q
 - **Confidence:** secondary-only
