@@ -4976,8 +4976,8 @@ N/A — manual verification: craft a body with 1001 task objects and POST to the
 
 ### SEC-021 — DELETE /tasks/:taskId/raci/:userId/:role — :role path param is unvalidated (no ParseEnumPipe)
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/tasks/tasks.controller.ts line 422: change to `@Param('role', new ParseEnumPipe(RACIRole)) role: RACIRole`. Failing witness: send DELETE /tasks/:validId/raci/:validUserId/INVALID_ROLE wit
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 2
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -12442,8 +12442,8 @@ curl -s -o /dev/null -w '%{http_code}' -X DELETE http://localhost:3000/api/setti
 
 ### PER-037 — SnapshotsQueryDto.projectIds and TasksBreakdownQueryDto.projectIds have no array size limit — unbounded IN-clause fan-out
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/analytics/advanced/dto/snapshots-query.dto.ts and apps/api/src/analytics/advanced/dto/tasks-breakdown.dto.ts: add `import { ArrayMaxSize } from 'class-validator'` and place `@ArrayMaxSize
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -13461,8 +13461,8 @@ grep -n 'IsInt\|IsNumber\|@Min\|@Max' apps/api/src/documents/dto/create-document
 
 ### SEC-039 — projectId query filter in epics/milestones findAll not validated as UUID
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). In epics.controller.ts line 54 replace `@Query('projectId') projectId?: string` with `@Query('projectId', new ParseUUIDPipe({ optional: true })) projectId?: string`. Apply the same change to milestone
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13560,8 +13560,8 @@ N/A — manual verification
 
 ### SEC-041 — GET /holidays/import-french: year query param parsed via parseInt without range bounds or ParseIntPipe
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). Replace `@Query('year') year: string` with `@Query('year', new ParseIntPipe({ optional: true })) year?: number` in the importFrenchHolidays handler (controller line 127). ParseIntPipe is already impor
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13611,8 +13611,8 @@ N/A — manual verification: POST /holidays/import-french?year=NaN (as admin), o
 
 ### SEC-043 — ImportLeaveDto.userEmail uses @IsString/@IsNotEmpty instead of @IsEmail, and CreateLeaveDto.leaveTypeId / ImportLeaveDto lack @IsUUID
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). Add IsEmail to imports in import-leaves.dto.ts and apply @IsEmail() to ImportLeaveDto.userEmail. Add IsUUID to imports in create-leave.dto.ts and apply @IsUUID() to leaveTypeId and targetUserId. Add I
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13720,8 +13720,8 @@ grep -n 'ArrayMaxSize\|milestones' apps/api/src/milestones/dto/import-milestones
 
 ### SEC-045 — Unvalidated date query strings passed to new Date() in exportIcs — possible HTTP 500 instead of 400
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). Create a PlanningExportQueryDto with `@IsISO8601() @IsOptional() start?: string` and `@IsISO8601() @IsOptional() end?: string` and use `@Query() query: PlanningExportQueryDto` in the controller. Or ad
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13831,8 +13831,8 @@ N/A — manual verification
 
 ### SEC-048 — managerId and sponsorId in CreateProjectDto use @IsString instead of @IsUUID
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/projects/dto/create-project.dto.ts: add IsUUID to imports from class-validator; replace @IsString() with @IsUUID() on both managerId and sponsorId. Failing test: POST /projects with manag
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13894,8 +13894,8 @@ grep -n 'managerId\|sponsorId\|IsString\|IsUUID' apps/api/src/projects/dto/creat
 
 ### SEC-049 — visibleStatuses in UpdateProjectDto uses @IsString (not @IsEnum) allowing arbitrary status strings
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/projects/dto/update-project.dto.ts: replace @IsString({ each: true }) with @IsEnum(TaskStatus, { each: true }) on visibleStatuses; change type from string[] to TaskStatus[]. Failing test:
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -13950,8 +13950,8 @@ grep -n 'visibleStatuses\|hiddenStatuses\|IsEnum\|IsString' apps/api/src/project
 
 ### SEC-051 — departmentId query parameter in GET /services and GET /skills/matrix is not validated as UUID — invalid values cause DB-level errors surfaced as 500
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/services/services.controller.ts:72 and apps/api/src/skills/skills.controller.ts:99: change to @Query('departmentId', new ParseUUIDPipe({ optional: true })) departmentId?: string. Failing 
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14175,8 +14175,8 @@ N/A — manual verification
 
 ### SEC-055 — ImportTaskDto.assigneeEmail has no @IsEmail — email validation is done by case-insensitive Map lookup instead
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). apps/api/src/tasks/dto/import-tasks.dto.ts: add IsEmail to imports from class-validator; replace @IsString() with @IsEmail() and add @MaxLength(254) on assigneeEmail. Failing test: POST /tasks/project
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -14384,8 +14384,8 @@ grep -n 'MaxLength\|MinLength' apps/api/src/users/dto/create-user.dto.ts apps/ap
 
 ### SEC-060 — getUsersPresence accepts arbitrary dateStr with no format validation — invalid date causes NaN Date passed to $queryRaw
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). Option 1 (service guard): at top of getUsersPresence add `if (dateStr && isNaN(new Date(dateStr).getTime())) throw new BadRequestException('Invalid date format — use YYYY-MM-DD')`. Option 2 (controlle
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** F
 - **Confidence:** primary-only
@@ -16707,8 +16707,8 @@ grep -n 'MaxLength' apps/api/src/auth/dto/refresh-token.dto.ts
 
 ### SA-SEC-009 — CreateLeaveDto.leaveTypeId uses @IsString() instead of @IsUUID()
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch B-typevalid). In create-leave.dto.ts, replace `@IsString() @IsNotEmpty()` on leaveTypeId with `@IsUUID('4') @IsNotEmpty()`. Update Swagger example to a UUID v4 placeholder. Failing test: POST /leaves with leaveType
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch B)
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** secondary-only

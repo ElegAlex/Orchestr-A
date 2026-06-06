@@ -6,8 +6,10 @@ import {
   IsEnum,
   IsNumber,
   IsArray,
+  IsEmail,
   ValidateNested,
   Min,
+  MaxLength,
   ArrayMaxSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -41,7 +43,8 @@ export class ImportTaskDto {
     description: "Email de l'utilisateur assigné",
     required: false,
   })
-  @IsString()
+  @IsEmail()
+  @MaxLength(254)
   @IsOptional()
   assigneeEmail?: string;
 

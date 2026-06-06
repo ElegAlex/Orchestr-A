@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseIntPipe,
   ParseUUIDPipe,
+  ParseEnumPipe,
   Req,
   Res,
 } from '@nestjs/common';
@@ -419,7 +420,7 @@ export class TasksController {
   removeRACI(
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Param('userId', ParseUUIDPipe) userId: string,
-    @Param('role') role: RACIRole,
+    @Param('role', new ParseEnumPipe(RACIRole)) role: RACIRole,
     @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.tasksService.removeRACI(taskId, userId, role, {

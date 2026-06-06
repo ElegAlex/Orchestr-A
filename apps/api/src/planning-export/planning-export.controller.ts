@@ -10,6 +10,7 @@ import {
 import type { FastifyReply } from 'fastify';
 import { PlanningExportService } from './planning-export.service';
 import { ImportIcsDto } from './dto/import-ics.dto';
+import { PlanningExportQueryDto } from './dto/planning-export-query.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
@@ -48,14 +49,13 @@ export class PlanningExportController {
     @CurrentUser('id') userId: string,
     @Req()
     req: { headers?: Record<string, unknown>; ip?: string; ips?: string[] },
-    @Query('start') start?: string,
-    @Query('end') end?: string,
+    @Query() query: PlanningExportQueryDto,
     @Res() res?: FastifyReply,
   ) {
     const icsContent = await this.planningExportService.exportIcs(
       userId,
-      start,
-      end,
+      query.start,
+      query.end,
       extractMeta(req),
     );
     res!

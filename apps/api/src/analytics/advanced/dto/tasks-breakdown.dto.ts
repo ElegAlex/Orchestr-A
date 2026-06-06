@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsEnum, IsOptional, IsUUID } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsEnum,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 import { ArchivedFilter } from '../../../projects/dto/archived-filter.dto';
 
 export class TasksBreakdownQueryDto {
@@ -11,6 +17,7 @@ export class TasksBreakdownQueryDto {
   })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(200)
   @IsUUID('all', { each: true })
   @Type(() => String)
   projectIds?: string[];

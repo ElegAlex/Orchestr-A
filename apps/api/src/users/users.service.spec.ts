@@ -2801,6 +2801,18 @@ describe('UsersService', () => {
       expect(result.totals.absent).toBe(1);
       expect(result.totals.external).toBe(1);
     });
+
+    it('SEC-060 — rejects an invalid dateStr with BadRequestException', async () => {
+      await expect(service.getUsersPresence('notadate')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('SEC-060 — accepts a valid ISO date string', async () => {
+      await expect(
+        service.getUsersPresence('2025-01-15'),
+      ).resolves.toBeDefined();
+    });
   });
 
   describe('uploadAvatar', () => {

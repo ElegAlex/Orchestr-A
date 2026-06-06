@@ -79,7 +79,8 @@ export class MilestonesController {
   findAll(
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
-    @Query('projectId') projectId?: string,
+    @Query('projectId', new ParseUUIDPipe({ optional: true }))
+    projectId?: string,
     @Query('status') status?: MilestoneStatus,
   ) {
     return this.milestonesService.findAll(page, limit, projectId, status);

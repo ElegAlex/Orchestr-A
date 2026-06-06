@@ -96,7 +96,8 @@ export class SkillsController {
     description: 'Matrice de compétences (utilisateurs × compétences)',
   })
   getMatrix(
-    @Query('departmentId') departmentId?: string,
+    @Query('departmentId', new ParseUUIDPipe({ optional: true }))
+    departmentId?: string,
     @Query('category') category?: SkillCategory,
   ) {
     return this.skillsService.getSkillsMatrix(departmentId, category);

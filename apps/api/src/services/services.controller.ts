@@ -69,7 +69,8 @@ export class ServicesController {
   findAll(
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
-    @Query('departmentId') departmentId?: string,
+    @Query('departmentId', new ParseUUIDPipe({ optional: true }))
+    departmentId?: string,
   ) {
     return this.servicesService.findAll(page, limit, departmentId);
   }

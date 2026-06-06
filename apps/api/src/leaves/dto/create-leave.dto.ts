@@ -5,6 +5,7 @@ import {
   IsDateString,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { LeaveType, HalfDay } from 'database';
@@ -12,10 +13,9 @@ import { LeaveType, HalfDay } from 'database';
 export class CreateLeaveDto {
   @ApiProperty({
     description: 'ID du type de congé',
-    example: 'lt-cp-001',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
   })
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID('4')
   leaveTypeId: string;
 
   @ApiPropertyOptional({
@@ -85,9 +85,9 @@ export class CreateLeaveDto {
   @ApiPropertyOptional({
     description:
       "ID de l'utilisateur cible (pour déclarer un congé au nom d'un collaborateur, nécessite leaves:declare_for_others)",
-    example: 'uuid-user-456',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
   })
-  @IsString()
+  @IsUUID()
   @IsOptional()
   targetUserId?: string;
 }

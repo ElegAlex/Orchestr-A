@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsDateString,
   IsEnum,
@@ -17,6 +18,7 @@ export class SnapshotsQueryDto {
   })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(200)
   @IsUUID('all', { each: true })
   @Type(() => String)
   projectIds?: string[];

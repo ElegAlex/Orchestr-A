@@ -124,10 +124,11 @@ export class HolidaysController {
     },
   })
   async importFrenchHolidays(
-    @Query('year') year: string,
+    @Query('year', new ParseIntPipe({ optional: true }))
+    year: number | undefined,
     @CurrentUser() user: User,
   ) {
-    const targetYear = year ? parseInt(year, 10) : new Date().getFullYear();
+    const targetYear = year ?? new Date().getFullYear();
     return this.holidaysService.importFrenchHolidays(targetYear, user.id);
   }
 

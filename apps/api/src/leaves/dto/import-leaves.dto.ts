@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsEnum,
   IsArray,
+  IsEmail,
   ArrayMaxSize,
   ValidateNested,
   MaxLength,
@@ -17,8 +18,7 @@ export class ImportLeaveDto {
     description: "Email de l'utilisateur",
     example: 'user@example.com',
   })
-  @IsString()
-  @IsNotEmpty()
+  @IsEmail()
   userEmail: string;
 
   @ApiProperty({

@@ -38,3 +38,22 @@ describe('ImportLeaveDto — SEC-042 comment MaxLength(2000)', () => {
     expect(errors.find((e) => e.property === 'comment')).toBeUndefined();
   });
 });
+
+describe('ImportLeaveDto — SA-SEC-009 userEmail @IsEmail', () => {
+  it('rejects a non-email userEmail', async () => {
+    const dto = plainToInstance(ImportLeaveDto, {
+      ...base,
+      userEmail: 'not-an-email',
+    });
+    const errors = await validate(dto);
+    expect(
+      errors.find((e) => e.property === 'userEmail')?.constraints,
+    ).toHaveProperty('isEmail');
+  });
+
+  it('accepts a valid email userEmail', async () => {
+    const dto = plainToInstance(ImportLeaveDto, base);
+    const errors = await validate(dto);
+    expect(errors.find((e) => e.property === 'userEmail')).toBeUndefined();
+  });
+});

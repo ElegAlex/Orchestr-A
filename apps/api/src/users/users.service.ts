@@ -1767,6 +1767,9 @@ export class UsersService {
    * > ON_SITE (matches the original if/else-if ordering).
    */
   async getUsersPresence(dateStr?: string) {
+    if (dateStr && isNaN(new Date(dateStr).getTime())) {
+      throw new BadRequestException('Invalid date format');
+    }
     const targetDate = dateStr ? new Date(dateStr) : new Date();
     const startOfDay = new Date(targetDate);
     // COR-064 — use setUTCHours so the day boundary is always UTC midnight

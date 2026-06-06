@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsDateString,
   IsArray,
+  IsUUID,
   MaxLength,
   MinLength,
   ArrayUnique,
@@ -90,7 +91,7 @@ export class CreateProjectDto {
     example: 'uuid-du-manager',
     required: false,
   })
-  @IsString()
+  @IsUUID()
   @IsOptional()
   managerId?: string;
 
@@ -99,7 +100,7 @@ export class CreateProjectDto {
     example: 'uuid-du-sponsor',
     required: false,
   })
-  @IsString()
+  @IsUUID()
   @IsOptional()
   sponsorId?: string;
 

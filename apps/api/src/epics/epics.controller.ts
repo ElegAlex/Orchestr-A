@@ -51,7 +51,8 @@ export class EpicsController {
   findAll(
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
-    @Query('projectId') projectId?: string,
+    @Query('projectId', new ParseUUIDPipe({ optional: true }))
+    projectId?: string,
     @CurrentUser('id') userId?: string,
     @CurrentUserRoleCode() userRole?: string | null,
   ) {

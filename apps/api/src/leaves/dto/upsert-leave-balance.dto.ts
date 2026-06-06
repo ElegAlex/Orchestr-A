@@ -1,13 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsString,
-  IsNotEmpty,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  Min,
-  Max,
-} from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsUUID, Min, Max } from 'class-validator';
 
 export class UpsertLeaveBalanceDto {
   @ApiPropertyOptional({
@@ -15,16 +7,15 @@ export class UpsertLeaveBalanceDto {
       "ID de l'utilisateur (null = solde global par défaut pour tous)",
     example: 'uuid-user-123',
   })
-  @IsString()
+  @IsUUID()
   @IsOptional()
   userId?: string;
 
   @ApiProperty({
     description: 'ID du type de congé',
-    example: 'uuid-leave-type-123',
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
   })
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   leaveTypeId: string;
 
   @ApiProperty({
