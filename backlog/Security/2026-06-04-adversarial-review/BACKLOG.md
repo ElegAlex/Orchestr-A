@@ -5026,7 +5026,7 @@ curl -s -X DELETE http://localhost:3000/api/tasks/<taskId>/raci/<userId>/INVALID
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial review: verbatim code confirmed at tasks.controller.ts lines 407-429. The `@Param('role') role: RACIRole` pattern is real — no ParseEnumPipe present. Prisma's DB-level enum constraint (PostgreSQL native enum) does provide a backend safety net: an invalid enum string causes a Prisma P2023 error which NestJS maps to 500, not silent acceptance. However, the missing client-side validation means the error surface is 500 (internal) instead of 400 (bad request), which is still incorrect behavior and information-leaking in server logs.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -12492,7 +12492,7 @@ grep -n 'ArrayMaxSize\|projectIds' apps/api/src/analytics/advanced/dto/snapshots
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verified verbatim match in both DTOs. snapshots-query.dto.ts lines 12-22 and tasks-breakdown.dto.ts lines 6-16 both show @IsArray() @IsUUID('all', { each: true }) with no @ArrayMaxSize decorator.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -13505,7 +13505,7 @@ grep -n 'projectId' apps/api/src/epics/epics.controller.ts apps/api/src/mileston
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: epics.controller.ts line 54 confirmed verbatim — @Query('projectId') projectId?: string with no pipe. milestones.controller.ts line 82 same pattern confirmed. No UUID validation on query param.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -13605,7 +13605,7 @@ N/A — manual verification: POST /holidays/import-french?year=NaN (as admin), o
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The `GET /holidays/year/:year` endpoint correctly uses ParseIntPipe; this inconsistency in the import endpoint is the gap. Adversarial review confirmed: holidays.controller.ts line 130 verbatim `parseInt(year, 10)` with no pipe on the @Query decorator. holidays.service.ts importFrenchHolidays() has no isNaN guard — `Date.UTC(NaN, 0, 1)` propagates Invalid Date into Prisma upsert calls. Global ValidationPipe does not intercept raw @Query string params without a DTO class. Endpoint is @Post not @Get as the finding notes say, but that does not affect validity.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -13659,7 +13659,7 @@ N/A — manual verification: POST /leaves with leaveTypeId='INJECTION_ATTEMPT', 
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: CreateLeaveDto.targetUserId is also @IsString without @IsUUID. Adversarial review confirmed: grep of IsUUID/IsEmail across create-leave.dto.ts, import-leaves.dto.ts, upsert-leave-balance.dto.ts returned zero results. All three files confirmed to use only @IsString/@IsNotEmpty for UUID and email fields.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -13762,7 +13762,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: events.service.ts:getEventsByRange lines 660-665 has isNaN checks — that endpoint is safe. The original finding's title has been narrowed to exportIcs only. Confidence remains high for that specific path.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -13888,7 +13888,7 @@ grep -n 'managerId\|sponsorId\|IsString\|IsUUID' apps/api/src/projects/dto/creat
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: create-project.dto.ts lines 87-103 confirmed verbatim. Both managerId and sponsorId use @IsString() @IsOptional() with no @IsUUID(). No service-level UUID validation found for these fields.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -13944,7 +13944,7 @@ grep -n 'visibleStatuses\|hiddenStatuses\|IsEnum\|IsString' apps/api/src/project
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: update-project.dto.ts lines 14-29 confirmed verbatim. hiddenStatuses uses @IsEnum(TaskStatus, { each: true }); visibleStatuses uses @IsString({ each: true }). The asymmetry is clearly present.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -13998,7 +13998,7 @@ curl -s -o /dev/null -w '%{http_code}' 'http://localhost:4000/api/services?depar
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verified: services.controller.ts line 72 has bare @Query('departmentId') with no pipe. skills.controller.ts line 92 has bare @Query('departmentId') with no pipe. skills.service.ts line 365 assigns departmentId directly to whereUser.departmentId and passes to Prisma — no service-level UUID validation. The pattern with ParseUUIDPipe is already used for path params in both files (e.g., services.controller.ts line 89, skills.controller.ts line 114).
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -14221,7 +14221,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial review: verbatim code confirmed at import-tasks.dto.ts lines 39-45. @IsString() only, no @IsEmail(), no @MaxLength. The service-layer lookup provides functional mitigation for email format issues but not for length. Finding confirmed at medium confidence as originally rated.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -14430,7 +14430,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: controller at line 185 passes raw string directly: `getUsersPresence(@Query('date') date?: string)` with no pipe. Service line 1679-1684 verbatim confirmed. No isNaN guard present. No injection risk (parameterized), but 500 on invalid date is confirmed real.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
@@ -16753,7 +16753,7 @@ grep -A3 'leaveTypeId' packages/database/prisma/schema.prisma apps/api/src/leave
 - sessionA-only finding (99-run). Namespaced `SA-SEC-009` to avoid ID collision with the primary run; original id `SEC-009` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: Need to verify leaveTypeId DB type in schema.prisma to confirm whether it should be UUID or slug.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 43b47434
 
 ---
 
