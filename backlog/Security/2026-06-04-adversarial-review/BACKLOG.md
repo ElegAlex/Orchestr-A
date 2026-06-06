@@ -2620,7 +2620,7 @@ N/A — manual verification of API endpoint guards required
 - **Behaviour change to flag (not a blocker):** scoping leaves-balance restricts `HR_OFFICER` (holds `leaves:approve`, lacks `users:manage`/`leaves:manage_any`) to its managed perimeter — consistent with the documented "leave data is service-scoped except ADMIN-tier" decision ([[project_responsable_scope_perimeter]]). If org-wide HR balance read is required, grant `HR_OFFICER` `leaves:manage_any` (or a dedicated perm) — an operator/RBAC decision, out of SEC-030's scope.
 - Witness: `apps/api/src/common/services/sec030-by-user-scope.int.spec.ts` (real DB) — RED→GREEN, discriminating (the 2 deny tests fail with the scope checks removed; self + same-service-peer positive controls stay green). Unit coverage added to `leaves.controller.spec.ts` + `skills.controller.spec.ts`. The CLAUDE.md-mandated Playwright e2e remains a tracked harness-pass debt (the folded-authz e2e set), not authored here.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** fd671b74
 
 ---
 
