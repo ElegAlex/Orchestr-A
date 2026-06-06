@@ -961,17 +961,19 @@ describe('TasksService', () => {
 
       const result = await service.getTasksByAssignee('user-1');
 
-      expect(result.data).toHaveLength(2);
-      expect(result.data[0]).toMatchObject({
+      // Bare array (route contract: "toutes les tâches assignées") — no envelope.
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({
         id: 'task-1',
         totalLoggedHours: 0,
       });
-      expect(result.data[1]).toMatchObject({
+      expect(result[1]).toMatchObject({
         id: 'task-2',
         totalLoggedHours: 0,
       });
       // timeEntries must be stripped from the response shape
-      expect(result.data[0]).not.toHaveProperty('timeEntries');
+      expect(result[0]).not.toHaveProperty('timeEntries');
       expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
@@ -1007,7 +1009,7 @@ describe('TasksService', () => {
 
       const result = await service.getTasksByAssignee('user-1');
 
-      expect(result.data).toEqual([
+      expect(result).toEqual([
         expect.objectContaining({ id: 'task-1', totalLoggedHours: 3.5 }),
         expect.objectContaining({ id: 'task-2', totalLoggedHours: 0 }),
       ]);
@@ -1021,7 +1023,7 @@ describe('TasksService', () => {
 
       const result = await service.getTasksByAssignee('user-1');
 
-      expect(result.data).toEqual([]);
+      expect(result).toEqual([]);
       expect(mockPrismaService.timeEntry.groupBy).not.toHaveBeenCalled();
     });
 
@@ -1042,8 +1044,8 @@ describe('TasksService', () => {
 
       const result = await service.getTasksByAssignee('user-1');
 
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].totalLoggedHours).toBeCloseTo(3.5);
+      expect(result).toHaveLength(1);
+      expect(result[0].totalLoggedHours).toBeCloseTo(3.5);
       expect(mockPrismaService.timeEntry.groupBy).not.toHaveBeenCalled();
     });
   });
@@ -1111,8 +1113,9 @@ describe('TasksService', () => {
 
       const result = await service.getTasksByProject('project-1');
 
-      expect(result.data).toHaveLength(2);
-      expect(result).toHaveProperty('meta');
+      // Bare array (route contract: "toutes les tâches d'un projet") — no envelope.
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2);
     });
 
     it('should throw error when project not found', async () => {
@@ -2159,50 +2162,41 @@ describe('TasksService', () => {
 
   // ─── PER-021 ──────────────────────────────────────────────────────────────
   describe('PER-021 — getTasksByAssignee pagination', () => {
-    it('PER-021 — getTasksByAssignee returns meta + capped data, not an unbounded array', async () => {
+    it('PER-021 — getTasksByAssignee caps the findMany (memory bound) and returns a bare array', async () => {
       const manyTasks = Array.from({ length: 10 }, (_, i) => ({
         id: `t${i}`,
         assigneeId: 'user-1',
         timeEntries: [],
       }));
       mockPrismaService.task.findMany.mockResolvedValue(manyTasks);
-      mockPrismaService.task.count.mockResolvedValue(600);
 
-      const result = await service.getTasksByAssignee(
-        'user-1',
-        undefined,
-        1,
-        100,
+      const result = await service.getTasksByAssignee('user-1');
+
+      // PER-021 is satisfied by a hard `take` cap on the otherwise-unbounded
+      // findMany — NOT by an envelope. The route contract is a bare array
+      // (consistent with GET /projects/user); the prior {data,meta} was a
+      // half-wired regression that stranded rows past the (un-plumbed) page 1.
+      expect(Array.isArray(result)).toBe(true);
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 1000 }),
       );
-
-      // Before fix: plain array returned. After fix: { data, meta }.
-      expect(result).toHaveProperty('data');
-      expect(result).toHaveProperty('meta');
-      expect((result as any).meta.total).toBe(600);
-      expect((result as any).meta.limit).toBe(100);
     });
   });
 
   describe('PER-021 — getTasksByProject pagination', () => {
-    it('PER-021 — getTasksByProject returns meta + capped data, not an unbounded array', async () => {
+    it('PER-021 — getTasksByProject caps the findMany (memory bound) and returns a bare array', async () => {
       mockPrismaService.project.findUnique.mockResolvedValue({
         id: 'project-1',
       });
       mockPrismaService.task.findMany.mockResolvedValue([]);
-      mockPrismaService.task.count.mockResolvedValue(600);
 
-      const result = await service.getTasksByProject(
-        'project-1',
-        undefined,
-        1,
-        100,
+      const result = await service.getTasksByProject('project-1');
+
+      // PER-021 satisfied by the `take` cap; bare-array contract (no envelope).
+      expect(Array.isArray(result)).toBe(true);
+      expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 1000 }),
       );
-
-      // Before fix: plain array returned. After fix: { data, meta }.
-      expect(result).toHaveProperty('data');
-      expect(result).toHaveProperty('meta');
-      expect((result as any).meta.total).toBe(600);
-      expect((result as any).meta.limit).toBe(100);
     });
   });
 

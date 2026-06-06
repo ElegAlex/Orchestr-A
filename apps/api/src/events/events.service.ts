@@ -645,61 +645,53 @@ export class EventsService {
       throw new NotFoundException('Utilisateur introuvable');
     }
 
-    const safePageSize = Math.min(pageSize || 100, 200);
-    const skip = (page - 1) * safePageSize;
+    // Hard cap to bound the findMany (memory guard). Returns a BARE ARRAY: the
+    // frontend (eventsService.getByUser) consumes this as Event[], and no caller
+    // uses the page cursor. `page` is accepted for backward-compat but the route
+    // returns the full (capped) set in one shot.
+    void page;
+    const safePageSize = Math.min(pageSize || 500, 500);
     const where: Prisma.EventWhereInput = {
       participants: { some: { userId } },
     };
 
-    const [events, total] = await Promise.all([
-      this.prisma.event.findMany({
-        where,
-        include: {
-          project: {
-            select: {
-              id: true,
-              name: true,
-            },
+    const events = await this.prisma.event.findMany({
+      where,
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
           },
-          createdBy: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              avatarUrl: true,
-              avatarPreset: true,
-            },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+            avatarPreset: true,
           },
-          participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  avatarUrl: true,
-                  avatarPreset: true,
-                },
+        },
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true,
+                avatarPreset: true,
               },
             },
           },
         },
-        orderBy: { date: 'asc' },
-        skip,
-        take: safePageSize,
-      }),
-      this.prisma.event.count({ where }),
-    ]);
-
-    return {
-      data: events,
-      meta: {
-        total,
-        page,
-        pageSize: safePageSize,
-        totalPages: Math.ceil(total / safePageSize),
       },
-    };
+      orderBy: { date: 'asc' },
+      take: safePageSize,
+    });
+
+    return events;
   }
 
   /**

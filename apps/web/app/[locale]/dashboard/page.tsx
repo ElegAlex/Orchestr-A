@@ -292,33 +292,37 @@ export default function DashboardPage() {
               : Promise.resolve([] as Task[]),
           ]);
 
-          setMyProjects(Array.isArray(projects) ? projects : []);
+          // Defensive: the API contract for these endpoints is a bare array,
+          // but guard once so a future shape regression degrades to 0s instead
+          // of throwing mid-setStats (which silently stranded the KPIs at 0).
+          const projectsArr = Array.isArray(projects) ? projects : [];
+          const tasksArr = Array.isArray(tasks) ? tasks : [];
 
-          const filteredTasks = Array.isArray(tasks)
-            ? tasks
-                .filter((task) => task.status !== "DONE")
-                .sort((a, b) => {
-                  if (!a.endDate) return 1;
-                  if (!b.endDate) return -1;
-                  return (
-                    new Date(a.endDate).getTime() - new Date(b.endDate).getTime()
-                  );
-                })
-            : [];
+          setMyProjects(projectsArr);
+
+          const filteredTasks = tasksArr
+            .filter((task) => task.status !== "DONE")
+            .sort((a, b) => {
+              if (!a.endDate) return 1;
+              if (!b.endDate) return -1;
+              return (
+                new Date(a.endDate).getTime() - new Date(b.endDate).getTime()
+              );
+            });
           setMyTasks(filteredTasks);
 
           setDoneUndeclaredTasks(Array.isArray(undeclared) ? undeclared : []);
 
           // Calculate stats
           setStats({
-            totalProjects: projects.length,
-            activeProjects: projects.filter((p) => p.status === "ACTIVE")
+            totalProjects: projectsArr.length,
+            activeProjects: projectsArr.filter((p) => p.status === "ACTIVE")
               .length,
-            totalTasks: tasks.length,
-            tasksInProgress: tasks.filter((t) => t.status === "IN_PROGRESS")
+            totalTasks: tasksArr.length,
+            tasksInProgress: tasksArr.filter((t) => t.status === "IN_PROGRESS")
               .length,
-            tasksDone: tasks.filter((t) => t.status === "DONE").length,
-            tasksOverdue: tasks.filter(isTaskOverdue).length,
+            tasksDone: tasksArr.filter((t) => t.status === "DONE").length,
+            tasksOverdue: tasksArr.filter(isTaskOverdue).length,
           });
         }
       } catch (err) {

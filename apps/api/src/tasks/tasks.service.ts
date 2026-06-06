@@ -1201,8 +1201,7 @@ export class TasksService {
   async getTasksByAssignee(
     userId: string,
     currentUser?: { id: string; role: string | null },
-    page = 1,
-    limit = 100,
+    limit = 1000,
   ) {
     // If requesting another user's tasks, require tasks:readAll permission
     if (currentUser && userId !== currentUser.id) {
@@ -1216,20 +1215,23 @@ export class TasksService {
       }
     }
 
-    // PER-021 — cap at 500 rows; default 100
-    const safeLimit = Math.min(limit ?? 100, 500);
-    const skip = (page - 1) * safeLimit;
+    // PER-021 — hard cap to bound the otherwise-unbounded findMany (memory-DoS
+    // guard). Returns a BARE ARRAY: this route's contract is "toutes les tâches
+    // assignées" and its sibling GET /projects/user is also a bare array. The
+    // earlier {data,meta} envelope was a half-wired mistake (the controller never
+    // plumbed page/limit, so it always returned page 1 / 100 and stranded rows
+    // 101+). The cap keeps PER-021's memory bound; default high enough for real
+    // per-user volumes.
+    const safeLimit = Math.min(limit ?? 1000, 1000);
 
     const where = {
       OR: [{ assigneeId: userId }, { assignees: { some: { userId } } }],
     };
 
-    const [tasks, total] = await Promise.all([
-      this.prisma.task.findMany({
-        where,
-        take: safeLimit,
-        skip,
-        include: {
+    const tasks = await this.prisma.task.findMany({
+      where,
+      take: safeLimit,
+      include: {
           project: {
             select: {
               id: true,
@@ -1271,15 +1273,13 @@ export class TasksService {
             select: { hours: true },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      }),
-      this.prisma.task.count({ where }),
-    ]);
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
     // Fold time aggregation in memory — eliminates the separate timeEntry.groupBy round-trip.
-    const data = tasks.map((t) => {
+    return tasks.map((t) => {
       const { timeEntries, ...rest } = t;
       const totalLoggedHours = (timeEntries ?? []).reduce(
         (sum, e) => sum + Number(e.hours ?? 0),
@@ -1287,16 +1287,6 @@ export class TasksService {
       );
       return { ...rest, totalLoggedHours };
     });
-
-    return {
-      data,
-      meta: {
-        total,
-        page,
-        limit: safeLimit,
-        totalPages: Math.ceil(total / safeLimit),
-      },
-    };
   }
 
   /**
@@ -1335,8 +1325,7 @@ export class TasksService {
   async getTasksByProject(
     projectId: string,
     currentUser?: AccessUser,
-    page = 1,
-    limit = 100,
+    limit = 1000,
   ) {
     if (currentUser) {
       await this.accessScope.assertCanAccessProject(projectId, currentUser, [
@@ -1351,16 +1340,16 @@ export class TasksService {
       if (!project) throw new NotFoundException('Projet introuvable');
     }
 
-    // PER-021 — cap at 500 rows; default 100
-    const safeLimit = Math.min(limit ?? 100, 500);
-    const skip = (page - 1) * safeLimit;
+    // PER-021 — hard cap to bound the otherwise-unbounded findMany (memory-DoS
+    // guard). Returns a BARE ARRAY (route contract: "toutes les tâches d'un
+    // projet"); the {data,meta} envelope was a half-wired mistake (controller
+    // never plumbed page/limit → always page 1 / 100, stranding rows 101+).
+    const safeLimit = Math.min(limit ?? 1000, 1000);
 
-    const [tasks, total] = await Promise.all([
-      this.prisma.task.findMany({
-        where: { projectId },
-        take: safeLimit,
-        skip,
-        include: {
+    const tasks = await this.prisma.task.findMany({
+      where: { projectId },
+      take: safeLimit,
+      include: {
           assignee: {
             select: {
               id: true,
@@ -1412,22 +1401,12 @@ export class TasksService {
             },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      }),
-      this.prisma.task.count({ where: { projectId } }),
-    ]);
-
-    return {
-      data: tasks,
-      meta: {
-        total,
-        page,
-        limit: safeLimit,
-        totalPages: Math.ceil(total / safeLimit),
+      orderBy: {
+        createdAt: 'desc',
       },
-    };
+    });
+
+    return tasks;
   }
 
   /**

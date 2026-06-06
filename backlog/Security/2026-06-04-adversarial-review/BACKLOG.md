@@ -749,6 +749,8 @@ Add `take: 200` (or accept `page/limit` params) and return paginated meta. For `
 3. Commit message includes `[closes PER-021]`.
 4. Gate green (tests + types + build) per CLAUDE_SESSION_CONTRACT.md before DONE.
 
+**Correction (2026-06-06, post-prod-deploy — append-only):** the `{data,meta}` envelope this fix added to the two SCOPED convenience routes (`getTasksByAssignee`, `getTasksByProject`) was an over-application. The controllers never plumbed `page/limit`, so prod always returned page 1 / 100 and **stranded rows 101+** (a user with 168 tasks silently lost 68), AND the shape change broke the frontend — which consumes these as bare arrays (like `GET /projects/user`, never enveloped) — throwing `TypeError: t.filter is not a function` on the dashboard → task KPIs stuck at 0. Reverted both methods (and `events.getEventsByUser`, same pattern) to **bare arrays** while KEEPING PER-021's memory bound via a hard `take: 1000` cap. The unbounded-`findMany` DoS the finding targeted stays closed (the global browse `GET /tasks` `findAll` keeps real pagination). Witnesses updated to assert array + `take` cap. AC#2's "exposes meta.total" is intentionally dropped for these scoped "get-all" routes (wrong design for a convenience route). See HANDOVER §Next.
+
 **Verification command:**
 ```
 N/A — manual verification
