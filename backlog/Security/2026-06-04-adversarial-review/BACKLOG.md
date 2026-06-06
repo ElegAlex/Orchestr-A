@@ -5852,7 +5852,7 @@ N/A — manual verification
 
 - **2026-06-06 — DONE.** Audit-emit cluster slice 10 (penultimate; non-mechanical — `d7a2bd76` had threaded `actorId` into hardDelete only as a `void actorId` placeholder with 0 emit callsites). **Injected `AuditPersistenceService`** (was NOT injected) and added 7 actions (entityType `ThirdParty`): create→`THIRD_PARTY_CREATED` {thirdPartyId,organizationName}; update→`THIRD_PARTY_UPDATED` {before,after}; hardDelete→`THIRD_PARTY_DELETED` {snapshot, **impact**} (cascade counts from `getDeletionImpact` captured BEFORE the delete — AC#1); assignToTask→`THIRD_PARTY_ASSIGNED_TO_TASK`; unassignFromTask→`THIRD_PARTY_UNASSIGNED_FROM_TASK`; attachToProject→`THIRD_PARTY_ATTACHED_TO_PROJECT`; detachFromProject→`THIRD_PARTY_DETACHED_FROM_PROJECT` (the link actions reference both endpoints). **update() is SERIALIZABLE (COR-036) → emit placed AFTER the tx** (restructured txBody to return {before,after}), same hash-chain constraint as OBS-015/009. **Actor threading:** added `actorId` to update/unassignFromTask/detachFromProject (create/assign/attach/hardDelete already had it) + threaded `@CurrentUser` into 3 controllers (third-parties PATCH, tasks-third-party-assignees DELETE, projects-third-party-members DELETE); `third-parties.controller.spec` updated for the new update signature. Witnesses (third-parties.service.spec, 7 tests) capture each emit + real `validatePayloadForAction` (RED-by-absence). Gate green: nest build + api vitest 2263 + lint 0-err + coherence.
 
-**Closed_by:** (empty — TODO; reopened: d7a2bd76 only threaded the actor id, now THIRD_PARTY_* batch emits)
+**Closed_by:** 12aed7ee
 
 ---
 
