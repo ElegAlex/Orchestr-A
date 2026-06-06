@@ -5,6 +5,7 @@ import { plainToInstance } from 'class-transformer';
 import { LeavesController } from './leaves.controller';
 import { LeavesService } from './leaves.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import { AccessScopeService } from '../common/services/access-scope.service';
 import {
   NotFoundException,
   BadRequestException,
@@ -67,6 +68,11 @@ describe('LeavesController', () => {
     getPermissionsForRole: vi.fn().mockResolvedValue([]),
   };
 
+  const mockAccessScopeService = {
+    assertCanManageUser: vi.fn().mockResolvedValue(undefined),
+    canManageUser: vi.fn().mockResolvedValue(true),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [LeavesController],
@@ -78,6 +84,10 @@ describe('LeavesController', () => {
         {
           provide: PermissionsService,
           useValue: mockPermissionsService,
+        },
+        {
+          provide: AccessScopeService,
+          useValue: mockAccessScopeService,
         },
       ],
     }).compile();
@@ -325,21 +335,62 @@ describe('LeavesController', () => {
 
       // D6 #2 PO 2026-04-19 : `leaves:validate` n'existe pas au catalogue ;
       // le check runtime utilise désormais `leaves:approve` (typo corrigée).
+      // SEC-030 : `leaves:manage_any` (ADMIN-tier global) bypasses the
+      // managed-scope assertion — admin reads any balance.
       mockPermissionsService.getPermissionsForRole.mockResolvedValue([
         'leaves:approve',
+        'leaves:manage_any',
       ]);
       mockLeavesService.getLeaveBalance.mockResolvedValue(balance);
 
-      const result = await controller.getUserBalance(
-        'user-id-2',
-        'admin-user-id',
-        'ADMIN',
-      );
+      const result = await controller.getUserBalance('user-id-2', {
+        id: 'admin-user-id',
+        role: { code: 'ADMIN', templateKey: 'ADMIN' },
+      } as never);
 
       expect(result).toEqual(balance);
       expect(mockLeavesService.getLeaveBalance).toHaveBeenCalledWith(
         'user-id-2',
       );
+      // ADMIN-tier global reader skips the managed-scope assertion entirely.
+      expect(mockAccessScopeService.assertCanManageUser).not.toHaveBeenCalled();
+    });
+
+    it('SEC-030: enforces managed scope for non-global readers (leaves:approve only)', async () => {
+      // A manager-tier role holds `leaves:approve` but NOT `leaves:manage_any`,
+      // so the controller must assert managed scope on the target.
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'leaves:approve',
+      ]);
+      mockAccessScopeService.assertCanManageUser.mockRejectedValueOnce(
+        new ForbiddenException('Utilisateur hors de votre périmètre'),
+      );
+
+      await expect(
+        controller.getUserBalance('user-id-2', {
+          id: 'manager-id',
+          role: { code: 'MANAGER', templateKey: 'MANAGER' },
+        } as never),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(mockAccessScopeService.assertCanManageUser).toHaveBeenCalledWith(
+        'user-id-2',
+        expect.objectContaining({ id: 'manager-id' }),
+      );
+      expect(mockLeavesService.getLeaveBalance).not.toHaveBeenCalled();
+    });
+
+    it('SEC-030: rejects a non-self reader lacking leaves:approve', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+
+      await expect(
+        controller.getUserBalance('user-id-2', {
+          id: 'observer-id',
+          role: { code: 'BASIC_USER', templateKey: 'BASIC_USER' },
+        } as never),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(mockLeavesService.getLeaveBalance).not.toHaveBeenCalled();
     });
   });
 

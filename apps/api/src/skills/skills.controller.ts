@@ -31,14 +31,21 @@ import {
 } from './dto/import-skills.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
 import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../auth/decorators/current-user.decorator';
+import { AccessScopeService } from '../common/services/access-scope.service';
 import { SkillCategory, SkillLevel } from 'database';
 
 @ApiTags('skills')
 @Controller('skills')
 @ApiBearerAuth()
 export class SkillsController {
-  constructor(private readonly skillsService: SkillsService) {}
+  constructor(
+    private readonly skillsService: SkillsService,
+    private readonly accessScope: AccessScopeService,
+  ) {}
 
   @Post()
   @RequirePermissions('skills:create')
@@ -309,7 +316,19 @@ export class SkillsController {
     status: 404,
     description: 'Utilisateur introuvable',
   })
-  getUserSkills(@Param('userId', ParseUUIDPipe) userId: string) {
+  async getUserSkills(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() caller: AuthenticatedUser,
+  ) {
+    // SEC-030 — `skills:read` carried NO per-user scope: any reader could fetch
+    // any user's skills, bypassing the SuiviPage's browser-side managed-service
+    // gate. Enforce the managed-service perimeter server-side for cross-user
+    // reads (self is always allowed). The `/skills` directory drills in only on
+    // users already returned by the scoped `GET /users`, so legitimate use
+    // (self, same-service peers, managed reports) is preserved.
+    if (userId !== caller.id) {
+      await this.accessScope.assertCanManageUser(userId, caller);
+    }
     return this.skillsService.getUserSkills(userId);
   }
 

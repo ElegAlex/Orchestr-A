@@ -40,7 +40,9 @@ import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorato
 import {
   CurrentUser,
   CurrentUserRoleCode,
+  type AuthenticatedUser,
 } from '../auth/decorators/current-user.decorator';
+import { AccessScopeService } from '../common/services/access-scope.service';
 import { LeaveStatus, LeaveType } from 'database';
 import { clientIp } from '../common/fastify/trust-proxy.config';
 
@@ -68,6 +70,7 @@ export class LeavesController {
   constructor(
     private readonly leavesService: LeavesService,
     private readonly permissionsService: PermissionsService,
+    private readonly accessScope: AccessScopeService,
   ) {}
 
   @Post()
@@ -335,12 +338,11 @@ export class LeavesController {
   })
   async getUserBalance(
     @Param('userId', ParseUUIDPipe) userId: string,
-    @CurrentUser('id') currentUserId: string,
-    @CurrentUserRoleCode() currentUserRole: string | null,
+    @CurrentUser() caller: AuthenticatedUser,
   ) {
-    if (userId !== currentUserId) {
+    if (userId !== caller.id) {
       const permissions = await this.permissionsService.getPermissionsForRole(
-        currentUserRole ?? '',
+        caller.role?.code ?? '',
       );
       // D6 #2 PO : `leaves:validate` n'existe pas au catalogue ; le check
       // historique était cassé (toujours faux). La permission métier
@@ -349,6 +351,16 @@ export class LeavesController {
         throw new ForbiddenException(
           "Permission leaves:approve requise pour consulter le solde d'un autre utilisateur",
         );
+      }
+      // SEC-030 — `leaves:approve` is held by MANAGER / MANAGER_HR_FOCUS /
+      // HR_OFFICER and grants it GLOBALLY; without a scope check any of them
+      // could read ANY user's balance, bypassing the SuiviPage's managed-service
+      // gate (which is browser-side only). Enforce the managed-service perimeter
+      // server-side: only ADMIN-tier global readers (`leaves:manage_any`, the
+      // ADMIN-only org-wide grant) skip it; everyone else must be within scope
+      // of the target (ADMIN template, shared service, or managed department).
+      if (!permissions.includes('leaves:manage_any')) {
+        await this.accessScope.assertCanManageUser(userId, caller);
       }
     }
     return this.leavesService.getLeaveBalance(userId);

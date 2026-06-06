@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SkillsController } from './skills.controller';
 import { SkillsService } from './skills.service';
+import { AccessScopeService } from '../common/services/access-scope.service';
 import {
   NotFoundException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { SkillCategory, SkillLevel } from 'database';
 
@@ -42,6 +44,11 @@ describe('SkillsController', () => {
     getUserSkills: vi.fn(),
   };
 
+  const mockAccessScopeService = {
+    assertCanManageUser: vi.fn().mockResolvedValue(undefined),
+    canManageUser: vi.fn().mockResolvedValue(true),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SkillsController],
@@ -49,6 +56,10 @@ describe('SkillsController', () => {
         {
           provide: SkillsService,
           useValue: mockSkillsService,
+        },
+        {
+          provide: AccessScopeService,
+          useValue: mockAccessScopeService,
         },
       ],
     }).compile();
@@ -392,7 +403,7 @@ describe('SkillsController', () => {
   });
 
   describe('getUserSkills', () => {
-    it('should return skills for specified user', async () => {
+    it('should return skills for an in-scope user', async () => {
       const userSkills = {
         TECHNICAL: [{ skill: mockSkill, level: 'EXPERT' }],
         SOFT_SKILL: [],
@@ -400,10 +411,46 @@ describe('SkillsController', () => {
 
       mockSkillsService.getUserSkills.mockResolvedValue(userSkills);
 
-      const result = await controller.getUserSkills('user-id-1');
+      const result = await controller.getUserSkills('user-id-1', {
+        id: 'manager-id',
+        role: { code: 'MANAGER', templateKey: 'MANAGER' },
+      } as never);
 
       expect(result).toEqual(userSkills);
       expect(mockSkillsService.getUserSkills).toHaveBeenCalledWith('user-id-1');
+      // SEC-030 — cross-user read asserts managed scope server-side.
+      expect(mockAccessScopeService.assertCanManageUser).toHaveBeenCalledWith(
+        'user-id-1',
+        expect.objectContaining({ id: 'manager-id' }),
+      );
+    });
+
+    it('SEC-030: rejects an out-of-scope reader', async () => {
+      mockAccessScopeService.assertCanManageUser.mockRejectedValueOnce(
+        new ForbiddenException('Utilisateur hors de votre périmètre'),
+      );
+
+      await expect(
+        controller.getUserSkills('user-id-2', {
+          id: 'manager-id',
+          role: { code: 'MANAGER', templateKey: 'MANAGER' },
+        } as never),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(mockSkillsService.getUserSkills).not.toHaveBeenCalled();
+    });
+
+    it('SEC-030: allows self-read without a scope assertion', async () => {
+      const ownSkills = { TECHNICAL: [], SOFT_SKILL: [] };
+      mockSkillsService.getUserSkills.mockResolvedValue(ownSkills);
+
+      const result = await controller.getUserSkills('self-id', {
+        id: 'self-id',
+        role: { code: 'BASIC_USER', templateKey: 'BASIC_USER' },
+      } as never);
+
+      expect(result).toEqual(ownSkills);
+      expect(mockAccessScopeService.assertCanManageUser).not.toHaveBeenCalled();
     });
   });
 
