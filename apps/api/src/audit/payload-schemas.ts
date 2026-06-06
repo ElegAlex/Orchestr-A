@@ -244,6 +244,15 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
     .object({ previousArchivedAt: snapshot })
     .strict(),
   [AuditAction.PROJECT_DELETED]: deletionSnapshot,
+  // Core project lifecycle (OBS-010) — CREATED references the row + name; UPDATE
+  // carries before/after; CANCELLED records the prior status (soft-delete).
+  [AuditAction.PROJECT_CREATED]: z
+    .object({ projectId: z.string(), name: z.string() })
+    .strict(),
+  [AuditAction.PROJECT_UPDATED]: beforeAfter,
+  [AuditAction.PROJECT_CANCELLED]: z
+    .object({ projectId: z.string(), previousStatus: z.string() })
+    .strict(),
 
   // Time-entry lifecycle (OBS-015) — CREATED references the declaration's scalar
   // facts (task/project/hours/activity/date) + whether it was declared for a

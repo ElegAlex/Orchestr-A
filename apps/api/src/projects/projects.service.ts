@@ -147,6 +147,20 @@ export class ProjectsService {
         });
       }
 
+      // OBS-010 — audit project creation. Emitted INSIDE this default-isolation
+      // (READ COMMITTED) tx, passing `tx`, atomic with the create per the
+      // archive/unarchive/hard-delete precedent. actor = the creator.
+      await this.auditPersistence.log(
+        {
+          action: AuditAction.PROJECT_CREATED,
+          entityType: 'Project',
+          entityId: newProject.id,
+          actorId: creatorId,
+          payload: { projectId: newProject.id, name: newProject.name },
+        },
+        tx,
+      );
+
       // Retourner le projet avec toutes les relations
       return tx.project.findUnique({
         where: { id: newProject.id },
@@ -647,6 +661,18 @@ export class ProjectsService {
           });
         }
 
+        // OBS-010 — before/after audit row, emitted INSIDE the COR-018 tx.
+        await this.auditPersistence.log(
+          {
+            action: AuditAction.PROJECT_UPDATED,
+            entityType: 'Project',
+            entityId: id,
+            actorId: user?.id ?? null,
+            payload: { before: existingProject, after: updated },
+          },
+          tx,
+        );
+
         return updated;
       });
 
@@ -662,6 +688,15 @@ export class ProjectsService {
         ...(hiddenStatuses !== undefined && { hiddenStatuses }),
         ...(visibleStatuses !== undefined && { visibleStatuses }),
       },
+    });
+
+    // OBS-010 — before/after audit row (non-client-change path, no surrounding tx).
+    await this.auditPersistence.log({
+      action: AuditAction.PROJECT_UPDATED,
+      entityType: 'Project',
+      entityId: id,
+      actorId: user?.id ?? null,
+      payload: { before: existingProject, after: project },
     });
 
     return project;
@@ -687,6 +722,16 @@ export class ProjectsService {
     await this.prisma.project.update({
       where: { id },
       data: { status: ProjectStatus.CANCELLED },
+    });
+
+    // OBS-010 — the soft-delete (status→CANCELLED) is the dominant project
+    // removal path and was unaudited; record it with the prior status.
+    await this.auditPersistence.log({
+      action: AuditAction.PROJECT_CANCELLED,
+      entityType: 'Project',
+      entityId: id,
+      actorId: user?.id ?? null,
+      payload: { projectId: id, previousStatus: project.status },
     });
 
     return { message: 'Projet annulé avec succès' };

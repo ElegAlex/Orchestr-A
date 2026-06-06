@@ -105,6 +105,12 @@ export enum AuditAction {
   PROJECT_ARCHIVED = 'PROJECT_ARCHIVED',
   PROJECT_UNARCHIVED = 'PROJECT_UNARCHIVED',
   PROJECT_DELETED = 'PROJECT_DELETED',
+  // OBS-010 — the core project lifecycle (only archive/unarchive/hard-delete were
+  // audited before). CREATED on create(); UPDATED carries before/after; CANCELLED
+  // on the soft-delete remove() (status→CANCELLED).
+  PROJECT_CREATED = 'PROJECT_CREATED',
+  PROJECT_UPDATED = 'PROJECT_UPDATED',
+  PROJECT_CANCELLED = 'PROJECT_CANCELLED',
   // OBS-015 — time-entry lifecycle (TimeTrackingService). Time declarations are
   // payroll-adjacent in a French government context: create / update / delete of
   // logged hours each leave a durable row. The actor is the DECLARING user

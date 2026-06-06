@@ -5554,7 +5554,7 @@ grep -n 'LEAVE_CREATED\|auditPersistence' apps/api/src/leaves/leaves.service.ts 
 
 ### OBS-010 — Project create, update, and soft-delete (status→CANCELLED) emit no audit rows
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -5614,6 +5614,7 @@ grep -n 'auditPersistence\|auditService\|AuditAction' apps/api/src/projects/proj
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verified: grep of projects.service.ts shows audit calls only at lines 710 (PROJECT_ARCHIVED), 748 (PROJECT_UNARCHIVED), 855 (PROJECT_DELETED). create() at 89-221, update() at 548-662, remove() at 667-687 confirmed verbatim with no audit calls. PROJECT_CREATED/PROJECT_UPDATED/PROJECT_CANCELLED absent from audit-action.enum.ts. Finding confirmed.
+- **2026-06-06 — DONE.** Audit-emit cluster slice 9 (last mechanical). Added PROJECT_CREATED/PROJECT_UPDATED/PROJECT_CANCELLED (entityType `Project`, already in the union) to the 3 compile-locked layers; `auditPersistence` already injected. create→`PROJECT_CREATED` {projectId,name} emitted INSIDE the create tx (passing `tx`, atomic — default isolation, matches the archive/unarchive/hard-delete precedent), actor=creator. update→`PROJECT_UPDATED` {before,after} in BOTH paths — inside the COR-018 client-sync tx AND the plain non-tx update; before=existingProject. remove→`PROJECT_CANCELLED` {projectId,previousStatus} after the status→CANCELLED soft-delete. actor=`user?.id` for update/remove. AC#1/#2/#3 covered. Witnesses (projects.service.spec, 3 tests) capture each emit + real `validatePayloadForAction` (RED-by-absence). Gate green: nest build + api vitest 2256 + lint 0-err + coherence.
 
 **Closed_by:** (empty — TODO)
 

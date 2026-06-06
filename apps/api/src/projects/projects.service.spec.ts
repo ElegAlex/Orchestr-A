@@ -6,6 +6,8 @@ import { OwnershipService } from '../common/services/ownership.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AccessScopeService } from '../common/services/access-scope.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 import {
   NotFoundException,
   BadRequestException,
@@ -2416,6 +2418,112 @@ describe('ProjectsService', () => {
       expect(createManyCall.data[0].date).toEqual(expectedStartOfDay);
       expect(mockPrismaService.projectSnapshot.create).not.toHaveBeenCalled();
       expect(result).toEqual({ captured: 1 });
+    });
+  });
+
+  // OBS-010 — the core project lifecycle (create / update / cancel) was unaudited
+  // (only archive/unarchive/hardDelete emitted). Witness = capture the payload to
+  // the mocked AuditPersistence.log + assert the REAL strict schema.
+  describe('OBS-010 audit emits', () => {
+    const findCall = (action: AuditAction) =>
+      mockAuditPersistenceService.log.mock.calls.find(
+        (c) => c[0]?.action === action,
+      )?.[0];
+
+    it('create() emits PROJECT_CREATED inside the tx', async () => {
+      mockPrismaService.$transaction.mockImplementation(async (callback) => {
+        const tx = {
+          project: {
+            create: vi
+              .fn()
+              .mockResolvedValue({ id: 'p-new', name: 'New Project' }),
+            findUnique: vi
+              .fn()
+              .mockResolvedValue({ ...mockProject, id: 'p-new', clients: [] }),
+          },
+          projectMember: { create: vi.fn().mockResolvedValue({}) },
+        };
+        return callback(tx);
+      });
+
+      await service.create(
+        { name: 'New Project', managerId: 'm-1', departmentId: 'd-1' },
+        'creator-1',
+      );
+
+      const call = findCall(AuditAction.PROJECT_CREATED);
+      expect(call).toMatchObject({
+        action: AuditAction.PROJECT_CREATED,
+        entityType: 'Project',
+        entityId: 'p-new',
+        actorId: 'creator-1',
+      });
+      expect(call?.payload).toMatchObject({
+        projectId: 'p-new',
+        name: 'New Project',
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.PROJECT_CREATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('update() emits PROJECT_UPDATED before/after', async () => {
+      mockOwnershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        status: ProjectStatus.ACTIVE,
+        name: 'Old',
+      });
+      mockPrismaService.project.update.mockResolvedValue({
+        ...mockProject,
+        name: 'Renamed',
+      });
+
+      await service.update('project-1', { name: 'Renamed' }, { id: 'actor-1' });
+
+      const call = findCall(AuditAction.PROJECT_UPDATED);
+      expect(call).toMatchObject({
+        action: AuditAction.PROJECT_UPDATED,
+        entityType: 'Project',
+        entityId: 'project-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        before: expect.objectContaining({ name: 'Old' }),
+        after: expect.objectContaining({ name: 'Renamed' }),
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.PROJECT_UPDATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('remove() emits PROJECT_CANCELLED with the previous status', async () => {
+      mockOwnershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        ...mockProject,
+        status: ProjectStatus.ACTIVE,
+      });
+      mockPrismaService.project.update.mockResolvedValue({
+        ...mockProject,
+        status: ProjectStatus.CANCELLED,
+      });
+
+      await service.remove('project-1', { id: 'actor-1' });
+
+      const call = findCall(AuditAction.PROJECT_CANCELLED);
+      expect(call).toMatchObject({
+        action: AuditAction.PROJECT_CANCELLED,
+        entityType: 'Project',
+        entityId: 'project-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        projectId: 'project-1',
+        previousStatus: ProjectStatus.ACTIVE,
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.PROJECT_CANCELLED, call?.payload),
+      ).not.toThrow();
     });
   });
 });
