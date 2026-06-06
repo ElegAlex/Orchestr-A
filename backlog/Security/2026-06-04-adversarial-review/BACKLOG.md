@@ -5740,7 +5740,7 @@ grep -n 'auditPersistence\|auditService\|AuditAction\|emitDataExported' apps/api
 
 ### OBS-013 — telework: all CRUD and recurring-rule mutations emit no audit_log row
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -5790,6 +5790,7 @@ N/A — manual verification
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: AuditAction enum has no TELEWORK_* members. Constructor verified (line 63-66): only PrismaService and PermissionsService. Code at line 124 matches verbatim.
+- **2026-06-06 — DONE.** Audit-emit cluster slice 5. Injected `AuditPersistenceService` and audited ALL 7 user-facing mutations (each is a `@CurrentUser`-threaded endpoint): single-entry create→`TELEWORK_CREATED` {teleworkId,targetUserId,isTelework,date}, update→`TELEWORK_UPDATED` {before,after}, remove→`TELEWORK_DELETED` {snapshot}; recurring-rule create→`TELEWORK_RULE_CREATED` {ruleId,targetUserId}, update→`TELEWORK_RULE_UPDATED` {before,after}, remove→`TELEWORK_RULE_DELETED` {snapshot}; bulk `POST /recurring-rules/generate`→`TELEWORK_SCHEDULES_GENERATED` {created,skipped,rulesProcessed} **emitted only when created>0** (a 0-created run is a no-op query, not a state change). entityType `Telework`. AC#1-4 covered incl. AC#4 (admin acting for another employee — payloads carry `targetUserId` distinct from the actor). All emits awaited after the single-row writes (no surrounding tx). Witnesses (telework.service.spec, 7 tests) capture each emit + real `validatePayloadForAction` (RED-by-absence: 7 fail before the emits exist). Gate green: nest build + api vitest 2243 + lint 0-err + coherence.
 
 **Closed_by:** (empty — TODO)
 

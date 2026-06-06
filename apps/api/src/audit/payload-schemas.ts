@@ -273,6 +273,33 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
     .strict(),
   [AuditAction.TASK_UPDATED]: beforeAfter,
   [AuditAction.TASK_DELETED]: deletionSnapshot,
+
+  // Telework lifecycle (OBS-013). CREATED carries the affected employee
+  // (targetUserId, may differ from the actor); UPDATE/DELETE carry before-after
+  // / snapshot; rule CRUD mirrors the single-entry shapes; SCHEDULES_GENERATED
+  // is a bulk-materialization summary (count only).
+  [AuditAction.TELEWORK_CREATED]: z
+    .object({
+      teleworkId: z.string(),
+      targetUserId: z.string(),
+      isTelework: z.boolean(),
+      date: z.string(),
+    })
+    .strict(),
+  [AuditAction.TELEWORK_UPDATED]: beforeAfter,
+  [AuditAction.TELEWORK_DELETED]: deletionSnapshot,
+  [AuditAction.TELEWORK_RULE_CREATED]: z
+    .object({ ruleId: z.string(), targetUserId: z.string() })
+    .strict(),
+  [AuditAction.TELEWORK_RULE_UPDATED]: beforeAfter,
+  [AuditAction.TELEWORK_RULE_DELETED]: deletionSnapshot,
+  [AuditAction.TELEWORK_SCHEDULES_GENERATED]: z
+    .object({
+      created: z.number(),
+      skipped: z.number(),
+      rulesProcessed: z.number(),
+    })
+    .strict(),
 } satisfies Record<AuditAction, z.ZodTypeAny>;
 
 /**

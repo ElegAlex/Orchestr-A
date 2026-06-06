@@ -39,6 +39,10 @@ export { AuditAction };
  *               is a row in the `time_entries` table (OBS-015).
  *   - `Task` — task lifecycle (create / update / delete). The subject is a row
  *               in the `tasks` table (OBS-012).
+ *   - `Telework` — telework lifecycle: single-entry CRUD, recurring-rule CRUD,
+ *               and bulk schedule generation. The subject is a row in the
+ *               `telework_schedules` / `telework_recurring_rules` tables, or the
+ *               triggering actor for a bulk generation (OBS-013).
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
@@ -56,6 +60,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   | 'Project'
   | 'TimeEntry'
   | 'Task'
+  | 'Telework'
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
@@ -100,6 +105,13 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.TASK_CREATED]: 'Task',
   [AuditAction.TASK_UPDATED]: 'Task',
   [AuditAction.TASK_DELETED]: 'Task',
+  [AuditAction.TELEWORK_CREATED]: 'Telework',
+  [AuditAction.TELEWORK_UPDATED]: 'Telework',
+  [AuditAction.TELEWORK_DELETED]: 'Telework',
+  [AuditAction.TELEWORK_RULE_CREATED]: 'Telework',
+  [AuditAction.TELEWORK_RULE_UPDATED]: 'Telework',
+  [AuditAction.TELEWORK_RULE_DELETED]: 'Telework',
+  [AuditAction.TELEWORK_SCHEDULES_GENERATED]: 'Telework',
 };
 
 /**

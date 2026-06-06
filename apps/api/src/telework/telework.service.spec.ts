@@ -2,6 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TeleworkService } from './telework.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 import {
   NotFoundException,
   ConflictException,
@@ -48,6 +51,10 @@ describe('TeleworkService', () => {
     getPermissionsForRole: vi.fn(),
   };
 
+  const mockAuditPersistence = {
+    log: vi.fn().mockResolvedValue(undefined),
+  };
+
   const mockTelework = {
     id: 'telework-1',
     userId: 'user-1',
@@ -77,10 +84,15 @@ describe('TeleworkService', () => {
           provide: PermissionsService,
           useValue: mockPermissionsService,
         },
+        {
+          provide: AuditPersistenceService,
+          useValue: mockAuditPersistence,
+        },
       ],
     }).compile();
 
     service = module.get<TeleworkService>(TeleworkService);
+    mockAuditPersistence.log.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -1517,6 +1529,224 @@ describe('TeleworkService', () => {
       expect(
         mockPrismaService.teleworkSchedule.createMany,
       ).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // OBS-013 — telework is sensitive HR data; every CRUD + recurring-rule
+  // mutation must leave a durable audit_logs row (esp. an admin acting for
+  // another employee, targetUserId != actor). Witness = capture the payload to
+  // the mocked AuditPersistence.log + assert the REAL strict schema accepts it.
+  describe('OBS-013 audit emits', () => {
+    const findCall = (action: AuditAction) =>
+      mockAuditPersistence.log.mock.calls.find(
+        (c) => c[0]?.action === action,
+      )?.[0];
+
+    it('create() emits TELEWORK_CREATED (targetUserId captured)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(null);
+      mockPrismaService.teleworkSchedule.create.mockResolvedValue(mockTelework);
+
+      await service.create('user-1', 'ADMIN', { date: '2025-11-20' });
+
+      const call = findCall(AuditAction.TELEWORK_CREATED);
+      expect(call).toMatchObject({
+        action: AuditAction.TELEWORK_CREATED,
+        entityType: 'Telework',
+        entityId: 'telework-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({ targetUserId: 'user-1' });
+      expect(() =>
+        validatePayloadForAction(AuditAction.TELEWORK_CREATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('update() emits TELEWORK_UPDATED before/after', async () => {
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(
+        mockTelework,
+      );
+      mockPrismaService.teleworkSchedule.update.mockResolvedValue({
+        ...mockTelework,
+        isTelework: false,
+      });
+
+      await service.update('telework-1', 'user-1', 'ADMIN', {
+        isTelework: false,
+      });
+
+      const call = findCall(AuditAction.TELEWORK_UPDATED);
+      expect(call).toMatchObject({
+        action: AuditAction.TELEWORK_UPDATED,
+        entityType: 'Telework',
+        entityId: 'telework-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        before: expect.objectContaining({ isTelework: true }),
+        after: expect.objectContaining({ isTelework: false }),
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.TELEWORK_UPDATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('remove() emits TELEWORK_DELETED snapshot', async () => {
+      mockPrismaService.teleworkSchedule.findUnique.mockResolvedValue(
+        mockTelework,
+      );
+      mockPrismaService.teleworkSchedule.delete.mockResolvedValue(mockTelework);
+
+      await service.remove('telework-1', 'user-1', 'ADMIN');
+
+      const call = findCall(AuditAction.TELEWORK_DELETED);
+      expect(call).toMatchObject({
+        action: AuditAction.TELEWORK_DELETED,
+        entityType: 'Telework',
+        entityId: 'telework-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        snapshot: expect.objectContaining({ id: 'telework-1' }),
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.TELEWORK_DELETED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('createRecurringRule() emits TELEWORK_RULE_CREATED', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
+        null,
+      );
+      mockPrismaService.teleworkRecurringRule.create.mockResolvedValue({
+        id: 'rule-1',
+        userId: 'user-1',
+      });
+
+      await service.createRecurringRule('user-1', 'ADMIN', {
+        userId: 'user-1',
+        dayOfWeek: 0,
+        startDate: '2025-11-01',
+      });
+
+      const call = findCall(AuditAction.TELEWORK_RULE_CREATED);
+      expect(call).toMatchObject({
+        action: AuditAction.TELEWORK_RULE_CREATED,
+        entityType: 'Telework',
+        entityId: 'rule-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        ruleId: 'rule-1',
+        targetUserId: 'user-1',
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.TELEWORK_RULE_CREATED,
+          call?.payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('updateRecurringRule() emits TELEWORK_RULE_UPDATED before/after', async () => {
+      const rule = { id: 'rule-1', userId: 'user-1', isActive: true };
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
+        rule,
+      );
+      mockPrismaService.teleworkRecurringRule.update.mockResolvedValue({
+        ...rule,
+        isActive: false,
+      });
+
+      await service.updateRecurringRule('rule-1', 'user-1', 'ADMIN', {
+        isActive: false,
+      });
+
+      const call = findCall(AuditAction.TELEWORK_RULE_UPDATED);
+      expect(call).toMatchObject({
+        action: AuditAction.TELEWORK_RULE_UPDATED,
+        entityType: 'Telework',
+        entityId: 'rule-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        before: expect.objectContaining({ isActive: true }),
+        after: expect.objectContaining({ isActive: false }),
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.TELEWORK_RULE_UPDATED,
+          call?.payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('removeRecurringRule() emits TELEWORK_RULE_DELETED snapshot', async () => {
+      const rule = { id: 'rule-1', userId: 'user-1' };
+      mockPrismaService.teleworkRecurringRule.findUnique.mockResolvedValue(
+        rule,
+      );
+      mockPrismaService.teleworkRecurringRule.delete.mockResolvedValue(rule);
+
+      await service.removeRecurringRule('rule-1', 'user-1', 'ADMIN');
+
+      const call = findCall(AuditAction.TELEWORK_RULE_DELETED);
+      expect(call).toMatchObject({
+        action: AuditAction.TELEWORK_RULE_DELETED,
+        entityType: 'Telework',
+        entityId: 'rule-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        snapshot: expect.objectContaining({ id: 'rule-1' }),
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.TELEWORK_RULE_DELETED,
+          call?.payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('generateSchedulesFromRules() emits TELEWORK_SCHEDULES_GENERATED when rows are created', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'telework:manage_any',
+      ]);
+      // dayOfWeek 0 = Monday (model 0=Mon..6=Sun); Nov 2025 has 4 Mondays.
+      mockPrismaService.teleworkRecurringRule.findMany.mockResolvedValue([
+        {
+          id: 'rule-1',
+          userId: 'user-1',
+          dayOfWeek: 0,
+          startDate: new Date('2025-11-01'),
+          endDate: null,
+          isActive: true,
+        },
+      ]);
+      mockPrismaService.teleworkSchedule.findMany.mockResolvedValue([]);
+      mockPrismaService.teleworkSchedule.createMany.mockResolvedValue({
+        count: 4,
+      });
+
+      await service.generateSchedulesFromRules('user-1', 'ADMIN', {
+        startDate: '2025-11-01',
+        endDate: '2025-11-30',
+      });
+
+      const call = findCall(AuditAction.TELEWORK_SCHEDULES_GENERATED);
+      expect(call).toMatchObject({
+        action: AuditAction.TELEWORK_SCHEDULES_GENERATED,
+        entityType: 'Telework',
+        actorId: 'user-1',
+      });
+      expect(call?.payload?.created).toBeGreaterThan(0);
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.TELEWORK_SCHEDULES_GENERATED,
+          call?.payload,
+        ),
+      ).not.toThrow();
     });
   });
 });

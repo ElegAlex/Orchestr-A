@@ -8,6 +8,8 @@ import {
 import { formatInTimeZone } from 'date-fns-tz';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit-action.enum';
 import { CreateTeleworkDto } from './dto/create-telework.dto';
 import { UpdateTeleworkDto } from './dto/update-telework.dto';
 import { CreateRecurringRuleDto } from './dto/create-recurring-rule.dto';
@@ -64,6 +66,7 @@ export class TeleworkService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly permissionsService: PermissionsService,
+    private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
   /**
@@ -139,6 +142,22 @@ export class TeleworkService {
             role: true,
           },
         },
+      },
+    });
+
+    // OBS-013 — durable audit row for a telework entry (HR data). Awaited after
+    // the single-row create; actor = the declaring user, targetUserId = the
+    // affected employee (may differ from the actor on the admin path).
+    await this.auditPersistence.log({
+      action: AuditAction.TELEWORK_CREATED,
+      entityType: 'Telework',
+      entityId: telework.id,
+      actorId: currentUserId,
+      payload: {
+        teleworkId: telework.id,
+        targetUserId: telework.userId,
+        isTelework: telework.isTelework,
+        date: telework.date.toISOString(),
       },
     });
 
@@ -667,6 +686,15 @@ export class TeleworkService {
       },
     });
 
+    // OBS-013 — durable before/after audit row; actor = the editing user.
+    await this.auditPersistence.log({
+      action: AuditAction.TELEWORK_UPDATED,
+      entityType: 'Telework',
+      entityId: id,
+      actorId: currentUserId,
+      payload: { before: existingTelework, after: telework },
+    });
+
     return telework;
   }
 
@@ -699,6 +727,16 @@ export class TeleworkService {
 
     await this.prisma.teleworkSchedule.delete({
       where: { id },
+    });
+
+    // OBS-013 — snapshot (captured above, before the delete) so the deletion is
+    // reconstructable from the immutable trail; actor = the deleting user.
+    await this.auditPersistence.log({
+      action: AuditAction.TELEWORK_DELETED,
+      entityType: 'Telework',
+      entityId: id,
+      actorId: currentUserId,
+      payload: { snapshot: telework },
     });
 
     return { message: 'Télétravail supprimé avec succès' };
@@ -843,6 +881,16 @@ export class TeleworkService {
       },
     });
 
+    // OBS-013 — recurring rules transfer a standing telework pattern; audit who
+    // created one and for whom (targetUserId may differ from the actor).
+    await this.auditPersistence.log({
+      action: AuditAction.TELEWORK_RULE_CREATED,
+      entityType: 'Telework',
+      entityId: rule.id,
+      actorId: currentUserId,
+      payload: { ruleId: rule.id, targetUserId: rule.userId },
+    });
+
     return rule;
   }
 
@@ -895,6 +943,15 @@ export class TeleworkService {
       },
     });
 
+    // OBS-013 — before/after audit row for a recurring-rule edit.
+    await this.auditPersistence.log({
+      action: AuditAction.TELEWORK_RULE_UPDATED,
+      entityType: 'Telework',
+      entityId: id,
+      actorId: currentUserId,
+      payload: { before: rule, after: updated },
+    });
+
     return updated;
   }
 
@@ -924,6 +981,15 @@ export class TeleworkService {
     }
 
     await this.prisma.teleworkRecurringRule.delete({ where: { id } });
+
+    // OBS-013 — snapshot (captured above, before the delete).
+    await this.auditPersistence.log({
+      action: AuditAction.TELEWORK_RULE_DELETED,
+      entityType: 'Telework',
+      entityId: id,
+      actorId: currentUserId,
+      payload: { snapshot: rule },
+    });
 
     return { message: 'Règle récurrente supprimée avec succès' };
   }
@@ -1038,6 +1104,19 @@ export class TeleworkService {
 
     const created = toCreate.length;
     const skipped = expected.size - created;
+
+    // OBS-013 — audit a bulk schedule materialization only when it actually
+    // created rows (a 0-created run is a no-op query, not a state change worth a
+    // forensic row). The subject is the triggering actor; payload = the counts.
+    if (created > 0) {
+      await this.auditPersistence.log({
+        action: AuditAction.TELEWORK_SCHEDULES_GENERATED,
+        entityType: 'Telework',
+        entityId: currentUserId,
+        actorId: currentUserId,
+        payload: { created, skipped, rulesProcessed: rules.length },
+      });
+    }
 
     return {
       message: `Génération terminée : ${created} créé(s), ${skipped} ignoré(s) (déjà existant)`,

@@ -121,4 +121,16 @@ export enum AuditAction {
   TASK_CREATED = 'TASK_CREATED',
   TASK_UPDATED = 'TASK_UPDATED',
   TASK_DELETED = 'TASK_DELETED',
+  // OBS-013 — telework lifecycle (TeleworkService). Telework scheduling is HR
+  // data; an admin (telework:manage_any) can create/modify/delete entries for
+  // any employee — payloads carry the targetUserId so the affected employee is
+  // visible distinct from the actor. Covers the single-entry CRUD, the recurring
+  // rules CRUD, and the bulk schedule generation (count only).
+  TELEWORK_CREATED = 'TELEWORK_CREATED',
+  TELEWORK_UPDATED = 'TELEWORK_UPDATED',
+  TELEWORK_DELETED = 'TELEWORK_DELETED',
+  TELEWORK_RULE_CREATED = 'TELEWORK_RULE_CREATED',
+  TELEWORK_RULE_UPDATED = 'TELEWORK_RULE_UPDATED',
+  TELEWORK_RULE_DELETED = 'TELEWORK_RULE_DELETED',
+  TELEWORK_SCHEDULES_GENERATED = 'TELEWORK_SCHEDULES_GENERATED',
 }
