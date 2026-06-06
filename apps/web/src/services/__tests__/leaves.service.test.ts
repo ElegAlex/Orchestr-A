@@ -98,12 +98,17 @@ describe("leavesService", () => {
   });
 
   describe("getByUser", () => {
-    it("should fetch leaves by user", async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: mockLeaves });
+    it("fetches a user's leaves via GET /leaves?userId= and unwraps the envelope", async () => {
+      (api.get as jest.Mock).mockResolvedValue({
+        data: {
+          data: mockLeaves,
+          meta: { total: mockLeaves.length, page: 1, limit: 1000 },
+        },
+      });
 
       const result = await leavesService.getByUser("user-1");
 
-      expect(api.get).toHaveBeenCalledWith("/leaves/user/user-1");
+      expect(api.get).toHaveBeenCalledWith("/leaves?userId=user-1&limit=1000");
       expect(result).toEqual(mockLeaves);
     });
   });

@@ -15,10 +15,16 @@ export const milestonesService = {
   },
 
   async getByProject(projectId: string): Promise<Milestone[]> {
-    const response = await api.get<Milestone[]>(
-      `/milestones/project/${projectId}`,
+    // The API exposes a project's milestones via the filtered list
+    // GET /milestones?projectId= (paginated {data,meta} envelope) — there is no
+    // GET /milestones/project/:id path route (only the import POST routes).
+    const response = await api.get<{ data: Milestone[] } | Milestone[]>(
+      `/milestones?projectId=${projectId}&limit=1000`,
     );
-    return response.data;
+    if (response.data && "data" in response.data) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async create(data: {

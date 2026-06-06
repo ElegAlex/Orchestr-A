@@ -59,12 +59,19 @@ describe("teleworkService", () => {
   });
 
   describe("getByUser", () => {
-    it("should fetch telework entries by user", async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: mockTeleworks });
+    it("fetches a user's telework via GET /telework?userId= and unwraps the envelope", async () => {
+      (api.get as jest.Mock).mockResolvedValue({
+        data: {
+          data: mockTeleworks,
+          meta: { total: mockTeleworks.length, page: 1, limit: 1000 },
+        },
+      });
 
       const result = await teleworkService.getByUser("user-1");
 
-      expect(api.get).toHaveBeenCalledWith("/telework/user/user-1");
+      expect(api.get).toHaveBeenCalledWith(
+        "/telework?userId=user-1&limit=1000",
+      );
       expect(result).toEqual(mockTeleworks);
     });
   });

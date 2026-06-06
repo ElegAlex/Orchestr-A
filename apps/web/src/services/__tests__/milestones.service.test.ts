@@ -63,12 +63,19 @@ describe("milestonesService", () => {
   });
 
   describe("getByProject", () => {
-    it("should fetch milestones by project", async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: mockMilestones });
+    it("fetches a project's milestones via GET /milestones?projectId= and unwraps the envelope", async () => {
+      (api.get as jest.Mock).mockResolvedValue({
+        data: {
+          data: mockMilestones,
+          meta: { total: mockMilestones.length, page: 1, limit: 1000 },
+        },
+      });
 
       const result = await milestonesService.getByProject("project-1");
 
-      expect(api.get).toHaveBeenCalledWith("/milestones/project/project-1");
+      expect(api.get).toHaveBeenCalledWith(
+        "/milestones?projectId=project-1&limit=1000",
+      );
       expect(result).toEqual(mockMilestones);
     });
   });

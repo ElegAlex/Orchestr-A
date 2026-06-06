@@ -21,10 +21,16 @@ export const teleworkService = {
   },
 
   async getByUser(userId: string): Promise<TeleworkSchedule[]> {
-    const response = await api.get<TeleworkSchedule[]>(
-      `/telework/user/${userId}`,
-    );
-    return response.data;
+    // The API exposes a user's telework via the filtered list GET /telework?userId=
+    // (paginated {data,meta} envelope) — there is no /telework/user/:id path route
+    // (only /telework/user/:userId/week and /stats).
+    const response = await api.get<
+      { data: TeleworkSchedule[] } | TeleworkSchedule[]
+    >(`/telework?userId=${userId}&limit=1000`);
+    if (response.data && "data" in response.data) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async getByDateRange(

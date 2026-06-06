@@ -107,8 +107,15 @@ export const leavesService = {
   },
 
   async getByUser(userId: string): Promise<Leave[]> {
-    const response = await api.get<Leave[]>(`/leaves/user/${userId}`);
-    return response.data;
+    // The API exposes a user's leaves via the filtered list GET /leaves?userId=
+    // (paginated {data,meta} envelope) — there is no /leaves/user/:id path route.
+    const response = await api.get<{ data: Leave[] } | Leave[]>(
+      `/leaves?userId=${userId}&limit=1000`,
+    );
+    if (response.data && "data" in response.data) {
+      return response.data.data;
+    }
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   async getMyLeaves(): Promise<Leave[]> {
