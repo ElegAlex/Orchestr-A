@@ -221,6 +221,10 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
 
   // Leaves lifecycle (OBS-003 / OBS-021). LEAVE_APPROVED is dual-provenance
   // (rich direct row in approve() + envelope self-approval row).
+  // OBS-009 — LEAVE_CREATED is likewise dual-provenance: the PENDING /
+  // declaredByManager paths emit the rich `leaveAudit` shape directly; the
+  // self-approval path emits the AuditService security envelope.
+  [AuditAction.LEAVE_CREATED]: z.union([leaveAudit, securityEnvelope]),
   [AuditAction.LEAVE_APPROVED]: z.union([leaveAudit, securityEnvelope]),
   [AuditAction.LEAVE_REJECTED]: leaveAudit,
   [AuditAction.LEAVE_CANCELLED]: leaveAudit,

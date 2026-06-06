@@ -689,16 +689,48 @@ export class LeavesService {
       }
     }
 
-    // Trace d'audit séparée pour les auto-validations (finding #6). La
-    // colonne `selfApproved` rend la distinction lisible dans la table,
-    // l'entrée d'audit la rend visible dans le flux de logs sécurité.
+    // OBS-009 — durable LEAVE_CREATED for EVERY creation path (the PENDING and
+    // declaredByManager paths previously left no audit row at all; the
+    // self-approval path was mislabelled LEAVE_APPROVED — a creation, not an
+    // approval). Exactly ONE LEAVE_CREATED row per leave, no double-emit:
+    //  - self-approve → the AuditService security envelope (finding #6: keeps
+    //    the self-validation visible in the security-log flow; dual-writes one
+    //    durable row). Relabelled from LEAVE_APPROVED.
+    //  - PENDING / declaredByManager → AuditPersistence directly (rich leaveAudit
+    //    payload). Emitted AFTER the SERIALIZABLE tx (the chain read needs READ
+    //    COMMITTED snapshots — same constraint as OBS-015).
     if (canSelfApprove) {
       this.auditService.log({
-        action: AuditAction.LEAVE_APPROVED,
+        action: AuditAction.LEAVE_CREATED,
         userId: requestingUserId,
         targetId: leave.id,
-        details: `Auto-validation par ${requestingUserId} (selfApproved=true)`,
+        details: `Création auto-validée par ${requestingUserId} (selfApproved=true)`,
+        after: {
+          status: leave.status,
+          leaveTypeId: leave.leaveTypeId,
+          targetUserId: leave.userId,
+          selfApproved: true,
+        },
         success: true,
+      });
+    } else {
+      await this.auditPersistence.log({
+        action: AuditAction.LEAVE_CREATED,
+        entityType: 'Leave',
+        entityId: leave.id,
+        actorId: requestingUserId,
+        payload: {
+          targetUserId: leave.userId,
+          selfApproved: false,
+          operation: declaredByManager ? 'create_by_manager' : 'create',
+          after: {
+            status: leave.status,
+            leaveTypeId: leave.leaveTypeId,
+            startDate: leave.startDate,
+            endDate: leave.endDate,
+            declaredByManager,
+          },
+        },
       });
     }
 

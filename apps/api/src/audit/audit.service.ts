@@ -98,6 +98,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.DOCUMENT_CREATED]: 'Document',
   [AuditAction.DOCUMENT_UPDATED]: 'Document',
   [AuditAction.DOCUMENT_DELETED]: 'Document',
+  [AuditAction.LEAVE_CREATED]: 'Leave',
   [AuditAction.LEAVE_APPROVED]: 'Leave',
   [AuditAction.LEAVE_REJECTED]: 'Leave',
   [AuditAction.LEAVE_CANCELLED]: 'Leave',

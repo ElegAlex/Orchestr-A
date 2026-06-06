@@ -68,6 +68,13 @@ export enum AuditAction {
   DOCUMENT_CREATED = 'DOCUMENT_CREATED',
   DOCUMENT_UPDATED = 'DOCUMENT_UPDATED',
   DOCUMENT_DELETED = 'DOCUMENT_DELETED',
+  // OBS-009 — leave creation. Net-new durable emitter for the PENDING /
+  // declaredByManager paths (which left no audit row), and the correct label for
+  // the self-approval path (was mislabelled LEAVE_APPROVED — a creation, not an
+  // approval). Exactly one LEAVE_CREATED row per creation: the self-approve path
+  // emits it via the AuditService security envelope (dual-write), the other two
+  // via AuditPersistence directly.
+  LEAVE_CREATED = 'LEAVE_CREATED',
   LEAVE_APPROVED = 'LEAVE_APPROVED',
   LEAVE_REJECTED = 'LEAVE_REJECTED',
   // OBS-021 — full leave lifecycle beyond approve/reject. LEAVE_CANCELLED was

@@ -290,6 +290,53 @@ describe('LeavesService', () => {
       expect(mockPrismaService.leave.create).toHaveBeenCalled();
     });
 
+    // OBS-009 — the non-self-approve creation paths (PENDING / declaredByManager)
+    // previously left NO durable audit row. They must now emit a durable
+    // LEAVE_CREATED via auditPersistence (the self-approve path keeps its
+    // AuditService dual-write — see the dedicated test below).
+    it('OBS-009: emits a durable LEAVE_CREATED for a PENDING leave', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(mockUser)
+        .mockResolvedValueOnce({
+          ...mockUser,
+          department: { ...mockUser.department, manager: { id: 'manager-1' } },
+        });
+      mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+        mockLeaveTypeConfig,
+      );
+      mockPrismaService.leaveTypeConfig.findMany.mockResolvedValue([
+        mockLeaveTypeConfig,
+      ]);
+      mockPrismaService.leaveBalance.findUnique.mockResolvedValue({
+        totalDays: 25,
+      });
+      mockPrismaService.leave.findMany.mockResolvedValue([]);
+      mockPrismaService.leave.create.mockResolvedValue({
+        ...mockLeave,
+        id: 'leave-pending-1',
+        status: LeaveStatus.PENDING,
+      });
+      mockPrismaService.leaveValidationDelegate.findFirst.mockResolvedValue(
+        null,
+      );
+
+      await service.create('user-1', createLeaveDto);
+
+      const call = mockAuditPersistence.log.mock.calls.find(
+        (c) => c[0]?.action === AuditAction.LEAVE_CREATED,
+      )?.[0];
+      expect(call).toMatchObject({
+        action: AuditAction.LEAVE_CREATED,
+        entityType: 'Leave',
+        entityId: 'leave-pending-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({ targetUserId: 'user-1' });
+      expect(() =>
+        validatePayloadForAction(AuditAction.LEAVE_CREATED, call?.payload),
+      ).not.toThrow();
+    });
+
     it('COR-003 — fetches holidays and subtracts a non-working holiday from charged days', async () => {
       // Wiring witness: Mon 2025-06-02 → Fri 2025-06-06 = 5 weekdays. The
       // service must fetch the holiday calendar and exclude Wed 2025-06-04,
@@ -1336,15 +1383,24 @@ describe('LeavesService', () => {
 
       await service.create('user-1', createLeaveDto, 'ADMIN');
 
+      // OBS-009 — the self-approval CREATION must be labelled LEAVE_CREATED, not
+      // LEAVE_APPROVED (the old mislabel misclassified a creation as an approval).
       expect(auditLog).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: 'LEAVE_APPROVED',
+          action: 'LEAVE_CREATED',
           userId: 'user-1',
           targetId: 'leave-self-1',
           details: expect.stringMatching(/selfApproved=true/),
           success: true,
         }),
       );
+      // OBS-009 — and the self-approval path must NOT double-emit a durable
+      // LEAVE_CREATED via auditPersistence (auditService already dual-writes one).
+      expect(
+        mockAuditPersistence.log.mock.calls.filter(
+          (c) => c[0]?.action === AuditAction.LEAVE_CREATED,
+        ),
+      ).toHaveLength(0);
     });
 
     it('keeps PENDING status when user does not have leaves:self_approve', async () => {
