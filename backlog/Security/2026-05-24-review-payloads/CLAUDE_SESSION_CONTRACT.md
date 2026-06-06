@@ -59,21 +59,29 @@ passes. A finding (current or from a future adversarial audit) that re-asserts a
 item below is **NOT a vulnerability**: resolve it to **ACCEPTED (intended design)**,
 not blocking/important. Do **NOT** remediate, and do **NOT** tighten the named scope.
 
-- **AB-001 — Org-wide READ of tasks, leaves/congés, and telework is INTENDED (operator decision 2026-06-06).**
+- **AB-001 — Org-wide READ of tasks, leaves/congés, telework, and the user
+  directory (`GET /users*`) is INTENDED (operator decision 2026-06-06).**
   Orchestr'A is a planning tool where every authenticated user is meant to see
-  everyone's tasks, leave, and telework. The near-universal read permissions
-  `tasks:readAll` (21/26 templates), `leaves:readAll` (23/26), `telework:readAll`
-  (23/26) — held down to `BASIC_USER` — are deliberate, NOT a broken-access /
-  horizontal-privilege / IDOR bug.
+  everyone's tasks, leave, telework, and the staff directory. The near-universal
+  read permissions `tasks:readAll` (21/26 templates), `leaves:readAll` (23/26),
+  `telework:readAll` (23/26) — held down to `BASIC_USER` — are deliberate, NOT a
+  broken-access / horizontal-privilege / IDOR bug. The same principle covers the
+  read-only `users:read`-gated user directory.
   - **Covered read paths:** `GET /tasks/assignee/:userId`, `GET /leaves?userId=…`,
     `GET /telework?userId=…` (and the service `findAll` paths gated on the three
-    `*:readAll` permissions above). Equivalent future findings → ACCEPTED.
+    `*:readAll` permissions above), plus the user *directory* reads
+    (`GET /users`, `GET /users/:id`, `GET /users/department/:id`,
+    `GET /users/service/:id`, `GET /users/role/:role`, `GET /users/presence`) —
+    all gated by the read-only `users:read`. Equivalent future findings →
+    ACCEPTED.
   - **Resolves** the "broader exposure" flagged in SEC-030's notes (2026-06-04
     cycle) and the MANIFEST §Delta correction → ACCEPTED.
   - **Does NOT affect / does NOT accept:** SEC-030's actual fixes —
     `GET /leaves/balance/:userId` and `GET /skills/user/:userId` server-side
     managed-scope, and the `leaves:read_balance_any` grant — those target
-    different, non-`*:readAll` endpoints and STAND. Also NOT accepted here: the
-    user *directory* horizontal-scope findings (2026-05-24 `SEC-031` / `SEC-030`
-    on `GET /users*`), and any WRITE/approve/modify scoping. Acceptance is **READ
-    of the three planning domains only.**
+    different, non-`*:readAll`/non-`users:read` endpoints and STAND. NOT accepted:
+    any WRITE / approve / modify / role / scope mutation, including the
+    user-directory WRITE endpoints (`users:create` / `users:update` /
+    `users:delete` / `users:reset_password` / `users:manage_roles`). Acceptance is
+    **READ only** — the three planning domains plus the `users:read`-gated user
+    directory.
