@@ -15734,8 +15734,8 @@ N/A — manual verification
 
 ### COR-065 — Login/register pages fetch `/auth/me/permissions` redundantly — useAuthBootstrap does this on every mount
 
-- **Status:** DONE
-- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
+- **Status:** FALSE_POSITIVE
+- **Disposition:** FALSE-POSITIVE — The `permsRes` fetch and `setAuth` call in login/page.tsx (lines 29-32) and register/page.tsx (lines 41-44) are NOT redundant — they are necessary. `useAuthBootstrap` in AuthProvider.tsx runs with deps=`[]` (line 74 of useAuthBootstrap.ts),
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15778,7 +15778,7 @@ N/A — manual verification via network tab in devtools
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed. useAuthBootstrap (src/hooks/useAuthBootstrap.ts:48-53) fetches both /auth/me and /auth/me/permissions in parallel on every mount via Promise.all. The login page also fetches /auth/me/permissions at line 29-31. Confirmed redundancy.
 
-**Closed_by:** d8426eff
+**Closed_by:** (empty — not a fix; FALSE-POSITIVE)
 
 ---
 
@@ -17668,8 +17668,8 @@ grep -n 'end <= start\|end < start' apps/api/src/tasks/tasks.service.ts
 
 ### SEC-065 — getEventsByRange and findOne RBAC filter defaults to unscoped on null role — inconsistent with findAll
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/events/events.service.ts: In getEventsByRange, replace `if (currentUserId && currentUserRole)` with an unconditional getPermissionsForRole(currentUserRole) call; guard only the where.OR a
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch E; events default-open fix material in d8426eff, anchored)
 - **Phase:** 5
 - **Cluster:** A
 - **Confidence:** primary-only
@@ -17719,7 +17719,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Confidence downgraded from high to medium: currently not exploitable due to PermissionsGuardV2 enforcement. findOne IDOR check at line 390: `if (currentUserId && currentUserRole && !(await this.hasManagementAccess(currentUserRole)))` — same default-open pattern confirmed verbatim. The inconsistency with findAll (lines 277-278 unconditionally calls getPermissionsForRole) is real and confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 6dbb4284
 
 ---
 
