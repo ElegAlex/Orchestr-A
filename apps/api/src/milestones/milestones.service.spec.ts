@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
-import { MilestoneStatus } from 'database';
+import { MilestoneStatus, Prisma } from 'database';
 
 describe('MilestonesService', () => {
   let service: MilestonesService;
@@ -861,6 +861,42 @@ describe('MilestonesService', () => {
       );
 
       expect(result.name).toBe('Member Updated');
+    });
+  });
+
+  // COR-056 — update/remove must catch Prisma P2025 and surface NotFoundException
+  // instead of letting an unhandled error bubble as a 500.
+  describe('COR-056 — update/remove catch P2025 (concurrent delete) → NotFoundException', () => {
+    const p2025 = new Prisma.PrismaClientKnownRequestError(
+      'An operation failed because it depends on one or more records that were required but not found.',
+      { code: 'P2025', clientVersion: 'test' },
+    );
+
+    it('COR-056 — update() throws NotFoundException when milestone.update raises P2025', async () => {
+      // findOne passes (milestone exists at read time), but update hits P2025
+      mockPrismaService.milestone.findUnique.mockResolvedValue({
+        id: '1',
+        name: 'Milestone',
+        tasks: [],
+        project: { id: 'project-1', name: 'Project' },
+      });
+      mockPrismaService.milestone.update.mockRejectedValueOnce(p2025);
+
+      await expect(service.update('1', { name: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('COR-056 — remove() throws NotFoundException when milestone.delete raises P2025', async () => {
+      mockPrismaService.milestone.findUnique.mockResolvedValue({
+        id: '1',
+        name: 'Milestone',
+        tasks: [],
+        project: { id: 'project-1', name: 'Project' },
+      });
+      mockPrismaService.milestone.delete.mockRejectedValueOnce(p2025);
+
+      await expect(service.remove('1')).rejects.toThrow(NotFoundException);
     });
   });
 });

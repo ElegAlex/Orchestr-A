@@ -11901,8 +11901,8 @@ N/A — manual verification (service-level check already enforces this; guard ab
 
 ### COR-053 — update() recurrenceEndDate child-prune runs outside the update transaction, creating a window where pruned children exist alongside a committed new endDate
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/events/events.service.ts — move the `event.deleteMany` block inside the `$transaction` callback (before returning from `tx.event.update`), using `tx.event.deleteMany`. Test: unit test tha
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** primary-only
@@ -12138,8 +12138,8 @@ grep -n 'PrismaClientKnownRequestError\|P2002' apps/api/src/auth/auth.service.ts
 
 ### COR-052 — epics.service update()/remove(): double-read TOCTOU — epic fetched in membership check then again in findOne()
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/epics/epics.service.ts — catch PrismaClientKnownRequestError with code 'P2025' around epic.update/delete and re-throw as NotFoundException('Epic introuvable'). Test: mock prisma.epic.upda
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -12191,8 +12191,8 @@ grep -n 'findOne\|assertProjectMembership\|epic.update\|epic.delete' apps/api/sr
 
 ### COR-054 — addParticipant uses check-then-create pattern susceptible to race; duplicate concurrent request leaks P2002 as HTTP 500
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/events/events.service.ts — wrap `prisma.eventParticipant.create()` in try/catch: map P2002 to BadRequestException('Cet utilisateur est déjà participant'). Alternatively use `upsert` or `c
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -12259,8 +12259,8 @@ grep -n 'P2002\|skipDuplicates\|existingParticipation' apps/api/src/events/event
 
 ### COR-056 — milestones.service update()/remove(): same double-read TOCTOU as epics — unhandled P2025 on concurrent delete
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/milestones/milestones.service.ts — catch PrismaClientKnownRequestError P2025 around milestone.update/delete and re-throw as NotFoundException('Milestone introuvable'). Test: mock prisma.m
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -15301,8 +15301,8 @@ docker exec orchestr-a-db psql -U postgres -d orchestra -c "EXPLAIN SELECT * FRO
 
 ### COR-048 — daysFromNow in MilestonesCompletionService uses fixed MS_PER_DAY, off-by-one across DST transitions
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). milestones-completion.service.ts lines 101-102: replace with UTC midnight diff — `const nowMidnightUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()); const dueMidnightUTC = Dat
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
 - **Phase:** 4
 - **Cluster:** J
 - **Confidence:** primary-only
@@ -15674,8 +15674,8 @@ docker compose up -d && ss -tlnp | grep -E '5432|6379'
 
 ### COR-049 — SnapshotSchedulerService creates a Redis connection in constructor with no shutdown hook
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). snapshot-scheduler.service.ts: add `OnModuleDestroy` to imports from `@nestjs/common`, add `implements OnModuleDestroy` to class declaration, add `async onModuleDestroy() { await this.redis.quit(); }`
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15734,8 +15734,8 @@ N/A — manual verification
 
 ### COR-065 — Login/register pages fetch `/auth/me/permissions` redundantly — useAuthBootstrap does this on every mount
 
-- **Status:** FALSE_POSITIVE
-- **Disposition:** FALSE-POSITIVE — FALSE-POSITIVE. The `permsRes` fetch and `setAuth` call in login/page.tsx (lines 29-32) and register/page.tsx (lines 41-44) are NOT redundant — they are necessary. `useAuthBootstrap` in AuthProvider.tsx runs with deps=`[]` (line 74 of useAuthBootstrap.ts),
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -16546,8 +16546,8 @@ grep -n 'executeRawUnsafe' apps/api/src/scripts/normalize-action-codes.ts apps/a
 
 ### COR-058 — captureSnapshots() uses hardcoded string literal 'ACTIVE' instead of ProjectStatus enum
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). projects.service.ts line 1218: replace `{ status: 'ACTIVE' }` with `{ status: ProjectStatus.ACTIVE }`. No frontend response-shape change. TypeScript compile verification: rename `ProjectStatus.ACTIVE`
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
 - **Phase:** 4
 - **Cluster:** —
 - **Confidence:** primary-only
@@ -16593,8 +16593,8 @@ grep -n "status: 'ACTIVE'" apps/api/src/projects/projects.service.ts
 
 ### COR-063 — update(): progress not recalculated when status changes and subtasks exist
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). tasks.service.ts update() method: after the existing progress spread (lines 838-841), add an unconditional override when status is DONE: `...(taskData.status === TaskStatus.DONE && { progress: 100 })`
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
 - **Phase:** 4
 - **Cluster:** —
 - **Confidence:** primary-only
@@ -17615,8 +17615,8 @@ grep -n 'fetchManagersAndDepartments' apps/web/app/[locale]/projects/page.tsx
 
 ### SA-COR-009 — validateImport (tasks): end <= start is classified as a warning, but create() rejects end < start as an error — inconsistent boundary semantics
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). tasks.service.ts line 1847: change `end <= start` to `end < start` and update the message at line 1850 from 'La date de fin est antérieure ou égale à la date de début' to 'La date de fin est antérieur
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch D)
 - **Phase:** 4
 - **Cluster:** —
 - **Confidence:** secondary-only

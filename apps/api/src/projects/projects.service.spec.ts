@@ -2189,8 +2189,9 @@ describe('ProjectsService', () => {
       await service.captureSnapshots();
 
       expect(mockPrismaService.project.findMany).toHaveBeenCalledTimes(1);
+      // COR-058: must use ProjectStatus enum, not raw string 'ACTIVE'
       expect(mockPrismaService.project.findMany).toHaveBeenCalledWith({
-        where: { status: 'ACTIVE' },
+        where: { status: ProjectStatus.ACTIVE },
         include: {
           tasks: { select: { status: true } },
           milestones: { select: { status: true, dueDate: true } },

@@ -98,8 +98,22 @@ export class MilestonesCompletionService {
       else if (isPastDue) status = 'OVERDUE';
       else status = 'UPCOMING';
 
-      const dayMs = milestone.dueDate.getTime() - now.getTime();
-      const daysFromNow = Math.round(dayMs / MS_PER_DAY);
+      // COR-048: use UTC-midnight diff to avoid DST off-by-one errors.
+      // Raw (now.getTime() - due.getTime()) / MS_PER_DAY can be fractional when
+      // "now" is not at midnight, causing Math.round to return the wrong calendar day.
+      const nowMidnightUTC = Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+      );
+      const dueMidnightUTC = Date.UTC(
+        milestone.dueDate.getUTCFullYear(),
+        milestone.dueDate.getUTCMonth(),
+        milestone.dueDate.getUTCDate(),
+      );
+      const daysFromNow = Math.round(
+        (dueMidnightUTC - nowMidnightUTC) / MS_PER_DAY,
+      );
 
       const projectAgg = projectMap.get(milestone.project.id)!;
 

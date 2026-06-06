@@ -397,6 +397,57 @@ describe('MilestonesCompletionService', () => {
   });
 
   // -------------------------------------------------------------------------
+  // COR-048 — daysFromNow uses UTC-midnight diff, not raw ms delta
+  // -------------------------------------------------------------------------
+  it('COR-048 — daysFromNow is 1 when due date is next UTC midnight and now is 18:00 UTC', async () => {
+    // now = 2024-03-10T18:00:00Z, dueDate = 2024-03-11T00:00:00Z (next midnight)
+    // Raw-ms approach: Math.round(6h / 24h) = Math.round(0.25) = 0  ← WRONG
+    // UTC-midnight approach: 2024-03-11 - 2024-03-10 = 1             ← CORRECT
+    const fixedNow = new Date('2024-03-10T18:00:00.000Z');
+    const dueDate = new Date('2024-03-11T00:00:00.000Z');
+
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedNow);
+
+    mockPrisma.milestone.findMany.mockResolvedValue([
+      makeMilestone({
+        id: 'ms-cor048-a',
+        status: MilestoneStatus.PENDING,
+        dueDate,
+      }),
+    ]);
+
+    const result = await service.getMilestonesCompletion();
+    vi.useRealTimers();
+
+    expect(result.details[0].daysFromNow).toBe(1);
+  });
+
+  it('COR-048 — daysFromNow is 2 when due date is 30h ahead (now=18:00 UTC, due=next+1 midnight)', async () => {
+    // now = 2024-03-10T18:00:00Z, dueDate = 2024-03-12T00:00:00Z (30h ahead)
+    // Raw-ms approach: Math.round(30h / 24h) = Math.round(1.25) = 1  ← WRONG
+    // UTC-midnight approach: 2024-03-12 - 2024-03-10 = 2             ← CORRECT
+    const fixedNow = new Date('2024-03-10T18:00:00.000Z');
+    const dueDate = new Date('2024-03-12T00:00:00.000Z');
+
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedNow);
+
+    mockPrisma.milestone.findMany.mockResolvedValue([
+      makeMilestone({
+        id: 'ms-cor048-b',
+        status: MilestoneStatus.PENDING,
+        dueDate,
+      }),
+    ]);
+
+    const result = await service.getMilestonesCompletion();
+    vi.useRealTimers();
+
+    expect(result.details[0].daysFromNow).toBe(2);
+  });
+
+  // -------------------------------------------------------------------------
   // 8. Projects with 0 milestones are excluded from byProject
   // -------------------------------------------------------------------------
   it('excludes projects with no milestones from byProject', async () => {

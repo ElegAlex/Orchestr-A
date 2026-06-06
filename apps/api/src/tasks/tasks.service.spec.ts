@@ -1623,7 +1623,7 @@ describe('TasksService', () => {
       expect(result.summary.errors).toBe(1);
     });
 
-    it('should warn when end date is before or equal to start date', async () => {
+    it('should warn when end date is strictly before start date (SA-COR-009: <= changed to <)', async () => {
       setupValidationMocks();
 
       const tasks = [
@@ -1633,7 +1633,9 @@ describe('TasksService', () => {
       const result = await service.validateImport(projectId, tasks as any);
 
       expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0].messages[0]).toContain('antérieure ou égale');
+      expect(result.warnings[0].messages[0]).toContain(
+        'La date de fin est antérieure à la date de début',
+      );
       expect(result.summary.warnings).toBe(1);
     });
 
@@ -2612,6 +2614,107 @@ describe('TasksService', () => {
       expect(() =>
         validatePayloadForAction(AuditAction.TASK_DELETED, call?.payload),
       ).not.toThrow();
+    });
+  });
+
+  // COR-063 — update() with status=DONE must set progress=100 even when task has subtasks.
+  // When subtasks exist, the existing spread skips progress recalculation; adding
+  // an unconditional DONE override is required.
+  describe('COR-063 — update() with status=DONE on a task with subtasks sets progress=100', () => {
+    it('COR-063 — progress is 100 when status=DONE and subtask count > 0', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        status: TaskStatus.IN_PROGRESS,
+        progress: 40,
+      });
+      // subtask count > 0: the existing spread would skip getTaskProgress()
+      mockPrismaService.subtask.count.mockResolvedValue(2);
+      mockPrismaService.task.update.mockResolvedValue({
+        id: 'task-1',
+        status: TaskStatus.DONE,
+        progress: 100,
+      });
+
+      await service.update('task-1', { status: TaskStatus.DONE });
+
+      expect(mockPrismaService.task.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ progress: 100 }) as object,
+        }),
+      );
+    });
+
+    it('COR-063 — progress is NOT overridden to 100 when status=IN_PROGRESS with subtasks', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        status: TaskStatus.TODO,
+        progress: 0,
+      });
+      mockPrismaService.subtask.count.mockResolvedValue(2);
+      mockPrismaService.task.update.mockResolvedValue({
+        id: 'task-1',
+        status: TaskStatus.IN_PROGRESS,
+        progress: 25,
+      });
+
+      await service.update('task-1', { status: TaskStatus.IN_PROGRESS });
+
+      const callArg = mockPrismaService.task.update.mock.calls[0][0] as {
+        data: Record<string, unknown>;
+      };
+      // progress should NOT be forced to 100
+      expect(callArg.data.progress).not.toBe(100);
+    });
+  });
+
+  // SA-COR-009 — validateImport must use strict < (not <=) for date comparison
+  // to match the runtime constraint in create(). Same-day tasks are valid.
+  describe('SA-COR-009 — validateImport: same-day start/end is valid (strict < not <=)', () => {
+    it('SA-COR-009 — startDate === endDate produces no warning', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Test Project',
+      });
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      const result = await service.validateImport('project-1', [
+        {
+          title: 'Same Day Task',
+          startDate: '2099-06-15',
+          endDate: '2099-06-15',
+        } as any,
+      ]);
+
+      // Before fix: classified as warning because end <= start.
+      // After fix: classified as valid because end is NOT < start.
+      expect(result.warnings).toHaveLength(0);
+      expect(result.valid).toHaveLength(1);
+      expect(result.valid[0].status).toBe('valid');
+    });
+
+    it('SA-COR-009 — endDate < startDate still produces a warning', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Test Project',
+      });
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findMany.mockResolvedValue([]);
+      mockPrismaService.task.findMany.mockResolvedValue([]);
+
+      const result = await service.validateImport('project-1', [
+        {
+          title: 'Inverted Date Task',
+          startDate: '2099-06-15',
+          endDate: '2099-06-14',
+        } as any,
+      ]);
+
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0].messages[0]).toMatch(
+        /La date de fin est antérieure à la date de début/,
+      );
     });
   });
 });

@@ -4,6 +4,7 @@ import { EpicsService } from './epics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from 'database';
 
 describe('EpicsService', () => {
   let service: EpicsService;
@@ -435,6 +436,42 @@ describe('EpicsService', () => {
       // The assertProjectMembership findUnique must NOT include members
       const membershipCall = mockPrismaService.epic.findUnique.mock.calls[0][0];
       expect(membershipCall).not.toHaveProperty('include');
+    });
+  });
+
+  // COR-052 — update/remove must catch Prisma P2025 and surface NotFoundException
+  // instead of letting an unhandled error bubble as a 500.
+  describe('COR-052 — update/remove catch P2025 (concurrent delete) → NotFoundException', () => {
+    const p2025 = new Prisma.PrismaClientKnownRequestError(
+      'An operation failed because it depends on one or more records that were required but not found.',
+      { code: 'P2025', clientVersion: 'test' },
+    );
+
+    it('COR-052 — update() throws NotFoundException when epic.update raises P2025', async () => {
+      // findOne passes (epic exists at read time), but update hits P2025
+      mockPrismaService.epic.findUnique.mockResolvedValue({
+        id: '1',
+        name: 'Epic',
+        tasks: [],
+        project: { id: 'project-1', name: 'Project' },
+      });
+      mockPrismaService.epic.update.mockRejectedValueOnce(p2025);
+
+      await expect(service.update('1', { name: 'Updated' })).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('COR-052 — remove() throws NotFoundException when epic.delete raises P2025', async () => {
+      mockPrismaService.epic.findUnique.mockResolvedValue({
+        id: '1',
+        name: 'Epic',
+        tasks: [],
+        project: { id: 'project-1', name: 'Project' },
+      });
+      mockPrismaService.epic.delete.mockRejectedValueOnce(p2025);
+
+      await expect(service.remove('1')).rejects.toThrow(NotFoundException);
     });
   });
 });

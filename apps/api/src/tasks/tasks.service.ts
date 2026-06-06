@@ -839,6 +839,10 @@ export class TasksService {
             (await tx.subtask.count({ where: { taskId: id } })) === 0 && {
               progress: getTaskProgress(taskData.status),
             }),
+          // COR-063 — unconditional override: a DONE task must always show 100%
+          // regardless of subtask count (the spread above is skipped when
+          // subtasks exist, leaving progress stale).
+          ...(taskData.status === TaskStatus.DONE && { progress: 100 }),
         },
         include: {
           project: {
@@ -1844,10 +1848,10 @@ export class TasksService {
       if (taskData.startDate && taskData.endDate) {
         const start = new Date(taskData.startDate);
         const end = new Date(taskData.endDate);
-        if (end <= start) {
+        if (end < start) {
           previewItem.status = 'warning';
           previewItem.messages.push(
-            'La date de fin est antérieure ou égale à la date de début',
+            'La date de fin est antérieure à la date de début',
           );
         }
       }

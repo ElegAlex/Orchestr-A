@@ -28,6 +28,8 @@ const redisInstance = {
       return 'OK';
     },
   ),
+  // COR-049: quit must be called on module destroy to prevent open handle leaks
+  quit: vi.fn().mockResolvedValue('OK'),
 };
 
 vi.mock('ioredis', () => {
@@ -159,5 +161,20 @@ describe('SnapshotSchedulerService', () => {
     // Should NOT throw — a Redis error must not prevent the snapshot from running.
     await expect(service.captureDailySnapshots()).resolves.toBeUndefined();
     expect(mockProjectsService.captureSnapshots).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * COR-049 — Redis connection must be closed on module destroy.
+   *
+   * Without onModuleDestroy, the ioredis connection is left open when NestJS
+   * tears down the module, preventing the process from exiting cleanly and
+   * causing 'open handles' warnings in the test runner.
+   */
+  it('COR-049 — onModuleDestroy calls redis.quit() to close the connection', async () => {
+    vi.clearAllMocks();
+
+    await (service as any).onModuleDestroy();
+
+    expect(redisInstance.quit).toHaveBeenCalledTimes(1);
   });
 });

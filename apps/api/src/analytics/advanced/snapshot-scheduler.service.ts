@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { ProjectsService } from '../../projects/projects.service';
@@ -25,7 +30,7 @@ const LEADER_LOCK_KEY = 'snapshot:leader-lock';
 const LEADER_LOCK_TTL_SECONDS = 600; // 10 minutes
 
 @Injectable()
-export class SnapshotSchedulerService implements OnModuleInit {
+export class SnapshotSchedulerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SnapshotSchedulerService.name);
   private readonly redis: Redis;
 
@@ -48,6 +53,11 @@ export class SnapshotSchedulerService implements OnModuleInit {
     this.logger.log(
       `Snapshot capture cron registered: '${SNAPSHOT_CRON}' (timezone ${SNAPSHOT_TZ})`,
     );
+  }
+
+  // COR-049: close the Redis connection on graceful shutdown to avoid open-handle leaks.
+  async onModuleDestroy() {
+    await this.redis.quit();
   }
 
   @Cron(SNAPSHOT_CRON, { timeZone: SNAPSHOT_TZ })

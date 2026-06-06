@@ -22,6 +22,17 @@ import {
 } from './dto/import-milestones.dto';
 import { MilestoneStatus, Prisma } from 'database';
 
+// helper — centralises P2025 → NotFoundException translation
+function rethrowP2025(err: unknown, message: string): never {
+  if (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === 'P2025'
+  ) {
+    throw new NotFoundException(message);
+  }
+  throw err;
+}
+
 @Injectable()
 export class MilestonesService {
   private readonly logger = new Logger(MilestonesService.name);
@@ -111,14 +122,18 @@ export class MilestonesService {
     await this.findOne(id);
     const { dueDate, ...data } = updateMilestoneDto;
 
-    return this.prisma.milestone.update({
-      where: { id },
-      data: {
-        ...data,
-        ...(dueDate && { dueDate: new Date(dueDate) }),
-      },
-      include: { project: { select: { id: true, name: true } } },
-    });
+    try {
+      return await this.prisma.milestone.update({
+        where: { id },
+        data: {
+          ...data,
+          ...(dueDate && { dueDate: new Date(dueDate) }),
+        },
+        include: { project: { select: { id: true, name: true } } },
+      });
+    } catch (err) {
+      rethrowP2025(err, 'Milestone introuvable');
+    }
   }
 
   async remove(
@@ -130,7 +145,11 @@ export class MilestonesService {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }
     await this.findOne(id);
-    await this.prisma.milestone.delete({ where: { id } });
+    try {
+      await this.prisma.milestone.delete({ where: { id } });
+    } catch (err) {
+      rethrowP2025(err, 'Milestone introuvable');
+    }
     return { message: 'Milestone supprimé avec succès' };
   }
 

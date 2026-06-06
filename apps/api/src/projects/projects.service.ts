@@ -1215,7 +1215,7 @@ export class ProjectsService {
    */
   async captureSnapshots() {
     const projects = await this.prisma.project.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: ProjectStatus.ACTIVE },
       include: {
         tasks: { select: { status: true } },
         milestones: { select: { status: true, dueDate: true } },

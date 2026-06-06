@@ -49,12 +49,6 @@ export class EventsService {
     private readonly ownershipService: OwnershipService,
   ) {}
 
-  private async hasManagementAccess(role: string): Promise<boolean> {
-    const permissions =
-      await this.permissionsService.getPermissionsForRole(role);
-    return permissions.includes('events:readAll');
-  }
-
   /**
    * Defense-in-depth ownership enforcement for mutations.
    * The OwnershipGuard already protects these routes, but service-layer checks
@@ -433,20 +427,22 @@ export class EventsService {
       throw new NotFoundException('Événement introuvable');
     }
 
-    // IDOR protection: users without events:readAll can only see events they created or participate in
-    if (
-      currentUserId &&
-      currentUserRole &&
-      !(await this.hasManagementAccess(currentUserRole))
-    ) {
-      const isCreator = event.createdById === currentUserId;
-      const isParticipant = event.participants.some(
-        (p) => p.user.id === currentUserId,
-      );
-      if (!isCreator && !isParticipant) {
-        throw new ForbiddenException(
-          "Vous n'avez pas la permission de consulter cet événement",
+    // COR-065 — IDOR protection: permission lookup is unconditional (including
+    // when role is null) so a null-role caller is never default-open. Only the
+    // userId-dependent creator/participant check is guarded by `if (currentUserId)`.
+    if (currentUserId) {
+      const permissions =
+        await this.permissionsService.getPermissionsForRole(currentUserRole);
+      if (!permissions.includes('events:readAll')) {
+        const isCreator = event.createdById === currentUserId;
+        const isParticipant = event.participants.some(
+          (p) => p.user.id === currentUserId,
         );
+        if (!isCreator && !isParticipant) {
+          throw new ForbiddenException(
+            "Vous n'avez pas la permission de consulter cet événement",
+          );
+        }
       }
     }
 
@@ -542,7 +538,7 @@ export class EventsService {
         }
 
         // Mettre à jour l'événement
-        return tx.event.update({
+        const updatedEvent = await tx.event.update({
           where: { id },
           data: {
             ...eventData,
@@ -580,28 +576,32 @@ export class EventsService {
             },
           },
         });
+
+        // COR-053 — Si recurrenceEndDate est mise à jour sur un événement parent
+        // récurrent, supprimer les enfants dont la date dépasse la nouvelle date
+        // de fin à l'intérieur de la transaction, de façon atomique avec la mise
+        // à jour du parent.
+        if (
+          updateEventDto.recurrenceEndDate &&
+          existingEvent.isRecurring &&
+          !existingEvent.parentEventId
+        ) {
+          const newEndDate = new Date(updateEventDto.recurrenceEndDate);
+          await tx.event.deleteMany({
+            where: {
+              parentEventId: id,
+              date: { gt: newEndDate },
+            },
+          });
+        }
+
+        return updatedEvent;
       });
     } catch (err) {
       if (isEventParentCycleViolation(err)) {
         throw new ConflictException(EVENT_PARENT_CYCLE_MESSAGE);
       }
       throw err;
-    }
-
-    // Si recurrenceEndDate est mise à jour sur un événement parent récurrent,
-    // supprimer les enfants dont la date dépasse la nouvelle date de fin
-    if (
-      updateEventDto.recurrenceEndDate &&
-      existingEvent.isRecurring &&
-      !existingEvent.parentEventId
-    ) {
-      const newEndDate = new Date(updateEventDto.recurrenceEndDate);
-      await this.prisma.event.deleteMany({
-        where: {
-          parentEventId: id,
-          date: { gt: newEndDate },
-        },
-      });
     }
 
     return event;
@@ -735,11 +735,13 @@ export class EventsService {
       },
     };
 
-    // Scope events for non-management users: only their own or participated
-    if (currentUserId && currentUserRole) {
-      const permissions =
-        await this.permissionsService.getPermissionsForRole(currentUserRole);
-      if (!permissions.includes('events:readAll')) {
+    // COR-065 — scope filter must be unconditional: resolve permissions for any
+    // role (including null) so a caller with no role is never default-open.
+    // Guard only the userId-dependent where.OR assignment with `if (currentUserId)`.
+    const rangePermissions =
+      await this.permissionsService.getPermissionsForRole(currentUserRole);
+    if (!rangePermissions.includes('events:readAll')) {
+      if (currentUserId) {
         where.OR = [
           { participants: { some: { userId: currentUserId } } },
           { createdById: currentUserId },
@@ -844,12 +846,25 @@ export class EventsService {
     }
 
     // Ajouter le participant
-    await this.prisma.eventParticipant.create({
-      data: {
-        eventId,
-        userId,
-      },
-    });
+    // COR-054 — concurrent duplicate requests both pass the findUnique guard
+    // before either write commits; the second hits the DB unique constraint and
+    // Prisma raises P2002. Map it to BadRequestException instead of HTTP 500.
+    try {
+      await this.prisma.eventParticipant.create({
+        data: {
+          eventId,
+          userId,
+        },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new BadRequestException('Cet utilisateur est déjà participant');
+      }
+      throw err;
+    }
 
     return { message: 'Participant ajouté avec succès' };
   }

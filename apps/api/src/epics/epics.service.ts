@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../rbac/permissions.service';
+import { Prisma } from 'database';
 import { CreateEpicDto } from './dto/create-epic.dto';
 import { UpdateEpicDto } from './dto/update-epic.dto';
 
@@ -100,11 +101,21 @@ export class EpicsService {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }
     await this.findOne(id);
-    return this.prisma.epic.update({
-      where: { id },
-      data: updateEpicDto,
-      include: { project: { select: { id: true, name: true } } },
-    });
+    try {
+      return await this.prisma.epic.update({
+        where: { id },
+        data: updateEpicDto,
+        include: { project: { select: { id: true, name: true } } },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025'
+      ) {
+        throw new NotFoundException('Epic introuvable');
+      }
+      throw err;
+    }
   }
 
   async remove(
@@ -116,7 +127,17 @@ export class EpicsService {
       await this.assertProjectMembership(id, currentUserId, currentUserRole);
     }
     await this.findOne(id);
-    await this.prisma.epic.delete({ where: { id } });
+    try {
+      await this.prisma.epic.delete({ where: { id } });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025'
+      ) {
+        throw new NotFoundException('Epic introuvable');
+      }
+      throw err;
+    }
     return { message: 'Epic supprimé avec succès' };
   }
 

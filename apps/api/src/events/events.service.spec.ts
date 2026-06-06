@@ -9,6 +9,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
+import { Prisma } from 'database';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 
@@ -29,6 +30,7 @@ describe('EventsService', () => {
       findUnique: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+      deleteMany: vi.fn(),
     },
     project: {
       findUnique: vi.fn(),
@@ -479,6 +481,27 @@ describe('EventsService', () => {
         service.findOne('invalid-id', 'user-1', 'ADMIN'),
       ).rejects.toThrow(NotFoundException);
     });
+
+    // COR-065 — findOne IDOR check must apply even when currentUserRole is null.
+    // Pre-fix: `if (currentUserId && currentUserRole)` — short-circuits when role
+    // is null, granting any authenticated user unscoped read access.
+    // Post-fix: permission lookup is unconditional; ForbiddenException thrown when
+    // the caller is neither creator nor participant and has no events:readAll.
+    it('COR-065 — findOne throws ForbiddenException for non-participant with null role', async () => {
+      // Event not created by currentUser and no participants matching
+      const eventOwnedByOther = {
+        ...mockEvent,
+        createdById: 'other-user',
+        participants: [],
+      };
+      mockPrismaService.event.findUnique.mockResolvedValue(eventOwnedByOther);
+      // Null role → no events:readAll permission
+      permissionsService.getPermissionsForRole.mockResolvedValue([]);
+
+      await expect(service.findOne('1', 'user-1', null)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
   });
 
   describe('update', () => {
@@ -534,6 +557,46 @@ describe('EventsService', () => {
         ConflictException,
       );
     });
+
+    // COR-053 — recurrenceEndDate child-prune must run INSIDE the $transaction,
+    // not after it. Witness: capture the deleteMany call count at the moment the
+    // tx callback returns; it must already be 1 (inside) vs 0 (outside/post-fix).
+    it('COR-053 — child prune deleteMany fires inside the $transaction callback (not after)', async () => {
+      const recurringParent = {
+        ...mockEvent,
+        isRecurring: true,
+        parentEventId: null,
+      };
+      const newEndDate = '2025-11-20';
+      const updateEventDto: UpdateEventDto = {
+        recurrenceEndDate: newEndDate,
+      };
+
+      mockPrismaService.event.findUnique.mockResolvedValue(recurringParent);
+      mockPrismaService.event.update.mockResolvedValue({
+        ...recurringParent,
+        recurrenceEndDate: new Date(newEndDate),
+      });
+      mockPrismaService.event.deleteMany.mockResolvedValue({ count: 1 });
+      // Use isOwner=true so ensureCanMutate passes without needing manage_any
+      ownershipService.isOwner.mockResolvedValue(true);
+
+      // Track how many deleteMany calls had happened at the moment the tx
+      // callback returned its result. Pre-fix = 0 (runs after), post-fix = 1.
+      let deleteManyCallCountAtTxReturn = -1;
+      mockPrismaService.$transaction.mockImplementation(
+        async (cb: (tx: typeof mockPrismaService) => Promise<unknown>) => {
+          const result = await cb(mockPrismaService);
+          deleteManyCallCountAtTxReturn =
+            mockPrismaService.event.deleteMany.mock.calls.length;
+          return result;
+        },
+      );
+
+      await service.update('1', updateEventDto, 'user-1', 'ADMIN');
+
+      expect(deleteManyCallCountAtTxReturn).toBe(1);
+    });
   });
 
   describe('remove', () => {
@@ -582,6 +645,29 @@ describe('EventsService', () => {
         service.getEventsByRange('2025-11-30', '2025-11-01'),
       ).rejects.toThrow(BadRequestException);
     });
+
+    // COR-065 — getEventsByRange must apply scope filter even when role is null.
+    // Pre-fix: `if (currentUserId && currentUserRole)` is default-OPEN when role
+    // is null → no where.OR → unscoped access granted to every event.
+    // Post-fix: permissions always resolved; where.OR set when !events:readAll.
+    it('COR-065 — getEventsByRange scopes results when currentUserRole is null (not default-open)', async () => {
+      mockPrismaService.event.findMany.mockResolvedValue([]);
+      mockPrismaService.event.count.mockResolvedValue(0);
+      // Role is null → getPermissionsForRole returns empty list (no events:readAll)
+      permissionsService.getPermissionsForRole.mockResolvedValue([]);
+
+      await service.getEventsByRange(
+        '2025-11-01',
+        '2025-11-30',
+        'user-1',
+        null,
+      );
+
+      const call = (prisma.event.findMany as ReturnType<typeof vi.fn>).mock
+        .calls[0][0];
+      // Must have a scoped where.OR — not unscoped
+      expect(call.where).toHaveProperty('OR');
+    });
   });
 
   describe('addParticipant', () => {
@@ -611,6 +697,32 @@ describe('EventsService', () => {
       await expect(service.addParticipant('1', 'user-2')).rejects.toThrow(
         BadRequestException,
       );
+    });
+
+    // COR-054 — concurrent duplicate addParticipant races past the findUnique
+    // check; the second create hits the DB unique constraint (P2002) and must
+    // surface as BadRequestException(400), not a raw 500.
+    it('COR-054 — P2002 from eventParticipant.create is mapped to BadRequestException', async () => {
+      mockPrismaService.event.findUnique.mockResolvedValue(mockEvent);
+      ownershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-2' });
+      // No existing participation (passed the sequential guard)
+      mockPrismaService.eventParticipant.findUnique.mockResolvedValue(null);
+      // But the DB create throws P2002 (concurrent race)
+      mockPrismaService.eventParticipant.create.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`eventId`,`userId`)',
+          {
+            code: 'P2002',
+            clientVersion: 'test',
+            meta: { target: ['eventId', 'userId'] },
+          },
+        ),
+      );
+
+      await expect(
+        service.addParticipant('1', 'user-2', 'user-1', 'ADMIN'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
