@@ -45,6 +45,8 @@ export { AuditAction };
  *               triggering actor for a bulk generation (OBS-013).
  *   - `Client` — client (commanditaire) lifecycle + project↔client links. The
  *               subject is a row in the `clients` table (OBS-004).
+ *   - `Settings` — application settings write. The subject is the setting key in
+ *               the `app_settings` table (OBS-011).
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
@@ -64,6 +66,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   | 'Task'
   | 'Telework'
   | 'Client'
+  | 'Settings'
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
@@ -120,6 +123,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.CLIENT_DELETED]: 'Client',
   [AuditAction.CLIENT_ASSIGNED_TO_PROJECT]: 'Client',
   [AuditAction.CLIENT_REMOVED_FROM_PROJECT]: 'Client',
+  [AuditAction.SETTINGS_CHANGED]: 'Settings',
 };
 
 /**

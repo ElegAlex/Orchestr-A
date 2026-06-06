@@ -14,6 +14,7 @@ import {
   BulkUpdateSettingsDto,
 } from './dto/update-setting.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Settings')
 @Controller('settings')
@@ -51,6 +52,7 @@ export class SettingsController {
   async update(
     @Param('key') key: string,
     @Body() updateSettingDto: UpdateSettingDto,
+    @CurrentUser('id') actorId: string,
   ) {
     // Parse la valeur si c'est du JSON
     let value: unknown;
@@ -64,6 +66,7 @@ export class SettingsController {
       key,
       value,
       updateSettingDto.description,
+      actorId,
     );
   }
 
@@ -73,8 +76,11 @@ export class SettingsController {
     summary: 'Mettre à jour plusieurs paramètres (Admin uniquement)',
   })
   @ApiBearerAuth()
-  async bulkUpdate(@Body() bulkUpdateDto: BulkUpdateSettingsDto) {
-    return this.settingsService.bulkUpdate(bulkUpdateDto.settings);
+  async bulkUpdate(
+    @Body() bulkUpdateDto: BulkUpdateSettingsDto,
+    @CurrentUser('id') actorId: string,
+  ) {
+    return this.settingsService.bulkUpdate(bulkUpdateDto.settings, actorId);
   }
 
   @Post(':key/reset')
@@ -84,8 +90,11 @@ export class SettingsController {
       'Réinitialiser un paramètre à sa valeur par défaut (Admin uniquement)',
   })
   @ApiBearerAuth()
-  async resetToDefault(@Param('key') key: string) {
-    return this.settingsService.resetToDefault(key);
+  async resetToDefault(
+    @Param('key') key: string,
+    @CurrentUser('id') actorId: string,
+  ) {
+    return this.settingsService.resetToDefault(key, actorId);
   }
 
   @Post('reset-all')
@@ -94,8 +103,8 @@ export class SettingsController {
     summary: 'Réinitialiser tous les paramètres (Admin uniquement)',
   })
   @ApiBearerAuth()
-  async resetAllToDefaults() {
-    return this.settingsService.resetAllToDefaults();
+  async resetAllToDefaults(@CurrentUser('id') actorId: string) {
+    return this.settingsService.resetAllToDefaults(actorId);
   }
 
   @Delete(':key')
@@ -104,7 +113,7 @@ export class SettingsController {
     summary: 'Supprimer un paramètre personnalisé (Admin uniquement)',
   })
   @ApiBearerAuth()
-  async remove(@Param('key') key: string) {
-    return this.settingsService.remove(key);
+  async remove(@Param('key') key: string, @CurrentUser('id') actorId: string) {
+    return this.settingsService.remove(key, actorId);
   }
 }

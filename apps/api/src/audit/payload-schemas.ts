@@ -315,6 +315,13 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
   [AuditAction.CLIENT_REMOVED_FROM_PROJECT]: z
     .object({ projectId: z.string(), clientId: z.string() })
     .strict(),
+
+  // Settings write (OBS-011). `key` is the setting key; before/after carry the
+  // prior and new parsed values (before=null for a brand-new key, after=null on
+  // a custom-key delete).
+  [AuditAction.SETTINGS_CHANGED]: z
+    .object({ key: z.string(), before: snapshot, after: snapshot })
+    .strict(),
 } satisfies Record<AuditAction, z.ZodTypeAny>;
 
 /**

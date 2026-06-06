@@ -142,4 +142,9 @@ export enum AuditAction {
   CLIENT_DELETED = 'CLIENT_DELETED',
   CLIENT_ASSIGNED_TO_PROJECT = 'CLIENT_ASSIGNED_TO_PROJECT',
   CLIENT_REMOVED_FROM_PROJECT = 'CLIENT_REMOVED_FROM_PROJECT',
+  // OBS-011 — application settings write (SettingsService). Settings carry
+  // security-relevant values (maxTeleworkDaysPerWeek, defaultLeaveDays); a change
+  // that affects entitlements must be auditable. One action with before/after in
+  // the payload (after=null on a custom-key delete); entityId = the setting key.
+  SETTINGS_CHANGED = 'SETTINGS_CHANGED',
 }

@@ -5620,7 +5620,7 @@ grep -n 'auditPersistence\|auditService\|AuditAction' apps/api/src/projects/proj
 
 ### OBS-011 — settings: all write operations emit no audit_log row and do not capture actor identity
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -5669,6 +5669,7 @@ N/A — manual verification
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code at lines 235-265 matches verbatim. No AuditPersistenceService import or injection found in settings.service.ts. AuditAction enum has no SETTINGS_CHANGED member. The controller does not use @CurrentUser on any mutating handler, so the service signature change is a prerequisite for actor attribution.
+- **2026-06-06 — DONE.** Audit-emit cluster slice 7. Added `SETTINGS_CHANGED` (entityType `Settings`, entityId=key) and injected `AuditPersistenceService`. **Single chokepoint:** the emit lives in `update()` (reads the prior value first → before/after) and `bulkUpdate` / `resetToDefault` / `resetAllToDefaults` all funnel through it → AC#1 (PUT), AC#2 (one row per bulk key), AC#3 (one row per reset-all key) all covered. The custom-key `remove()` delete path emits separately (before=value, after=null). **Actor attribution (the prerequisite the note flagged):** added an `actorId` param (last, optional) to all 5 service methods and threaded `@CurrentUser('id')` into all 5 controller write handlers (PUT/:key, POST/bulk, POST/:key/reset, POST/reset-all, DELETE/:key) → AC#4. No settings.controller.spec exists, so no controller-spec churn. Witnesses (settings.service.spec, 3 tests: update before/after, bulk one-per-key, remove after=null) capture each emit + real `validatePayloadForAction` (RED-by-absence). Gate green: nest build + api vitest 2251 + lint 0-err + coherence.
 
 **Closed_by:** (empty — TODO)
 

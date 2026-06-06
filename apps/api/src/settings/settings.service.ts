@@ -1,6 +1,8 @@
 import { Injectable, OnModuleInit, BadRequestException } from '@nestjs/common';
 import { AppSettingsCategory } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit-action.enum';
 
 // Types for settings
 type SettingValue = string | number | boolean | number[];
@@ -86,7 +88,10 @@ const DEFAULT_SETTINGS: Record<string, SettingConfig> = {
 
 @Injectable()
 export class SettingsService implements OnModuleInit {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditPersistence: AuditPersistenceService,
+  ) {}
 
   /**
    * Initialiser les paramètres par défaut au démarrage
@@ -232,10 +237,23 @@ export class SettingsService implements OnModuleInit {
     return SettingsService.ALLOWED_KEYS.includes(key);
   }
 
-  async update(key: string, value: unknown, description?: string) {
+  async update(
+    key: string,
+    value: unknown,
+    description?: string,
+    actorId?: string,
+  ) {
     if (!SettingsService.isKnownKey(key)) {
       throw new BadRequestException(`Unknown setting key: ${key}`);
     }
+
+    // OBS-011 — read the prior value first so the audit row carries before/after.
+    // Validation (isKnownKey) runs before any DB read, so a rejected key never
+    // touches the DB. before=null when the key is being created for the first time.
+    const previous = await this.prisma.appSettings.findUnique({
+      where: { key },
+    });
+    const before = previous ? this.parseValue(previous.value) : null;
 
     const stringValue =
       typeof value === 'string' ? value : JSON.stringify(value);
@@ -258,20 +276,33 @@ export class SettingsService implements OnModuleInit {
       },
     });
 
+    const parsed = this.parseValue(setting.value);
+
+    // OBS-011 — settings carry security-relevant values (entitlements); audit
+    // every change with before/after + actor. This is the single chokepoint —
+    // bulkUpdate / resetToDefault / resetAllToDefaults all funnel through here.
+    await this.auditPersistence.log({
+      action: AuditAction.SETTINGS_CHANGED,
+      entityType: 'Settings',
+      entityId: key,
+      actorId: actorId ?? null,
+      payload: { key, before, after: parsed },
+    });
+
     return {
       ...setting,
-      value: this.parseValue(setting.value),
+      value: parsed,
     };
   }
 
   /**
    * Mettre à jour plusieurs paramètres en une fois
    */
-  async bulkUpdate(settings: Record<string, unknown>) {
+  async bulkUpdate(settings: Record<string, unknown>, actorId?: string) {
     const results: ParsedSetting[] = [];
 
     for (const [key, value] of Object.entries(settings)) {
-      const result = await this.update(key, value);
+      const result = await this.update(key, value, undefined, actorId);
       results.push(result);
     }
 
@@ -281,7 +312,7 @@ export class SettingsService implements OnModuleInit {
   /**
    * Réinitialiser un paramètre à sa valeur par défaut
    */
-  async resetToDefault(key: string) {
+  async resetToDefault(key: string, actorId?: string) {
     if (!DEFAULT_SETTINGS[key]) {
       throw new Error(`Pas de valeur par défaut pour le paramètre: ${key}`);
     }
@@ -290,15 +321,16 @@ export class SettingsService implements OnModuleInit {
       key,
       DEFAULT_SETTINGS[key].value,
       DEFAULT_SETTINGS[key].description,
+      actorId,
     );
   }
 
   /**
    * Réinitialiser tous les paramètres à leurs valeurs par défaut
    */
-  async resetAllToDefaults() {
+  async resetAllToDefaults(actorId?: string) {
     for (const [key, config] of Object.entries(DEFAULT_SETTINGS)) {
-      await this.update(key, config.value, config.description);
+      await this.update(key, config.value, config.description, actorId);
     }
 
     return this.findAll();
@@ -307,14 +339,29 @@ export class SettingsService implements OnModuleInit {
   /**
    * Supprimer un paramètre personnalisé
    */
-  async remove(key: string) {
+  async remove(key: string, actorId?: string) {
     // Ne pas supprimer les paramètres par défaut
     if (DEFAULT_SETTINGS[key]) {
-      return this.resetToDefault(key);
+      return this.resetToDefault(key, actorId);
     }
+
+    // OBS-011 — snapshot the custom value before the delete so the audit row
+    // records what was removed (before=prior value, after=null = deleted).
+    const previous = await this.prisma.appSettings.findUnique({
+      where: { key },
+    });
+    const before = previous ? this.parseValue(previous.value) : null;
 
     await this.prisma.appSettings.delete({
       where: { key },
+    });
+
+    await this.auditPersistence.log({
+      action: AuditAction.SETTINGS_CHANGED,
+      entityType: 'Settings',
+      entityId: key,
+      actorId: actorId ?? null,
+      payload: { key, before, after: null },
     });
 
     return { message: 'Paramètre supprimé' };

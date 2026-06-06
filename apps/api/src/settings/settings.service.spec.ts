@@ -3,6 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 
 describe('SettingsService', () => {
   let service: SettingsService;
@@ -16,6 +19,10 @@ describe('SettingsService', () => {
       upsert: vi.fn(),
       delete: vi.fn(),
     },
+  };
+
+  const mockAuditPersistence = {
+    log: vi.fn().mockResolvedValue(undefined),
   };
 
   const makeSetting = (key: string, value: unknown, overrides = {}) => ({
@@ -37,9 +44,14 @@ describe('SettingsService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: AuditPersistenceService,
+          useValue: mockAuditPersistence,
+        },
       ],
     }).compile();
 
+    mockAuditPersistence.log.mockResolvedValue(undefined);
     // Note: onModuleInit is NOT called during compile() — no DB side effect.
     service = module.get<SettingsService>(SettingsService);
   });
@@ -155,6 +167,96 @@ describe('SettingsService', () => {
       await expect(
         service.bulkUpdate({ appName: 'test', hackerKey: 'evil' }),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  // OBS-011 — settings drive entitlements (defaultLeaveDays, maxTelework…); every
+  // write must leave a durable SETTINGS_CHANGED row with before/after + actor.
+  describe('OBS-011 audit emits', () => {
+    const settingsChangedCalls = () =>
+      mockAuditPersistence.log.mock.calls
+        .map((c) => c[0])
+        .filter((e) => e?.action === AuditAction.SETTINGS_CHANGED);
+
+    it('update() emits SETTINGS_CHANGED with before/after + actor', async () => {
+      mockPrismaService.appSettings.findUnique.mockResolvedValue(
+        makeSetting('appName', 'Old'),
+      );
+      mockPrismaService.appSettings.upsert.mockResolvedValue(
+        makeSetting('appName', 'New'),
+      );
+
+      await service.update('appName', 'New', undefined, 'actor-1');
+
+      const calls = settingsChangedCalls();
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toMatchObject({
+        action: AuditAction.SETTINGS_CHANGED,
+        entityType: 'Settings',
+        entityId: 'appName',
+        actorId: 'actor-1',
+      });
+      expect(calls[0].payload).toMatchObject({
+        key: 'appName',
+        before: 'Old',
+        after: 'New',
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.SETTINGS_CHANGED,
+          calls[0].payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('bulkUpdate() emits one SETTINGS_CHANGED per changed key', async () => {
+      mockPrismaService.appSettings.findUnique.mockResolvedValue(null);
+      mockPrismaService.appSettings.upsert.mockResolvedValue(
+        makeSetting('appName', 'x'),
+      );
+
+      await service.bulkUpdate({ appName: 'a', locale: 'fr' }, 'actor-1');
+
+      const calls = settingsChangedCalls();
+      expect(calls).toHaveLength(2);
+      expect(calls.map((c) => c.payload.key).sort()).toEqual([
+        'appName',
+        'locale',
+      ]);
+      for (const c of calls) {
+        expect(c.actorId).toBe('actor-1');
+        expect(() =>
+          validatePayloadForAction(AuditAction.SETTINGS_CHANGED, c.payload),
+        ).not.toThrow();
+      }
+    });
+
+    it('remove() of a custom key emits SETTINGS_CHANGED with after=null', async () => {
+      mockPrismaService.appSettings.findUnique.mockResolvedValue(
+        makeSetting('customKey', 'legacy'),
+      );
+      mockPrismaService.appSettings.delete.mockResolvedValue({});
+
+      await service.remove('customKey', 'actor-1');
+
+      const calls = settingsChangedCalls();
+      expect(calls).toHaveLength(1);
+      expect(calls[0]).toMatchObject({
+        action: AuditAction.SETTINGS_CHANGED,
+        entityType: 'Settings',
+        entityId: 'customKey',
+        actorId: 'actor-1',
+      });
+      expect(calls[0].payload).toMatchObject({
+        key: 'customKey',
+        after: null,
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.SETTINGS_CHANGED,
+          calls[0].payload,
+        ),
+      ).not.toThrow();
     });
   });
 });
