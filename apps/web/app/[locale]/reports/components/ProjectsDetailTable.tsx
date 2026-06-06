@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -149,6 +149,7 @@ export function ProjectsDetailTable({
   projectId,
 }: ProjectsDetailTableProps) {
   const t = useTranslations("admin.reports.analytics");
+  const locale = useLocale();
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
@@ -376,7 +377,7 @@ export function ProjectsDetailTable({
 
                 <td className="px-4 py-3 whitespace-nowrap">
                   <Link
-                    href={`/projects/${row.id}`}
+                    href={`/${locale}/projects/${row.id}`}
                     className="font-semibold text-gray-900 hover:text-blue-600 hover:underline inline-flex items-center gap-1.5"
                   >
                     <ProjectIcon icon={row.icon} size={16} />
@@ -425,7 +426,7 @@ export function ProjectsDetailTable({
                       <span className="text-gray-400"> · </span>
                       <button
                         onClick={() =>
-                          router.push(`/tasks?projectId=${row.id}&overdue=true`)
+                          router.push(`/${locale}/tasks?projectId=${row.id}&overdue=true`)
                         }
                         className="font-semibold text-red-600 hover:text-red-800 hover:underline"
                       >

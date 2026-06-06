@@ -12,6 +12,7 @@ import { clientsService } from "@/services/clients.service";
 import { ExportService } from "@/services/export.service";
 import { Client, CreateClientDto, UpdateClientDto } from "@/types";
 import { logger } from '@/lib/logger';
+import { chunkArray } from '@/lib/chunk';
 
 export default function ClientsPage() {
   const tc = useTranslations("common");
@@ -144,14 +145,22 @@ export default function ClientsPage() {
         projectStatus: string;
       }> = [];
 
-      const results = await Promise.all(
-        cap.map((c) =>
-          clientsService
-            .getProjectsWithSummary(c.id)
-            .then((res) => ({ clientId: c.id, clientName: c.name, res }))
-            .catch(() => ({ clientId: c.id, clientName: c.name, res: null })),
-        ),
-      );
+      const results: Array<{
+        clientId: string;
+        clientName: string;
+        res: Awaited<ReturnType<typeof clientsService.getProjectsWithSummary>> | null;
+      }> = [];
+      for (const chunk of chunkArray(cap, 10)) {
+        const chunkResults = await Promise.all(
+          chunk.map((c) =>
+            clientsService
+              .getProjectsWithSummary(c.id)
+              .then((res) => ({ clientId: c.id, clientName: c.name, res }))
+              .catch(() => ({ clientId: c.id, clientName: c.name, res: null })),
+          ),
+        );
+        results.push(...chunkResults);
+      }
 
       for (const { clientId, clientName, res } of results) {
         if (res) {

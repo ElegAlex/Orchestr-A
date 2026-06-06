@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from '@/lib/logger';
 
+// SEC-031 — hop-by-hop + host-spoofing headers must be stripped before
+// forwarding to the internal API. "host" et al. are not hop-by-hop per RFC
+// but must never be forwarded to a same-machine backend (host-header injection).
 const HOP_BY_HOP = new Set([
   "connection",
   "keep-alive",
@@ -9,9 +12,13 @@ const HOP_BY_HOP = new Set([
   "proxy-connection",
   "te",
   "trailer",
+  // Host-spoofing headers: strip so the internal API cannot be misled.
+  "host",
+  "x-forwarded-host",
+  "x-real-ip",
 ]);
 
-function filterHeaders(headers: Headers): Record<string, string> {
+export function filterHeaders(headers: Headers): Record<string, string> {
   const out: Record<string, string> = {};
   headers.forEach((value, key) => {
     if (!HOP_BY_HOP.has(key.toLowerCase())) {

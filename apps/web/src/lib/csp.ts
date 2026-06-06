@@ -21,6 +21,11 @@ export function buildCsp(nonce: string): string {
     `font-src 'self' data:`,
     `connect-src 'self'`,
     `frame-ancestors 'none'`,
+    // SEC-061 — explicit directives not covered by default-src fallback in all
+    // browsers: object-src prevents Flash/plugin injection; base-uri prevents
+    // <base href> attacks that redirect relative URLs to an attacker origin.
+    `object-src 'none'`,
+    `base-uri 'self'`,
   ];
   return directives.join("; ");
 }

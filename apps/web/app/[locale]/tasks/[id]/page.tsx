@@ -93,10 +93,10 @@ export default function TaskDetailPage() {
 
         // Fetch milestones for the project
         if (taskData.projectId) {
+          // PER-032: use getByProject for server-filtered milestones (bare array)
           try {
-            const milestonesData = await milestonesService.getAll();
-            const projectMilestones = milestonesData.data.filter(
-              (m: Milestone) => m.projectId === taskData.projectId,
+            const projectMilestones = await milestonesService.getByProject(
+              taskData.projectId,
             );
             setMilestones(projectMilestones);
           } catch (error) {

@@ -7419,8 +7419,8 @@ grep -n 'labels\|route\|method' apps/api/src/metrics/metrics.service.ts | head -
 
 ### SEC-031 — API proxy forwards `host` header to internal backend (host-header injection)
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Add `'host'`, `'x-forwarded-host'`, `'x-real-ip'` to `HOP_BY_HOP` in `apps/web/app/api/[...path]/route.ts:4-12`. No response-shape risk — header-only change. RED test: send request with `Host: evil.co
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 2
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -7484,8 +7484,8 @@ curl -s -X POST http://localhost:3000/api/auth/login -H 'Host: evil.com' -H 'Con
 
 ### COR-041 — Login/register: JWT stored in localStorage before permissions fetch — broken auth state on network error
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Option A (cleanest): remove the `/auth/me/permissions` call from login and register handlers — `useAuthBootstrap` in layout already fetches it on mount; just `router.push` after `authService.login`. O
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7544,8 +7544,8 @@ N/A — manual verification: throttle /auth/me/permissions in devtools; confirm 
 
 ### COR-042 — handleUpdateProject has no error handling — silent failure on project update
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Wrap lines 953-959 in try/catch matching `handleHardDeleteProject` pattern: catch, extract `axiosError.response?.data?.message`, call `toast.error(...)`. Re-throw to keep the modal open if the caller 
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7610,8 +7610,8 @@ N/A — manual verification
 
 ### COR-043 — onArchive / onUnarchive in projects/page.tsx have no error handling
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Wrap each body in try/catch with toast.error matching the file's existing pattern. For `onArchive`: `try { await projectsService.archive(id); toast.success('Projet archivé'); await fetchProjects(); } 
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7683,8 +7683,8 @@ N/A — manual verification
 
 ### COR-044 — fetchProjects useCallback missing hasPermission dependency — stale permission closure
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Add `hasPermission` to the dep array at line 130: `}, [user, memberMeFilter, showArchived, hasPermission]);`. Because `hasPermission` is already memoized by `usePermissions`, this only triggers re-cre
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7746,8 +7746,8 @@ cd /home/alex/Documents/REPO/ORCHESTRA && npx eslint apps/web/app/\[locale\]/pro
 
 ### COR-045 — ProjectsDetailTable: Link href and router.push use locale-less paths, breaking client-side navigation
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Add `import { useLocale } from 'next-intl';` and `const locale = useLocale();` inside the component. Replace line 379 with `href={\`/${locale}/projects/${row.id}\`}` and line 428 with `router.push(\`/
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7857,8 +7857,8 @@ cd /home/alex/Documents/REPO/ORCHESTRA && npx eslint apps/web/app/\[locale\]/tas
 
 ### COR-047 — usersService.getAll() in telework/page.tsx has no .catch() — silent failure in user selector
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Add `.catch(err => { logger.error('Error fetching users for telework:', err); toast.error(tc('errors.serverError')); setAllUsers([]); })` after the `.then()`, or convert to async/await with try/catch.
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -7965,8 +7965,8 @@ find apps/web/app/\[locale\]/{leaves,telework,time-tracking,clients,third-partie
 
 ### PER-031 — handleExportExcel fires Promise.all over all active clients without concurrency cap (up to 200 requests)
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Replace `Promise.all` with a concurrency-limited chunked loop (chunks of 10): `for (const chunk of chunkArray(cap, 10)) { const chunkResults = await Promise.all(chunk.map(...)); results.push(...chunkR
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -8020,8 +8020,8 @@ grep -n 'Promise.all' apps/web/app/\[locale\]/clients/page.tsx
 
 ### PER-032 — milestonesService.getAll() fetches ALL milestones system-wide then filters client-side in two pages
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). In `apps/web/app/[locale]/tasks/[id]/page.tsx` replace lines 97-100 with `const projectMilestones = await milestonesService.getByProject(taskData.projectId); setMilestones(projectMilestones);`. CAUTIO
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -8075,8 +8075,8 @@ grep -n 'milestonesService.getAll' apps/web/app/\[locale\]/projects/\[id\]/page.
 
 ### PER-033 — AdvancedAnalyticsTab creates a module-scope QueryClient inside its own QueryClientProvider, bypassing the app-level cache
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch F-web). Remove the `QueryClientProvider` wrapper from `AdvancedAnalyticsTab`. Child components `WorkloadChart`, `RecentActivity`, `MilestonesCompletion` will use the app-level QueryProvider already in layout.
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 2
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -15565,8 +15565,8 @@ N/A — manual verification
 
 ### SEC-061 — CSP policy missing `object-src 'none'` and `base-uri 'self'` directives
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch G-webcheap). In apps/web/src/lib/csp.ts, add two entries to the directives array: `object-src 'none'` and `base-uri 'self'`. Failing test: snapshot test on buildCsp() output asserting both directives present. No r
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 4
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -16003,8 +16003,8 @@ N/A — manual verification
 
 ### OBS-026 — No error boundary anywhere in the [locale] subtree — unhandled render errors crash the entire app
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch G-webcheap). Create apps/web/app/[locale]/error.tsx as a 'use client' component with `useEffect(() => console.error(error), [error])` and a user-facing fallback UI with a retry button (Next.js App Router signature
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -16050,8 +16050,8 @@ find apps/web/app/\[locale\] -name 'error.tsx'
 
 ### OBS-027 — Profile page (`profile/page.tsx`) has no error boundary — uncaught render errors cause a blank screen
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch G-webcheap). Resolved by the [locale]/error.tsx from OBS-026, or create a dedicated apps/web/app/[locale]/profile/error.tsx for finer granularity. No API shape change, no PER-021 risk.
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only
@@ -16103,8 +16103,8 @@ N/A — manual verification: throw in IcsExportSection render, confirm error bou
 
 ### OBS-028 — No error boundary wrapping any of the three page-level components
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch G-webcheap). Resolved by the [locale]/error.tsx from OBS-026, covering all three subroutes. No API shape change.
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch FG)
 - **Phase:** 4
 - **Cluster:** M
 - **Confidence:** primary-only

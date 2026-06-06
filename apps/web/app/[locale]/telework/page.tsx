@@ -397,11 +397,18 @@ export default function TeleworkPage() {
     setSelectedUserId(user.id);
 
     if (canManageOthers && canListUsers) {
-      usersService.getAll().then((data) => {
-        setAllUsers(Array.isArray(data) ? data : []);
-      });
+      usersService
+        .getAll()
+        .then((data) => {
+          setAllUsers(Array.isArray(data) ? data : []);
+        })
+        .catch((err) => {
+          logger.error("Error fetching users for telework:", err);
+          toast.error(tc("errors.serverError"));
+          setAllUsers([]);
+        });
     }
-  }, [user, canManageOthers, canListUsers]);
+  }, [user, canManageOthers, canListUsers, tc]);
 
   // Charger les données de télétravail
   const fetchTeleworkData = useCallback(async () => {

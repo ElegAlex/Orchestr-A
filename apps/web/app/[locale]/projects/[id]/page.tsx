@@ -951,11 +951,21 @@ export default function ProjectDetailPage() {
 
   // Project update handler
   const handleUpdateProject = async (data: UpdateProjectDto) => {
-    await projectsService.update(projectId, data);
-    toast.success(t("messages.updateSuccess"));
-    // Refresh project data
-    const projectData = await projectsService.getById(projectId);
-    setProject(projectData);
+    // COR-042: wrap in try/catch matching handleHardDeleteProject pattern.
+    // Re-throw so ProjectEditModal keeps the modal open on failure.
+    try {
+      await projectsService.update(projectId, data);
+      toast.success(t("messages.updateSuccess"));
+      // Refresh project data
+      const projectData = await projectsService.getById(projectId);
+      setProject(projectData);
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        axiosError.response?.data?.message || t("messages.updateError"),
+      );
+      throw err;
+    }
   };
 
   // Project hard delete handler (permanent deletion)

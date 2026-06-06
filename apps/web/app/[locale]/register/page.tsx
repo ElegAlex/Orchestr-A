@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const locale = useLocale();
   const t = useTranslations("auth");
   const setAuth = useAuthStore((s) => s.setAuth);
+  const clearSession = useAuthStore((s) => s.clear);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -38,12 +39,20 @@ export default function RegisterPage() {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { confirmPassword: _unused, ...registerData } = formData;
       const response = await authService.register(registerData);
-      const permsRes = await api.get<{ permissions: string[] }>(
-        "/auth/me/permissions",
-      );
-      setAuth(response.user, permsRes.data.permissions);
-      toast.success(t("register.success"));
-      router.push(`/${locale}/dashboard`);
+      // COR-041: wrap the permissions fetch in its own try/catch.
+      // If it fails, roll back the persisted token so the user is fully
+      // logged out rather than left in a half-authenticated state.
+      try {
+        const permsRes = await api.get<{ permissions: string[] }>(
+          "/auth/me/permissions",
+        );
+        setAuth(response.user, permsRes.data.permissions);
+        toast.success(t("register.success"));
+        router.push(`/${locale}/dashboard`);
+      } catch {
+        clearSession();
+        toast.error(t("register.errors.generic"));
+      }
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
       toast.error(

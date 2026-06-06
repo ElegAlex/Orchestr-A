@@ -127,7 +127,8 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, memberMeFilter, showArchived]);
+  // COR-044: hasPermission added — prevents stale closure when permissions change
+  }, [user, memberMeFilter, showArchived, hasPermission]);
 
   // Single mount + dependency effect: load projects and clients in parallel.
   // Clients are mount-only (dep []) so they don't refetch on showArchived toggle.
@@ -327,13 +328,27 @@ export default function ProjectsPage() {
       )
     )
       return;
-    await projectsService.archive(id);
-    await fetchProjects();
+    // COR-043: wrap in try/catch with toast feedback
+    try {
+      await projectsService.archive(id);
+      toast.success("Projet archivé");
+      await fetchProjects();
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || "Erreur lors de l'archivage");
+    }
   };
 
   const onUnarchive = async (id: string) => {
-    await projectsService.unarchive(id);
-    await fetchProjects();
+    // COR-043: wrap in try/catch with toast feedback
+    try {
+      await projectsService.unarchive(id);
+      toast.success("Projet désarchivé");
+      await fetchProjects();
+    } catch (err) {
+      const axiosError = err as { response?: { data?: { message?: string } } };
+      toast.error(axiosError.response?.data?.message || "Erreur lors du désarchivage");
+    }
   };
 
   const canCreateProject = () => {

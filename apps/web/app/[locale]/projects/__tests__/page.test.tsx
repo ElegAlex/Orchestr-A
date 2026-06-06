@@ -110,12 +110,16 @@ jest.mock("@/stores/auth.store", () => ({
     selector ? selector(mockAuthState) : mockAuthState,
 }));
 
-jest.mock("@/hooks/usePermissions", () => ({
-  usePermissions: () => ({
-    hasPermission: (perm: string) =>
-      mockAuthState.permissions.includes(perm),
-  }),
-}));
+jest.mock("@/hooks/usePermissions", () => {
+  // Mirror the real usePermissions: hasPermission is a STABLE reference
+  // (useCallback([permissions]) in the hook). Returning a fresh function each
+  // render would make any consumer that lists hasPermission in a dep array
+  // (COR-044) recreate its callbacks every render — an artifact the real
+  // memoized hook never produces.
+  const hasPermission = (perm: string) =>
+    mockAuthState.permissions.includes(perm);
+  return { usePermissions: () => ({ hasPermission }) };
+});
 
 const mockProjects = [
   {

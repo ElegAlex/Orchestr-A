@@ -39,4 +39,15 @@ describe("buildCsp (SEC-CSP-001)", () => {
     const csp = buildCsp(TEST_NONCE);
     expect(csp).toContain("frame-ancestors 'none'");
   });
+
+  // SEC-061 — object-src and base-uri must be explicit (not just default-src fallback)
+  it("includes object-src 'none' (SEC-061)", () => {
+    const csp = buildCsp(TEST_NONCE);
+    expect(csp).toContain("object-src 'none'");
+  });
+
+  it("includes base-uri 'self' (SEC-061)", () => {
+    const csp = buildCsp(TEST_NONCE);
+    expect(csp).toContain("base-uri 'self'");
+  });
 });
