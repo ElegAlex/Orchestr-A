@@ -11510,7 +11510,7 @@ N/A — manual verification: POST /leaves with reason=<2001-char string>, expect
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary SEC-042 ⇄ sessionA SEC-008).
 - Audit note: Also applies to ImportLeaveDto.comment (import-leaves.dto.ts line 55-58). Adversarial review confirmed verbatim: create-leave.dto.ts lines 74-81 for `reason`, import-leaves.dto.ts lines 55-58 for `comment`. No @MaxLength found in either. ApproveLeaveDto/RejectLeaveDto do have @MaxLength(2000) — inconsistency confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -11565,7 +11565,7 @@ grep -n 'MaxLength\|description' apps/api/src/projects/dto/create-project.dto.ts
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary SEC-047 ⇄ sessionA SEC-006).
 - Audit note: Adversarial check: create-project.dto.ts lines 28-36 confirmed verbatim. description field has only @IsString and @IsOptional — no @MaxLength. name field at lines 22-26 correctly has @MaxLength(100). No mitigating constraint found.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -13351,7 +13351,7 @@ grep -n 'search\|MaxLength' apps/api/src/clients/dto/query-clients.dto.ts apps/a
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Same pattern in both DTOs. Third-parties has the same omission at line 31-33.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -13405,7 +13405,7 @@ grep -n 'MaxLength\|description' apps/api/src/documents/dto/create-document.dto.
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Partially mitigated by the 1MB Fastify body limit.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -13554,7 +13554,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: UpdateEventDto extends PartialType(CreateEventDto) so it inherits the same gap. Adversarial verification: lines 36-38 of create-event.dto.ts confirmed verbatim — @IsString() + @IsOptional() with no @MaxLength. Title has @MaxLength(200) at line 28, confirming the pattern gap is real.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -13825,7 +13825,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial review: verbatim code confirmed at create-predefined-task.dto.ts lines 17-47. The @Matches decorators are for startTime/endTime (HH:mm format), not for color. No @MaxLength on any of name, description, color, or icon. Finding confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -14060,7 +14060,7 @@ grep -n 'MaxLength\|IsString\|IsNotEmpty' apps/api/src/settings/dto/update-setti
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial re-check: code_evidence verified verbatim at lines 4-19 of update-setting.dto.ts. No @MaxLength import exists in the file. The settings service isKnownKey allowlist prevents writing to unknown keys but does NOT bound the size of the value written to known keys. The 1 MiB bodyLimit is the only backstop.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -14110,7 +14110,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verified in all three DTOs: create-skill.dto.ts lines 33-35, create-department.dto.ts lines 29-31, create-service.dto.ts lines 31-32 — all have @IsString() @IsOptional() only on description, no @MaxLength.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -14169,7 +14169,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The service-side validateImport() catches the length issue in the preview path (skills.service.ts lines 597-605), but importSkills() (lines 693-730) does not perform the same check — confirmed by direct reading. The importSkills() path writes to DB with name directly from skillData.name with no length guard.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -14271,7 +14271,7 @@ grep -n 'contactEmail\|MaxLength\|IsEmail' apps/api/src/third-parties/dto/create
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: UpdateThirdPartyDto inherits this gap via PartialType(CreateThirdPartyDto). All other string fields in CreateThirdPartyDto (organizationName @MaxLength(255), contactFirstName @MaxLength(100), contactLastName @MaxLength(100), notes @MaxLength(2000)) have explicit MaxLength — contactEmail is the only exception.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -14325,7 +14325,7 @@ python3 -c "import sys; print('a'*2001)" | xargs -I{} curl -s -X POST http://loc
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verbatim code verified at create-time-entry.dto.ts lines 71-73. No @MaxLength present. The 1 MiB bodyLimit (main.ts line 98, `bodyLimit: 1048576`) caps the absolute worst case. Impact is storage/query-performance rather than a direct security exploit.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -14378,7 +14378,7 @@ grep -n 'MaxLength\|MinLength' apps/api/src/users/dto/create-user.dto.ts apps/ap
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: create-user.dto.ts line 49 confirms @MinLength(3) with no @MaxLength on login. import-users.dto.ts line 29 same pattern. Prisma schema shows `login String @unique` with no @db.VarChar(N) — PostgreSQL will map this to TEXT (unbounded), so there is no DB-level cap either. Finding is fully confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -16701,7 +16701,7 @@ grep -n 'MaxLength' apps/api/src/auth/dto/refresh-token.dto.ts
 - sessionA-only finding (99-run). Namespaced `SA-SEC-004` to avoid ID collision with the primary run; original id `SEC-004` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Related (same run): SEC-003.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -16805,7 +16805,7 @@ grep -n 'MaxLength' apps/api/src/epics/dto/create-epic.dto.ts apps/api/src/miles
 - sessionA-only finding (99-run). Namespaced `SA-SEC-010` to avoid ID collision with the primary run; original id `SEC-010` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Related (same run): SEC-006, SEC-007.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
@@ -17827,7 +17827,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: previewImport (line 172-209) has the same no-count-cap issue but is read-only so impact is lower.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 583cb6a8
 
 ---
 
