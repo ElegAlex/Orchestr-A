@@ -9,6 +9,9 @@ import { Prisma, ThirdPartyType } from 'database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccessScopeService } from '../common/services/access-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 import { CreateThirdPartyDto } from './dto/create-third-party.dto';
 import { ThirdPartiesService } from './third-parties.service';
 
@@ -62,13 +65,19 @@ describe('ThirdPartiesService', () => {
     assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
   };
 
+  const mockAuditPersistence = {
+    log: vi.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockAuditPersistence.log.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ThirdPartiesService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: AccessScopeService, useValue: mockAccessScope },
+        { provide: AuditPersistenceService, useValue: mockAuditPersistence },
       ],
     }).compile();
     service = module.get<ThirdPartiesService>(ThirdPartiesService);
@@ -636,6 +645,233 @@ describe('ThirdPartiesService', () => {
       await expect(
         service.update('tp-1', { organizationName: 'X' }),
       ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  // OBS-014 — every third-party mutation (create / update / hardDelete / assign /
+  // unassign / attach / detach) must leave a durable audit_logs row; hardDelete
+  // cascades to time entries + assignments + memberships and was untraceable.
+  // Witness = capture the payload to the mocked AuditPersistence.log + assert the
+  // REAL strict schema (validatePayloadForAction).
+  describe('OBS-014 audit emits', () => {
+    const findCall = (action: AuditAction) =>
+      mockAuditPersistence.log.mock.calls.find(
+        (c) => c[0]?.action === action,
+      )?.[0];
+
+    it('create() emits THIRD_PARTY_CREATED', async () => {
+      mockPrismaService.thirdParty.create.mockResolvedValue({
+        id: 'tp-1',
+        organizationName: 'Acme',
+      });
+
+      await service.create(
+        { type: ThirdPartyType.EXTERNAL_PROVIDER, organizationName: 'Acme' },
+        'actor-1',
+      );
+
+      const call = findCall(AuditAction.THIRD_PARTY_CREATED);
+      expect(call).toMatchObject({
+        action: AuditAction.THIRD_PARTY_CREATED,
+        entityType: 'ThirdParty',
+        entityId: 'tp-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        thirdPartyId: 'tp-1',
+        organizationName: 'Acme',
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.THIRD_PARTY_CREATED,
+          call?.payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('update() emits THIRD_PARTY_UPDATED before/after (after the serializable tx)', async () => {
+      mockPrismaService.thirdParty.findUnique.mockResolvedValue({
+        id: 'tp-1',
+        type: ThirdPartyType.EXTERNAL_PROVIDER,
+        organizationName: 'Old',
+        contactFirstName: null,
+        contactLastName: null,
+      });
+      mockPrismaService.thirdParty.update.mockResolvedValue({
+        id: 'tp-1',
+        organizationName: 'New',
+      });
+
+      await service.update('tp-1', { organizationName: 'New' }, 'actor-1');
+
+      const call = findCall(AuditAction.THIRD_PARTY_UPDATED);
+      expect(call).toMatchObject({
+        action: AuditAction.THIRD_PARTY_UPDATED,
+        entityType: 'ThirdParty',
+        entityId: 'tp-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        before: expect.objectContaining({ organizationName: 'Old' }),
+        after: expect.objectContaining({ organizationName: 'New' }),
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.THIRD_PARTY_UPDATED,
+          call?.payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('hardDelete() emits THIRD_PARTY_DELETED with snapshot + cascade impact', async () => {
+      mockPrismaService.thirdParty.findUnique.mockResolvedValue({
+        id: 'tp-1',
+        organizationName: 'Acme',
+      });
+      mockPrismaService.timeEntry.count.mockResolvedValue(2);
+      mockPrismaService.taskThirdPartyAssignee.count.mockResolvedValue(1);
+      mockPrismaService.projectThirdPartyMember.count.mockResolvedValue(0);
+      mockPrismaService.thirdParty.delete.mockResolvedValue({});
+
+      await service.hardDelete('tp-1', 'actor-1');
+
+      const call = findCall(AuditAction.THIRD_PARTY_DELETED);
+      expect(call).toMatchObject({
+        action: AuditAction.THIRD_PARTY_DELETED,
+        entityType: 'ThirdParty',
+        entityId: 'tp-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        snapshot: expect.objectContaining({ id: 'tp-1' }),
+        impact: expect.objectContaining({ timeEntriesCount: 2 }),
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.THIRD_PARTY_DELETED,
+          call?.payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('assignToTask() emits THIRD_PARTY_ASSIGNED_TO_TASK', async () => {
+      mockPrismaService.task.findUnique.mockResolvedValue({ id: 'task-1' });
+      mockPrismaService.thirdParty.findUnique.mockResolvedValue({
+        id: 'tp-1',
+        isActive: true,
+      });
+      mockPrismaService.taskThirdPartyAssignee.create.mockResolvedValue({
+        taskId: 'task-1',
+        thirdPartyId: 'tp-1',
+      });
+
+      await service.assignToTask('task-1', 'tp-1', 'actor-1');
+
+      const call = findCall(AuditAction.THIRD_PARTY_ASSIGNED_TO_TASK);
+      expect(call).toMatchObject({
+        action: AuditAction.THIRD_PARTY_ASSIGNED_TO_TASK,
+        entityType: 'ThirdParty',
+        entityId: 'tp-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        thirdPartyId: 'tp-1',
+        taskId: 'task-1',
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.THIRD_PARTY_ASSIGNED_TO_TASK,
+          call?.payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('unassignFromTask() emits THIRD_PARTY_UNASSIGNED_FROM_TASK', async () => {
+      mockPrismaService.taskThirdPartyAssignee.findUnique.mockResolvedValue({
+        taskId: 'task-1',
+        thirdPartyId: 'tp-1',
+      });
+      mockPrismaService.taskThirdPartyAssignee.delete.mockResolvedValue({});
+
+      await service.unassignFromTask('task-1', 'tp-1', 'actor-1');
+
+      const call = findCall(AuditAction.THIRD_PARTY_UNASSIGNED_FROM_TASK);
+      expect(call).toMatchObject({
+        action: AuditAction.THIRD_PARTY_UNASSIGNED_FROM_TASK,
+        entityType: 'ThirdParty',
+        entityId: 'tp-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        thirdPartyId: 'tp-1',
+        taskId: 'task-1',
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.THIRD_PARTY_UNASSIGNED_FROM_TASK,
+          call?.payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('attachToProject() emits THIRD_PARTY_ATTACHED_TO_PROJECT', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'proj-1' });
+      mockPrismaService.thirdParty.findUnique.mockResolvedValue({
+        id: 'tp-1',
+        isActive: true,
+      });
+      mockPrismaService.projectThirdPartyMember.create.mockResolvedValue({
+        projectId: 'proj-1',
+        thirdPartyId: 'tp-1',
+      });
+
+      await service.attachToProject('proj-1', 'tp-1', 'actor-1', 50);
+
+      const call = findCall(AuditAction.THIRD_PARTY_ATTACHED_TO_PROJECT);
+      expect(call).toMatchObject({
+        action: AuditAction.THIRD_PARTY_ATTACHED_TO_PROJECT,
+        entityType: 'ThirdParty',
+        entityId: 'tp-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        thirdPartyId: 'tp-1',
+        projectId: 'proj-1',
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.THIRD_PARTY_ATTACHED_TO_PROJECT,
+          call?.payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('detachFromProject() emits THIRD_PARTY_DETACHED_FROM_PROJECT', async () => {
+      mockPrismaService.projectThirdPartyMember.findUnique.mockResolvedValue({
+        projectId: 'proj-1',
+        thirdPartyId: 'tp-1',
+      });
+      mockPrismaService.projectThirdPartyMember.delete.mockResolvedValue({});
+
+      await service.detachFromProject('proj-1', 'tp-1', 'actor-1');
+
+      const call = findCall(AuditAction.THIRD_PARTY_DETACHED_FROM_PROJECT);
+      expect(call).toMatchObject({
+        action: AuditAction.THIRD_PARTY_DETACHED_FROM_PROJECT,
+        entityType: 'ThirdParty',
+        entityId: 'tp-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        thirdPartyId: 'tp-1',
+        projectId: 'proj-1',
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.THIRD_PARTY_DETACHED_FROM_PROJECT,
+          call?.payload,
+        ),
+      ).not.toThrow();
     });
   });
 });

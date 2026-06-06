@@ -68,12 +68,14 @@ describe('ThirdPartiesController', () => {
     expect(result.timeEntriesCount).toBe(3);
   });
 
-  it('PATCH /:id delegates to service.update', async () => {
+  it('PATCH /:id delegates to service.update with the actor id', async () => {
     mockService.update.mockResolvedValue({ id: 'tp-1', isActive: false });
-    await controller.update('tp-1', { isActive: false });
-    expect(mockService.update).toHaveBeenCalledWith('tp-1', {
-      isActive: false,
-    });
+    await controller.update('tp-1', { isActive: false }, { id: 'user-1' });
+    expect(mockService.update).toHaveBeenCalledWith(
+      'tp-1',
+      { isActive: false },
+      'user-1',
+    );
   });
 
   it('DELETE /:id delegates to service.hardDelete and returns void', async () => {

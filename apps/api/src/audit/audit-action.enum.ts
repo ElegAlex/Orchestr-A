@@ -159,4 +159,16 @@ export enum AuditAction {
   // DEACTIVATED on deactivateDelegation. Subject = the delegation row.
   DELEGATION_CREATED = 'DELEGATION_CREATED',
   DELEGATION_DEACTIVATED = 'DELEGATION_DEACTIVATED',
+  // OBS-014 — third-party (tiers) lifecycle + assignments (ThirdPartiesService).
+  // A hardDelete cascades to time_entries / task_third_party_assignees /
+  // project_third_party_members; all mutations were untraceable. CREATED/UPDATED/
+  // DELETED on the tiers row; ASSIGNED/UNASSIGNED on task links; ATTACHED/DETACHED
+  // on project links. (d7a2bd76 threaded the actor id but added no emit.)
+  THIRD_PARTY_CREATED = 'THIRD_PARTY_CREATED',
+  THIRD_PARTY_UPDATED = 'THIRD_PARTY_UPDATED',
+  THIRD_PARTY_DELETED = 'THIRD_PARTY_DELETED',
+  THIRD_PARTY_ASSIGNED_TO_TASK = 'THIRD_PARTY_ASSIGNED_TO_TASK',
+  THIRD_PARTY_UNASSIGNED_FROM_TASK = 'THIRD_PARTY_UNASSIGNED_FROM_TASK',
+  THIRD_PARTY_ATTACHED_TO_PROJECT = 'THIRD_PARTY_ATTACHED_TO_PROJECT',
+  THIRD_PARTY_DETACHED_FROM_PROJECT = 'THIRD_PARTY_DETACHED_FROM_PROJECT',
 }

@@ -74,8 +74,10 @@ export class ThirdPartiesController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateThirdPartyDto,
+    @CurrentUser() user: { id: string },
   ) {
-    return this.thirdPartiesService.update(id, dto);
+    // OBS-014 — pass actor identity so the audit row captures who edited the tiers.
+    return this.thirdPartiesService.update(id, dto, user.id);
   }
 
   @Delete(':id')

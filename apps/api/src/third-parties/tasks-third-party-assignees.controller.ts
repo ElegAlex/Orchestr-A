@@ -67,7 +67,12 @@ export class TasksThirdPartyAssigneesController {
   async unassign(
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Param('thirdPartyId', ParseUUIDPipe) thirdPartyId: string,
+    @CurrentUser() user: { id: string },
   ) {
-    await this.thirdPartiesService.unassignFromTask(taskId, thirdPartyId);
+    await this.thirdPartiesService.unassignFromTask(
+      taskId,
+      thirdPartyId,
+      user.id,
+    );
   }
 }

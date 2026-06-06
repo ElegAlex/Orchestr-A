@@ -68,7 +68,12 @@ export class ProjectsThirdPartyMembersController {
   async detach(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Param('thirdPartyId', ParseUUIDPipe) thirdPartyId: string,
+    @CurrentUser() user: { id: string },
   ) {
-    await this.thirdPartiesService.detachFromProject(projectId, thirdPartyId);
+    await this.thirdPartiesService.detachFromProject(
+      projectId,
+      thirdPartyId,
+      user.id,
+    );
   }
 }

@@ -11,6 +11,8 @@ import {
   AccessUser,
 } from '../common/services/access-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit-action.enum';
 import { CreateThirdPartyDto } from './dto/create-third-party.dto';
 import { UpdateThirdPartyDto } from './dto/update-third-party.dto';
 import { QueryThirdPartyDto } from './dto/query-third-party.dto';
@@ -26,6 +28,7 @@ export class ThirdPartiesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accessScope: AccessScopeService,
+    private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
   async create(
@@ -40,7 +43,7 @@ export class ThirdPartiesService {
       }
     }
 
-    return this.prisma.thirdParty.create({
+    const created = await this.prisma.thirdParty.create({
       data: {
         type: dto.type,
         organizationName: dto.organizationName,
@@ -51,6 +54,20 @@ export class ThirdPartiesService {
         createdById,
       },
     });
+
+    // OBS-014 — audit tiers creation; actor = the creator.
+    await this.auditPersistence.log({
+      action: AuditAction.THIRD_PARTY_CREATED,
+      entityType: 'ThirdParty',
+      entityId: created.id,
+      actorId: createdById,
+      payload: {
+        thirdPartyId: created.id,
+        organizationName: created.organizationName,
+      },
+    });
+
+    return created;
   }
 
   async findAll(query: QueryThirdPartyDto) {
@@ -120,7 +137,11 @@ export class ThirdPartiesService {
     return tp;
   }
 
-  async update(id: string, dto: UpdateThirdPartyDto): Promise<ThirdParty> {
+  async update(
+    id: string,
+    dto: UpdateThirdPartyDto,
+    actorId?: string,
+  ): Promise<ThirdParty> {
     // COR-036 — wrap the read-check-write in a SERIALIZABLE transaction so
     // concurrent PATCH requests cannot both pass the LEGAL_ENTITY invariant
     // check and then produce an inconsistent final state.
@@ -151,7 +172,7 @@ export class ThirdPartiesService {
             );
           }
 
-          return tx.thirdParty.update({
+          const updated = await tx.thirdParty.update({
             where: { id },
             data: {
               type: dto.type,
@@ -163,11 +184,24 @@ export class ThirdPartiesService {
               isActive: dto.isActive,
             },
           });
+          return { before: existing, after: updated };
         },
         { isolationLevel: 'Serializable' },
       );
 
-      return result;
+      // OBS-014 — emit AFTER the SERIALIZABLE tx commits, never inside it: the
+      // audit hash-chain read relies on READ COMMITTED per-statement snapshots;
+      // inside SERIALIZABLE it would fork the chain off a frozen prevHash or trip
+      // SSI (P2034). Same constraint as OBS-015/OBS-009.
+      await this.auditPersistence.log({
+        action: AuditAction.THIRD_PARTY_UPDATED,
+        entityType: 'ThirdParty',
+        entityId: id,
+        actorId: actorId ?? null,
+        payload: { before: result.before, after: result.after },
+      });
+
+      return result.after;
     } catch (e) {
       // COR-036 — surface serialization failures as ConflictException (HTTP 409)
       if (
@@ -213,12 +247,21 @@ export class ThirdPartiesService {
     if (!tp) {
       throw new NotFoundException(`Third party ${id} not found`);
     }
+    // OBS-014 — capture the cascade impact BEFORE the delete so the immutable
+    // audit row records how many time entries / task assignments / project
+    // memberships the FK cascade destroyed.
+    const impact = await this.getDeletionImpact(id);
     // Cascade FK handles time_entries, task_third_party_assignees, project_third_party_members
     await this.prisma.thirdParty.delete({ where: { id } });
-    // OBS-014 — audit emission is wired here; requires THIRD_PARTY_DELETED enum
-    // member in audit-action.enum.ts and matching schema in payload-schemas.ts
-    // (cross-file dependency — see cross_file_needs in fix report).
-    void actorId; // referenced once audit enum is extended
+    // OBS-014 — durable deletion audit (snapshot + cascade counts); actor = the
+    // deleting user. Awaited after the delete (no surrounding tx).
+    await this.auditPersistence.log({
+      action: AuditAction.THIRD_PARTY_DELETED,
+      entityType: 'ThirdParty',
+      entityId: id,
+      actorId: actorId ?? null,
+      payload: { snapshot: tp, impact },
+    });
   }
 
   async assertExistsAndActive(id: string): Promise<void> {
@@ -322,8 +365,11 @@ export class ThirdPartiesService {
     }
     await this.assertExistsAndActive(thirdPartyId);
 
+    let assignment: Awaited<
+      ReturnType<typeof this.prisma.taskThirdPartyAssignee.create>
+    >;
     try {
-      return await this.prisma.taskThirdPartyAssignee.create({
+      assignment = await this.prisma.taskThirdPartyAssignee.create({
         data: { taskId, thirdPartyId, assignedById },
         include: {
           thirdParty: true,
@@ -340,6 +386,17 @@ export class ThirdPartiesService {
       }
       throw e;
     }
+
+    // OBS-014 — audit the task assignment; actor = assignedById.
+    await this.auditPersistence.log({
+      action: AuditAction.THIRD_PARTY_ASSIGNED_TO_TASK,
+      entityType: 'ThirdParty',
+      entityId: thirdPartyId,
+      actorId: assignedById,
+      payload: { thirdPartyId, taskId },
+    });
+
+    return assignment;
   }
 
   async listTaskAssignees(taskId: string, currentUser?: AccessUser) {
@@ -378,7 +435,11 @@ export class ThirdPartiesService {
     });
   }
 
-  async unassignFromTask(taskId: string, thirdPartyId: string): Promise<void> {
+  async unassignFromTask(
+    taskId: string,
+    thirdPartyId: string,
+    actorId?: string,
+  ): Promise<void> {
     const existing = await this.prisma.taskThirdPartyAssignee.findUnique({
       where: { taskId_thirdPartyId: { taskId, thirdPartyId } },
     });
@@ -389,6 +450,15 @@ export class ThirdPartiesService {
     }
     await this.prisma.taskThirdPartyAssignee.delete({
       where: { taskId_thirdPartyId: { taskId, thirdPartyId } },
+    });
+
+    // OBS-014 — audit the task unassignment.
+    await this.auditPersistence.log({
+      action: AuditAction.THIRD_PARTY_UNASSIGNED_FROM_TASK,
+      entityType: 'ThirdParty',
+      entityId: thirdPartyId,
+      actorId: actorId ?? null,
+      payload: { thirdPartyId, taskId },
     });
   }
 
@@ -407,8 +477,11 @@ export class ThirdPartiesService {
     }
     await this.assertExistsAndActive(thirdPartyId);
 
+    let membership: Awaited<
+      ReturnType<typeof this.prisma.projectThirdPartyMember.create>
+    >;
     try {
-      return await this.prisma.projectThirdPartyMember.create({
+      membership = await this.prisma.projectThirdPartyMember.create({
         data: {
           projectId,
           thirdPartyId,
@@ -430,11 +503,23 @@ export class ThirdPartiesService {
       }
       throw e;
     }
+
+    // OBS-014 — audit the project attachment; actor = assignedById.
+    await this.auditPersistence.log({
+      action: AuditAction.THIRD_PARTY_ATTACHED_TO_PROJECT,
+      entityType: 'ThirdParty',
+      entityId: thirdPartyId,
+      actorId: assignedById,
+      payload: { thirdPartyId, projectId },
+    });
+
+    return membership;
   }
 
   async detachFromProject(
     projectId: string,
     thirdPartyId: string,
+    actorId?: string,
   ): Promise<void> {
     const existing = await this.prisma.projectThirdPartyMember.findUnique({
       where: { projectId_thirdPartyId: { projectId, thirdPartyId } },
@@ -446,6 +531,15 @@ export class ThirdPartiesService {
     }
     await this.prisma.projectThirdPartyMember.delete({
       where: { projectId_thirdPartyId: { projectId, thirdPartyId } },
+    });
+
+    // OBS-014 — audit the project detachment.
+    await this.auditPersistence.log({
+      action: AuditAction.THIRD_PARTY_DETACHED_FROM_PROJECT,
+      entityType: 'ThirdParty',
+      entityId: thirdPartyId,
+      actorId: actorId ?? null,
+      payload: { thirdPartyId, projectId },
     });
   }
 }

@@ -49,6 +49,8 @@ export { AuditAction };
  *               the `app_settings` table (OBS-011).
  *   - `Delegation` — leave-validation delegation lifecycle. The subject is a row
  *               in the `leave_validation_delegates` table (OBS-008).
+ *   - `ThirdParty` — third-party (tiers) lifecycle + task/project assignments.
+ *               The subject is a row in the `third_parties` table (OBS-014).
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
@@ -70,6 +72,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   | 'Client'
   | 'Settings'
   | 'Delegation'
+  | 'ThirdParty'
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
@@ -132,6 +135,13 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.SETTINGS_CHANGED]: 'Settings',
   [AuditAction.DELEGATION_CREATED]: 'Delegation',
   [AuditAction.DELEGATION_DEACTIVATED]: 'Delegation',
+  [AuditAction.THIRD_PARTY_CREATED]: 'ThirdParty',
+  [AuditAction.THIRD_PARTY_UPDATED]: 'ThirdParty',
+  [AuditAction.THIRD_PARTY_DELETED]: 'ThirdParty',
+  [AuditAction.THIRD_PARTY_ASSIGNED_TO_TASK]: 'ThirdParty',
+  [AuditAction.THIRD_PARTY_UNASSIGNED_FROM_TASK]: 'ThirdParty',
+  [AuditAction.THIRD_PARTY_ATTACHED_TO_PROJECT]: 'ThirdParty',
+  [AuditAction.THIRD_PARTY_DETACHED_FROM_PROJECT]: 'ThirdParty',
 };
 
 /**

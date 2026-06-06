@@ -350,6 +350,29 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
       delegateId: z.string(),
     })
     .strict(),
+
+  // Third-party lifecycle + assignments (OBS-014). CREATED references the row +
+  // org name; UPDATE before/after; DELETE a snapshot + the cascade impact counts;
+  // the (un)assign / (de)tach actions reference the link endpoints.
+  [AuditAction.THIRD_PARTY_CREATED]: z
+    .object({ thirdPartyId: z.string(), organizationName: z.string() })
+    .strict(),
+  [AuditAction.THIRD_PARTY_UPDATED]: beforeAfter,
+  [AuditAction.THIRD_PARTY_DELETED]: z
+    .object({ snapshot, impact: snapshot })
+    .strict(),
+  [AuditAction.THIRD_PARTY_ASSIGNED_TO_TASK]: z
+    .object({ thirdPartyId: z.string(), taskId: z.string() })
+    .strict(),
+  [AuditAction.THIRD_PARTY_UNASSIGNED_FROM_TASK]: z
+    .object({ thirdPartyId: z.string(), taskId: z.string() })
+    .strict(),
+  [AuditAction.THIRD_PARTY_ATTACHED_TO_PROJECT]: z
+    .object({ thirdPartyId: z.string(), projectId: z.string() })
+    .strict(),
+  [AuditAction.THIRD_PARTY_DETACHED_FROM_PROJECT]: z
+    .object({ thirdPartyId: z.string(), projectId: z.string() })
+    .strict(),
 } satisfies Record<AuditAction, z.ZodTypeAny>;
 
 /**
