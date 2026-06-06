@@ -10,6 +10,8 @@ import {
   AccessScopeService,
   AccessUser,
 } from '../common/services/access-scope.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit-action.enum';
 import { CreateClientDto } from './dto/create-client.dto';
 import { QueryClientsDto } from './dto/query-clients.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
@@ -52,11 +54,13 @@ export class ClientsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly accessScope: AccessScopeService,
+    private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
-  async create(dto: CreateClientDto): Promise<Client> {
+  async create(dto: CreateClientDto, actorId: string): Promise<Client> {
+    let client: Client;
     try {
-      return await this.prisma.client.create({
+      client = await this.prisma.client.create({
         data: {
           name: dto.name,
         },
@@ -69,6 +73,17 @@ export class ClientsService {
       }
       throw err;
     }
+
+    // OBS-004 — durable audit row for client creation (procurement-relevant).
+    await this.auditPersistence.log({
+      action: AuditAction.CLIENT_CREATED,
+      entityType: 'Client',
+      entityId: client.id,
+      actorId,
+      payload: { clientId: client.id, name: client.name },
+    });
+
+    return client;
   }
 
   async findAll(query: QueryClientsDto) {
@@ -239,14 +254,19 @@ export class ClientsService {
     return { projectsCount };
   }
 
-  async update(id: string, dto: UpdateClientDto): Promise<Client> {
+  async update(
+    id: string,
+    dto: UpdateClientDto,
+    actorId: string,
+  ): Promise<Client> {
     const existing = await this.prisma.client.findUnique({ where: { id } });
     if (!existing) {
       throw new NotFoundException(`Client ${id} not found`);
     }
 
+    let updated: Client;
     try {
-      return await this.prisma.client.update({
+      updated = await this.prisma.client.update({
         where: { id },
         data: {
           name: dto.name,
@@ -261,9 +281,20 @@ export class ClientsService {
       }
       throw err;
     }
+
+    // OBS-004 — before/after audit row for a client edit (name / isActive).
+    await this.auditPersistence.log({
+      action: AuditAction.CLIENT_UPDATED,
+      entityType: 'Client',
+      entityId: id,
+      actorId,
+      payload: { before: existing, after: updated },
+    });
+
+    return updated;
   }
 
-  async hardDelete(id: string): Promise<void> {
+  async hardDelete(id: string, actorId: string): Promise<void> {
     const client = await this.prisma.client.findUnique({ where: { id } });
     if (!client) {
       throw new NotFoundException(`Client ${id} not found`);
@@ -284,6 +315,21 @@ export class ClientsService {
       }
 
       await tx.client.delete({ where: { id } });
+
+      // OBS-004 — emit INSIDE this default-isolation (READ COMMITTED) tx, passing
+      // `tx`, so the deletion audit is atomic with the delete (snapshot captured
+      // above before the row is gone). Hard-deleting a client destroys a
+      // procurement-relevant record; it must leave a forensic trail.
+      await this.auditPersistence.log(
+        {
+          action: AuditAction.CLIENT_DELETED,
+          entityType: 'Client',
+          entityId: id,
+          actorId,
+          payload: { snapshot: client },
+        },
+        tx,
+      );
     });
   }
 
@@ -314,7 +360,11 @@ export class ClientsService {
     });
   }
 
-  async assignClientToProject(projectId: string, clientId: string) {
+  async assignClientToProject(
+    projectId: string,
+    clientId: string,
+    actorId: string,
+  ) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       select: { id: true },
@@ -325,8 +375,9 @@ export class ClientsService {
 
     await this.assertExistsAndActive(clientId);
 
+    let link: Awaited<ReturnType<typeof this.prisma.projectClient.create>>;
     try {
-      return await this.prisma.projectClient.create({
+      link = await this.prisma.projectClient.create({
         data: { projectId, clientId },
         include: { client: true },
       });
@@ -341,11 +392,24 @@ export class ClientsService {
       }
       throw e;
     }
+
+    // OBS-004 — the client↔project link modifies a project relationship; audit
+    // it. Subject = the client; the project is in the payload.
+    await this.auditPersistence.log({
+      action: AuditAction.CLIENT_ASSIGNED_TO_PROJECT,
+      entityType: 'Client',
+      entityId: clientId,
+      actorId,
+      payload: { projectId, clientId },
+    });
+
+    return link;
   }
 
   async removeClientFromProject(
     projectId: string,
     clientId: string,
+    actorId: string,
   ): Promise<void> {
     const existing = await this.prisma.projectClient.findUnique({
       where: { projectId_clientId: { projectId, clientId } },
@@ -357,6 +421,15 @@ export class ClientsService {
     }
     await this.prisma.projectClient.delete({
       where: { projectId_clientId: { projectId, clientId } },
+    });
+
+    // OBS-004 — detaching a client from a project modifies the relationship.
+    await this.auditPersistence.log({
+      action: AuditAction.CLIENT_REMOVED_FROM_PROJECT,
+      entityType: 'Client',
+      entityId: clientId,
+      actorId,
+      payload: { projectId, clientId },
     });
   }
 }

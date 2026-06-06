@@ -43,6 +43,8 @@ export { AuditAction };
  *               and bulk schedule generation. The subject is a row in the
  *               `telework_schedules` / `telework_recurring_rules` tables, or the
  *               triggering actor for a bulk generation (OBS-013).
+ *   - `Client` — client (commanditaire) lifecycle + project↔client links. The
+ *               subject is a row in the `clients` table (OBS-004).
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
@@ -61,6 +63,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   | 'TimeEntry'
   | 'Task'
   | 'Telework'
+  | 'Client'
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
@@ -112,6 +115,11 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.TELEWORK_RULE_UPDATED]: 'Telework',
   [AuditAction.TELEWORK_RULE_DELETED]: 'Telework',
   [AuditAction.TELEWORK_SCHEDULES_GENERATED]: 'Telework',
+  [AuditAction.CLIENT_CREATED]: 'Client',
+  [AuditAction.CLIENT_UPDATED]: 'Client',
+  [AuditAction.CLIENT_DELETED]: 'Client',
+  [AuditAction.CLIENT_ASSIGNED_TO_PROJECT]: 'Client',
+  [AuditAction.CLIENT_REMOVED_FROM_PROJECT]: 'Client',
 };
 
 /**

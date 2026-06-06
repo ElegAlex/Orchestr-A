@@ -25,10 +25,16 @@ describe('ClientsController', () => {
     controller = module.get<ClientsController>(ClientsController);
   });
 
-  it('POST / delegates to service.create', async () => {
+  it('POST / delegates to service.create with the actor id', async () => {
     mockService.create.mockResolvedValue({ id: 'c-1', name: 'Mairie de Lyon' });
-    const result = await controller.create({ name: 'Mairie de Lyon' });
-    expect(mockService.create).toHaveBeenCalledWith({ name: 'Mairie de Lyon' });
+    const result = await controller.create(
+      { name: 'Mairie de Lyon' },
+      'actor-1',
+    );
+    expect(mockService.create).toHaveBeenCalledWith(
+      { name: 'Mairie de Lyon' },
+      'actor-1',
+    );
     expect(result).toBeDefined();
   });
 
@@ -67,16 +73,20 @@ describe('ClientsController', () => {
     expect(result.projectsCount).toBe(2);
   });
 
-  it('PATCH /:id delegates to service.update', async () => {
+  it('PATCH /:id delegates to service.update with the actor id', async () => {
     mockService.update.mockResolvedValue({ id: 'c-1', isActive: false });
-    await controller.update('c-1', { isActive: false });
-    expect(mockService.update).toHaveBeenCalledWith('c-1', { isActive: false });
+    await controller.update('c-1', { isActive: false }, 'actor-1');
+    expect(mockService.update).toHaveBeenCalledWith(
+      'c-1',
+      { isActive: false },
+      'actor-1',
+    );
   });
 
-  it('DELETE /:id delegates to service.hardDelete and returns void', async () => {
+  it('DELETE /:id delegates to service.hardDelete with the actor id and returns void', async () => {
     mockService.hardDelete.mockResolvedValue(undefined);
-    const result = await controller.remove('c-1');
-    expect(mockService.hardDelete).toHaveBeenCalledWith('c-1');
+    const result = await controller.remove('c-1', 'actor-1');
+    expect(mockService.hardDelete).toHaveBeenCalledWith('c-1', 'actor-1');
     expect(result).toBeUndefined();
   });
 });

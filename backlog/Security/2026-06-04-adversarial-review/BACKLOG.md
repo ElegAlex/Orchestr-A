@@ -5261,7 +5261,7 @@ grep -n 'LOGOUT' apps/api/src/audit/audit-action.enum.ts apps/api/src/auth/auth.
 
 ### OBS-004 — clients: create/update/hardDelete and project-assignment mutations emit no audit_log row
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -5309,6 +5309,7 @@ N/A — manual verification
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code at lines 50-65 matches verbatim. Constructor (line 48) verified: only PrismaService injected. No AuditPersistenceService import found. ClientsController.create() does not inject @CurrentUser, so actor identity is also not captured at the controller layer for this endpoint.
+- **2026-06-06 — DONE.** Audit-emit cluster slice 6. Injected `AuditPersistenceService` and added 5 actions (entityType `Client`): create→`CLIENT_CREATED` {clientId,name}, update→`CLIENT_UPDATED` {before,after}, hardDelete→`CLIENT_DELETED` {snapshot} (emitted INSIDE the COR-008 default-isolation tx, passing `tx`, atomic with the delete), assignClientToProject→`CLIENT_ASSIGNED_TO_PROJECT` {projectId,clientId}, removeClientFromProject→`CLIENT_REMOVED_FROM_PROJECT` {projectId,clientId}. **Actor threading (the audit-note gap):** added an `actorId` param to all 5 service methods and threaded `@CurrentUser('id')` from BOTH controllers — `clients.controller` (create/update/remove) and `clients/projects-clients.controller` (assign/detach). Sibling `clients.controller.spec` updated for the new signatures (legitimate, not test-weakening). Witnesses (clients.service.spec, 5 tests) capture each emit + real `validatePayloadForAction` (RED-by-absence). Gate green: nest build + api vitest 2248 + lint 0-err + coherence.
 
 **Closed_by:** (empty — TODO)
 

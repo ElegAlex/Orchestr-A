@@ -54,8 +54,13 @@ export class ProjectsClientsController {
   assign(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Body() dto: AssignClientToProjectDto,
+    @CurrentUser('id') actorId: string,
   ) {
-    return this.clientsService.assignClientToProject(projectId, dto.clientId);
+    return this.clientsService.assignClientToProject(
+      projectId,
+      dto.clientId,
+      actorId,
+    );
   }
 
   @Delete(':clientId')
@@ -67,7 +72,12 @@ export class ProjectsClientsController {
   async detach(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Param('clientId', ParseUUIDPipe) clientId: string,
+    @CurrentUser('id') actorId: string,
   ) {
-    await this.clientsService.removeClientFromProject(projectId, clientId);
+    await this.clientsService.removeClientFromProject(
+      projectId,
+      clientId,
+      actorId,
+    );
   }
 }

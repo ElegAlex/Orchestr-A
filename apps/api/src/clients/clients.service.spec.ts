@@ -9,6 +9,9 @@ import { Prisma } from 'database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccessScopeService } from '../common/services/access-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 import { ClientsService } from './clients.service';
 
 describe('ClientsService', () => {
@@ -50,14 +53,20 @@ describe('ClientsService', () => {
     assertCanAccessProject: vi.fn().mockResolvedValue(undefined),
   };
 
+  const mockAuditPersistence = {
+    log: vi.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
     mockAccessScope.assertCanAccessProject.mockResolvedValue(undefined);
+    mockAuditPersistence.log.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClientsService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: AccessScopeService, useValue: mockAccessScope },
+        { provide: AuditPersistenceService, useValue: mockAuditPersistence },
       ],
     }).compile();
     service = module.get<ClientsService>(ClientsService);
@@ -521,6 +530,157 @@ describe('ClientsService', () => {
       await expect(
         service.removeClientFromProject('p-1', 'c-1'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // OBS-004 — client (commanditaire) management has procurement implications;
+  // every mutation must leave a durable audit_logs row. Witness = capture the
+  // payload to the mocked AuditPersistence.log + assert the REAL strict schema.
+  describe('OBS-004 audit emits', () => {
+    const findCall = (action: AuditAction) =>
+      mockAuditPersistence.log.mock.calls.find(
+        (c) => c[0]?.action === action,
+      )?.[0];
+
+    it('create() emits CLIENT_CREATED', async () => {
+      mockPrismaService.client.create.mockResolvedValue({
+        id: 'c-1',
+        name: 'Mairie de Lyon',
+        isActive: true,
+      });
+
+      await service.create({ name: 'Mairie de Lyon' }, 'actor-1');
+
+      const call = findCall(AuditAction.CLIENT_CREATED);
+      expect(call).toMatchObject({
+        action: AuditAction.CLIENT_CREATED,
+        entityType: 'Client',
+        entityId: 'c-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        clientId: 'c-1',
+        name: 'Mairie de Lyon',
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.CLIENT_CREATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('update() emits CLIENT_UPDATED before/after', async () => {
+      mockPrismaService.client.findUnique.mockResolvedValue({
+        id: 'c-1',
+        name: 'Old',
+        isActive: true,
+      });
+      mockPrismaService.client.update.mockResolvedValue({
+        id: 'c-1',
+        name: 'New',
+        isActive: true,
+      });
+
+      await service.update('c-1', { name: 'New' }, 'actor-1');
+
+      const call = findCall(AuditAction.CLIENT_UPDATED);
+      expect(call).toMatchObject({
+        action: AuditAction.CLIENT_UPDATED,
+        entityType: 'Client',
+        entityId: 'c-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        before: expect.objectContaining({ name: 'Old' }),
+        after: expect.objectContaining({ name: 'New' }),
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.CLIENT_UPDATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('hardDelete() emits CLIENT_DELETED snapshot', async () => {
+      mockPrismaService.client.findUnique.mockResolvedValue({
+        id: 'c-1',
+        name: 'Mairie',
+      });
+      mockPrismaService.projectClient.count.mockResolvedValue(0);
+      mockPrismaService.client.delete.mockResolvedValue({});
+
+      await service.hardDelete('c-1', 'actor-1');
+
+      const call = findCall(AuditAction.CLIENT_DELETED);
+      expect(call).toMatchObject({
+        action: AuditAction.CLIENT_DELETED,
+        entityType: 'Client',
+        entityId: 'c-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        snapshot: expect.objectContaining({ id: 'c-1' }),
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.CLIENT_DELETED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('assignClientToProject() emits CLIENT_ASSIGNED_TO_PROJECT', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({ id: 'p-1' });
+      mockPrismaService.client.findUnique.mockResolvedValue({
+        id: 'c-1',
+        isActive: true,
+      });
+      mockPrismaService.projectClient.create.mockResolvedValue({
+        projectId: 'p-1',
+        clientId: 'c-1',
+        client: { id: 'c-1' },
+      });
+
+      await service.assignClientToProject('p-1', 'c-1', 'actor-1');
+
+      const call = findCall(AuditAction.CLIENT_ASSIGNED_TO_PROJECT);
+      expect(call).toMatchObject({
+        action: AuditAction.CLIENT_ASSIGNED_TO_PROJECT,
+        entityType: 'Client',
+        entityId: 'c-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        projectId: 'p-1',
+        clientId: 'c-1',
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.CLIENT_ASSIGNED_TO_PROJECT,
+          call?.payload,
+        ),
+      ).not.toThrow();
+    });
+
+    it('removeClientFromProject() emits CLIENT_REMOVED_FROM_PROJECT', async () => {
+      mockPrismaService.projectClient.findUnique.mockResolvedValue({
+        projectId: 'p-1',
+        clientId: 'c-1',
+      });
+      mockPrismaService.projectClient.delete.mockResolvedValue({});
+
+      await service.removeClientFromProject('p-1', 'c-1', 'actor-1');
+
+      const call = findCall(AuditAction.CLIENT_REMOVED_FROM_PROJECT);
+      expect(call).toMatchObject({
+        action: AuditAction.CLIENT_REMOVED_FROM_PROJECT,
+        entityType: 'Client',
+        entityId: 'c-1',
+        actorId: 'actor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        projectId: 'p-1',
+        clientId: 'c-1',
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.CLIENT_REMOVED_FROM_PROJECT,
+          call?.payload,
+        ),
+      ).not.toThrow();
     });
   });
 });

@@ -18,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { QueryClientsDto } from './dto/query-clients.dto';
@@ -34,8 +35,8 @@ export class ClientsController {
   @ApiOperation({ summary: 'Créer un client commanditaire' })
   @ApiResponse({ status: 201, description: 'Client créé' })
   @ApiResponse({ status: 400, description: 'Données invalides' })
-  create(@Body() dto: CreateClientDto) {
-    return this.clientsService.create(dto);
+  create(@Body() dto: CreateClientDto, @CurrentUser('id') actorId: string) {
+    return this.clientsService.create(dto, actorId);
   }
 
   @Get()
@@ -75,8 +76,12 @@ export class ClientsController {
   @RequirePermissions('clients:update')
   @ApiOperation({ summary: 'Modifier un client (nom, isActive)' })
   @ApiResponse({ status: 404, description: 'Client introuvable' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateClientDto) {
-    return this.clientsService.update(id, dto);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateClientDto,
+    @CurrentUser('id') actorId: string,
+  ) {
+    return this.clientsService.update(id, dto, actorId);
   }
 
   @Delete(':id')
@@ -92,7 +97,10 @@ export class ClientsController {
     status: 409,
     description: 'Client lié à un ou plusieurs projets',
   })
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    await this.clientsService.hardDelete(id);
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser('id') actorId: string,
+  ) {
+    await this.clientsService.hardDelete(id, actorId);
   }
 }

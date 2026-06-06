@@ -300,6 +300,21 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
       rulesProcessed: z.number(),
     })
     .strict(),
+
+  // Client lifecycle (OBS-004). CREATED references the row + name; UPDATE
+  // carries before/after; DELETE a snapshot; ASSIGNED/REMOVED reference the
+  // project↔client link.
+  [AuditAction.CLIENT_CREATED]: z
+    .object({ clientId: z.string(), name: z.string() })
+    .strict(),
+  [AuditAction.CLIENT_UPDATED]: beforeAfter,
+  [AuditAction.CLIENT_DELETED]: deletionSnapshot,
+  [AuditAction.CLIENT_ASSIGNED_TO_PROJECT]: z
+    .object({ projectId: z.string(), clientId: z.string() })
+    .strict(),
+  [AuditAction.CLIENT_REMOVED_FROM_PROJECT]: z
+    .object({ projectId: z.string(), clientId: z.string() })
+    .strict(),
 } satisfies Record<AuditAction, z.ZodTypeAny>;
 
 /**

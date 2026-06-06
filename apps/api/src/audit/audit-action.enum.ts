@@ -133,4 +133,13 @@ export enum AuditAction {
   TELEWORK_RULE_UPDATED = 'TELEWORK_RULE_UPDATED',
   TELEWORK_RULE_DELETED = 'TELEWORK_RULE_DELETED',
   TELEWORK_SCHEDULES_GENERATED = 'TELEWORK_SCHEDULES_GENERATED',
+  // OBS-004 — client (commanditaire) lifecycle (ClientsService). Client
+  // management has procurement implications; hard-deleting one or (de)linking it
+  // from a project was previously untraceable. CREATED/UPDATED/DELETED on the
+  // client row; ASSIGNED/REMOVED on the project↔client link.
+  CLIENT_CREATED = 'CLIENT_CREATED',
+  CLIENT_UPDATED = 'CLIENT_UPDATED',
+  CLIENT_DELETED = 'CLIENT_DELETED',
+  CLIENT_ASSIGNED_TO_PROJECT = 'CLIENT_ASSIGNED_TO_PROJECT',
+  CLIENT_REMOVED_FROM_PROJECT = 'CLIENT_REMOVED_FROM_PROJECT',
 }
