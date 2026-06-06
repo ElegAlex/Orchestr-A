@@ -5433,7 +5433,7 @@ grep -n 'rejectCancellation\|auditPersistence' apps/api/src/leaves/leaves.servic
 
 ### OBS-008 — createDelegation() and deactivateDelegation() emit no audit row
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -5487,6 +5487,7 @@ grep -n 'createDelegation\|deactivateDelegation\|auditPersistence' apps/api/src/
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verified: createDelegation() at lines 2329-2407 and deactivateDelegation() at lines 2454-2485 confirmed verbatim. Full grep of audit calls in leaves.service.ts shows none in ranges 2329-2407 or 2454-2485. Finding confirmed.
+- **2026-06-06 — DONE.** Audit-emit cluster slice 8. Added `DELEGATION_CREATED` / `DELEGATION_DEACTIVATED` (new entityType `Delegation` — the subject is a `leave_validation_delegates` row, semantically distinct from a leave request; honest per-subject typing per OBS-001). `auditPersistence` was already injected. createDelegation→emit after the create {delegationId,delegatorId,delegateId,startDate,endDate} (actor=delegator); deactivateDelegation→emit after the update {delegationId,delegatorId,delegateId} (actor=the deactivating user). Both AC#1-3 covered (parties + actor captured). Build gotcha hit + fixed: the create payload uses the INPUT `startDate`/`endDate` Date params (always present), not `delegation.startDate` (the existing createDelegation tests' create-mock omits those columns → would `undefined.toISOString()`). Witnesses (leaves.service.spec, 2 tests) capture each emit + real `validatePayloadForAction` (RED-by-absence). Gate green: nest build + api vitest 2253 + lint 0-err + coherence.
 
 **Closed_by:** (empty — TODO)
 

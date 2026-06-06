@@ -10,8 +10,9 @@ import {
 } from '@nestjs/common';
 import { LeaveStatus, LeaveType, Role } from '../__mocks__/database';
 import { Prisma } from 'database';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, AuditAction } from '../audit/audit.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 import { PermissionsService } from '../rbac/permissions.service';
 import { HolidaysService } from '../holidays/holidays.service';
 
@@ -5471,6 +5472,95 @@ describe('LeavesService', () => {
         (c: any[]) => c[0]?.where?.id === 'user-1',
       );
       expect(uniqueCalls.length).toBeLessThan(rows.length);
+    });
+  });
+
+  // OBS-008 — delegations transfer leave-approval authority (RBAC-adjacent);
+  // create + deactivate must each leave a durable audit_logs row. Witness =
+  // capture the payload to the mocked AuditPersistence.log + assert the REAL
+  // strict schema (validatePayloadForAction).
+  describe('OBS-008 delegation audit emits', () => {
+    const findCall = (action: AuditAction) =>
+      mockAuditPersistence.log.mock.calls.find(
+        (c) => c[0]?.action === action,
+      )?.[0];
+
+    it('createDelegation() emits DELEGATION_CREATED', async () => {
+      mockGetPermissionsForRole.mockResolvedValueOnce([
+        'leaves:manage_delegations',
+      ]);
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce({ id: 'deleg-1', role: { code: 'MANAGER' } })
+        .mockResolvedValueOnce({ id: 'deleg-2', isActive: true });
+      mockPrismaService.leaveValidationDelegate.create.mockResolvedValue({
+        id: 'del-1',
+        delegatorId: 'deleg-1',
+        delegateId: 'deleg-2',
+        startDate: new Date('2026-01-01'),
+        endDate: new Date('2026-02-01'),
+        isActive: true,
+      });
+
+      await service.createDelegation(
+        'deleg-1',
+        'deleg-2',
+        new Date('2026-01-01'),
+        new Date('2026-02-01'),
+      );
+
+      const call = findCall(AuditAction.DELEGATION_CREATED);
+      expect(call).toMatchObject({
+        action: AuditAction.DELEGATION_CREATED,
+        entityType: 'Delegation',
+        entityId: 'del-1',
+        actorId: 'deleg-1',
+      });
+      expect(call?.payload).toMatchObject({
+        delegationId: 'del-1',
+        delegatorId: 'deleg-1',
+        delegateId: 'deleg-2',
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.DELEGATION_CREATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('deactivateDelegation() emits DELEGATION_DEACTIVATED', async () => {
+      mockPrismaService.leaveValidationDelegate.findUnique.mockResolvedValue({
+        id: 'del-1',
+        delegatorId: 'user-1',
+        delegateId: 'deleg-2',
+        isActive: true,
+      });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        role: { code: 'MANAGER' },
+      });
+      mockPrismaService.leaveValidationDelegate.update.mockResolvedValue({
+        id: 'del-1',
+        isActive: false,
+      });
+
+      await service.deactivateDelegation('del-1', 'user-1');
+
+      const call = findCall(AuditAction.DELEGATION_DEACTIVATED);
+      expect(call).toMatchObject({
+        action: AuditAction.DELEGATION_DEACTIVATED,
+        entityType: 'Delegation',
+        entityId: 'del-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        delegationId: 'del-1',
+        delegatorId: 'user-1',
+        delegateId: 'deleg-2',
+      });
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.DELEGATION_DEACTIVATED,
+          call?.payload,
+        ),
+      ).not.toThrow();
     });
   });
 });

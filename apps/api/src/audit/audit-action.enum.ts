@@ -147,4 +147,10 @@ export enum AuditAction {
   // that affects entitlements must be auditable. One action with before/after in
   // the payload (after=null on a custom-key delete); entityId = the setting key.
   SETTINGS_CHANGED = 'SETTINGS_CHANGED',
+  // OBS-008 — leave-validation delegation lifecycle (LeavesService). A delegation
+  // transfers leave-approval authority from a delegator to a delegate for a time
+  // window — RBAC-adjacent and previously untraceable. CREATED on createDelegation;
+  // DEACTIVATED on deactivateDelegation. Subject = the delegation row.
+  DELEGATION_CREATED = 'DELEGATION_CREATED',
+  DELEGATION_DEACTIVATED = 'DELEGATION_DEACTIVATED',
 }

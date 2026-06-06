@@ -2460,6 +2460,23 @@ export class LeavesService {
       },
     });
 
+    // OBS-008 — a delegation transfers leave-approval authority; record it.
+    // Actor = the delegator (the authority being delegated). Awaited after the
+    // single-row create.
+    await this.auditPersistence.log({
+      action: AuditAction.DELEGATION_CREATED,
+      entityType: 'Delegation',
+      entityId: delegation.id,
+      actorId: delegatorId,
+      payload: {
+        delegationId: delegation.id,
+        delegatorId,
+        delegateId,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      },
+    });
+
     return delegation;
   }
 
@@ -2536,6 +2553,21 @@ export class LeavesService {
     const updated = await this.prisma.leaveValidationDelegate.update({
       where: { id: delegationId },
       data: { isActive: false },
+    });
+
+    // OBS-008 — deactivating a delegation revokes transferred approval authority;
+    // record it. Actor = the user performing the deactivation (delegator or an
+    // admin with leaves:manage_any).
+    await this.auditPersistence.log({
+      action: AuditAction.DELEGATION_DEACTIVATED,
+      entityType: 'Delegation',
+      entityId: delegationId,
+      actorId: userId,
+      payload: {
+        delegationId,
+        delegatorId: delegation.delegatorId,
+        delegateId: delegation.delegateId,
+      },
     });
 
     return updated;

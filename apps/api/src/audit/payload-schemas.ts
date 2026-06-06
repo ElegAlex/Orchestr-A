@@ -322,6 +322,25 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
   [AuditAction.SETTINGS_CHANGED]: z
     .object({ key: z.string(), before: snapshot, after: snapshot })
     .strict(),
+
+  // Leave-validation delegation lifecycle (OBS-008). CREATED carries the window;
+  // DEACTIVATED references the parties.
+  [AuditAction.DELEGATION_CREATED]: z
+    .object({
+      delegationId: z.string(),
+      delegatorId: z.string(),
+      delegateId: z.string(),
+      startDate: z.string(),
+      endDate: z.string(),
+    })
+    .strict(),
+  [AuditAction.DELEGATION_DEACTIVATED]: z
+    .object({
+      delegationId: z.string(),
+      delegatorId: z.string(),
+      delegateId: z.string(),
+    })
+    .strict(),
 } satisfies Record<AuditAction, z.ZodTypeAny>;
 
 /**
