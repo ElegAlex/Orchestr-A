@@ -19,6 +19,12 @@
 
 > ⚠️ **Scope of this merge:** dedup is *across the two 2026-06-04 runs only*. Overlap with the older `2026-05-24` remediation cycle (sibling dir) was **NOT** deduped — some items here may already be DONE/superseded there. A verify pass should reconcile before remediation.
 
+## ACCEPTED BEHAVIORS (WONT-FIX — intended design; reconcile/audit passes resolve equivalents to ACCEPTED)
+
+Authoritative copy: `../2026-05-24-review-payloads/CLAUDE_SESSION_CONTRACT.md` §"Accepted behaviors" (read first by every session). Items here are NOT vulnerabilities — a finding (current or future-audit) that re-asserts one resolves to **ACCEPTED (intended design)**, never blocking/important. Do NOT remediate or tighten the named scope. (Format is a bullet, not a `### ID —` finding block, so it is intentionally invisible to the coherence gate / generator.)
+
+- **AB-001 — Org-wide READ of tasks, leaves/congés, telework is INTENDED (operator decision 2026-06-06).** Orchestr'A is a planning tool where every authenticated user is meant to see everyone's tasks/leave/telework. The near-universal read permissions `tasks:readAll` (21/26 templates), `leaves:readAll` (23/26), `telework:readAll` (23/26) — held down to `BASIC_USER` — are deliberate, NOT broken-access / horizontal-privilege / IDOR. Covered read paths: `GET /tasks/assignee/:userId`, `GET /leaves?userId=`, `GET /telework?userId=` (+ the service `findAll` paths gated on those `*:readAll`). **Resolves** the "broader exposure" SEC-030 flagged for separate review (see SEC-030 Notes + MANIFEST §Delta correction) → ACCEPTED; **no code change, `*:readAll` NOT tightened.** **Untouched (still valid, do NOT blanket-accept):** SEC-030's `GET /leaves/balance/:userId` + `GET /skills/user/:userId` managed-scope and the `leaves:read_balance_any` grant (different, non-`*:readAll` endpoints — they STAND); the user-*directory* horizontal-scope findings (2026-05-24 `SEC-031` / `SEC-030` on `GET /users*`); and any WRITE/approve/modify scoping. Acceptance = **READ of the three planning domains only.**
+
 ## Totals
 
 - **Tasks:** 329  ·  **deduped (sessionA→primary):** 38  ·  **requires-live-verification:** 13

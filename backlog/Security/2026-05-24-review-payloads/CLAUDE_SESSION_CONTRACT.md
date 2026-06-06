@@ -51,3 +51,29 @@ dev-only hazards block it (prod/`migrate deploy` are unaffected — deploy ignor
 
 `migrate dev` needs `DATABASE_MIGRATION_URL` (datasource `directUrl`, the owner role);
 in dev it equals `DATABASE_URL`: `set -a; . ./.env; set +a; export DATABASE_MIGRATION_URL="$DATABASE_URL"`.
+
+## Accepted behaviors (intended design — audits MUST resolve these to ACCEPTED / WONT-FIX)
+
+This section is read first by every security session, including reconcile/audit
+passes. A finding (current or from a future adversarial audit) that re-asserts any
+item below is **NOT a vulnerability**: resolve it to **ACCEPTED (intended design)**,
+not blocking/important. Do **NOT** remediate, and do **NOT** tighten the named scope.
+
+- **AB-001 — Org-wide READ of tasks, leaves/congés, and telework is INTENDED (operator decision 2026-06-06).**
+  Orchestr'A is a planning tool where every authenticated user is meant to see
+  everyone's tasks, leave, and telework. The near-universal read permissions
+  `tasks:readAll` (21/26 templates), `leaves:readAll` (23/26), `telework:readAll`
+  (23/26) — held down to `BASIC_USER` — are deliberate, NOT a broken-access /
+  horizontal-privilege / IDOR bug.
+  - **Covered read paths:** `GET /tasks/assignee/:userId`, `GET /leaves?userId=…`,
+    `GET /telework?userId=…` (and the service `findAll` paths gated on the three
+    `*:readAll` permissions above). Equivalent future findings → ACCEPTED.
+  - **Resolves** the "broader exposure" flagged in SEC-030's notes (2026-06-04
+    cycle) and the MANIFEST §Delta correction → ACCEPTED.
+  - **Does NOT affect / does NOT accept:** SEC-030's actual fixes —
+    `GET /leaves/balance/:userId` and `GET /skills/user/:userId` server-side
+    managed-scope, and the `leaves:read_balance_any` grant — those target
+    different, non-`*:readAll` endpoints and STAND. Also NOT accepted here: the
+    user *directory* horizontal-scope findings (2026-05-24 `SEC-031` / `SEC-030`
+    on `GET /users*`), and any WRITE/approve/modify scoping. Acceptance is **READ
+    of the three planning domains only.**
