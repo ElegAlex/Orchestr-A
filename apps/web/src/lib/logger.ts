@@ -22,6 +22,18 @@ const PII_KEYS = new Set(["token", "password", "email", "accessToken", "refreshT
  */
 function scrub(value: unknown): unknown {
   if (value === null || typeof value !== "object") return value;
+  // Error objects expose message/name/stack as NON-enumerable props, so
+  // Object.entries() returns [] and the error would be flattened to "{}",
+  // hiding the actual failure in prod DevTools. Preserve the diagnostic fields
+  // explicitly. (We deliberately do NOT spread an AxiosError's own enumerable
+  // props — config/request/response can carry tokens/PII and add noise.)
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: value.message,
+      stack: value.stack,
+    };
+  }
   if (Array.isArray(value)) return value.map(scrub);
   const result: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {

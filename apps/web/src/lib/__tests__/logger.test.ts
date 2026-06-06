@@ -121,4 +121,24 @@ describe("logger", () => {
       expect(JSON.stringify(call)).toContain("active");
     });
   });
+
+  describe("Error preservation (OBS-016 regression guard)", () => {
+    it("logs an Error's name/message/stack instead of flattening to {}", () => {
+      logger.error(new TypeError("foo.filter is not a function"));
+      const call = spyError.mock.calls[0];
+      // The non-enumerable Error fields must survive scrubbing — previously
+      // Object.entries(error) was [] so the error was logged as a useless "{}".
+      expect(JSON.stringify(call)).toContain("foo.filter is not a function");
+      expect(JSON.stringify(call)).toContain("TypeError");
+      expect(JSON.stringify(call[0])).not.toBe("{}");
+      expect(call[0]).toHaveProperty("stack");
+    });
+
+    it("still redacts PII keys on a plain-object payload", () => {
+      logger.error("ctx", { email: "a@b.com" });
+      const call = spyError.mock.calls[0];
+      expect(JSON.stringify(call)).not.toContain("a@b.com");
+      expect(JSON.stringify(call)).toContain("[REDACTED]");
+    });
+  });
 });
