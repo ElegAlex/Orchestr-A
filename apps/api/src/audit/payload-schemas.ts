@@ -244,6 +244,22 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
     .object({ previousArchivedAt: snapshot })
     .strict(),
   [AuditAction.PROJECT_DELETED]: deletionSnapshot,
+
+  // Time-entry lifecycle (OBS-015) — CREATED references the declaration's scalar
+  // facts (task/project/hours/activity/date) + whether it was declared for a
+  // third party; UPDATE carries before/after; DELETE a full snapshot.
+  [AuditAction.TIME_ENTRY_CREATED]: z
+    .object({
+      taskId: z.string().nullable(),
+      projectId: z.string().nullable(),
+      hours: z.number(),
+      activityType: z.string(),
+      date: z.string(),
+      declaredForThirdParty: z.boolean(),
+    })
+    .strict(),
+  [AuditAction.TIME_ENTRY_UPDATED]: beforeAfter,
+  [AuditAction.TIME_ENTRY_DELETED]: deletionSnapshot,
 } satisfies Record<AuditAction, z.ZodTypeAny>;
 
 /**

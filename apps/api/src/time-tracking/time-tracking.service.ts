@@ -10,6 +10,8 @@ import { PermissionsService } from '../rbac/permissions.service';
 import { ThirdPartiesService } from '../third-parties/third-parties.service';
 import { OwnershipService } from '../common/services/ownership.service';
 import { AccessScopeService } from '../common/services/access-scope.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit-action.enum';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
 
@@ -38,6 +40,7 @@ export class TimeTrackingService {
     private readonly permissionsService: PermissionsService,
     private readonly ownershipService: OwnershipService,
     private readonly accessScopeService: AccessScopeService,
+    private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
   /**
@@ -161,6 +164,12 @@ export class TimeTrackingService {
       if (!createTimeEntryDto.taskId) {
         throw new BadRequestException('taskId requis pour un dismissal');
       }
+      // OBS-015 — the dismissal toggle (hours:0, isDismissal:true) is an
+      // idempotent UI marker that a done-but-undeclared task is intentionally
+      // not declared, NOT a payroll declaration. It is deliberately not audited:
+      // emitting TIME_ENTRY_CREATED here would be a mislabel on the upsert's
+      // touch-existing branch (the defect class OBS-009 fixes) for ~zero
+      // forensic value.
       return this.upsertDismissal(currentUser, createTimeEntryDto.taskId);
     }
 
@@ -265,8 +274,9 @@ export class TimeTrackingService {
       });
     };
 
+    let created: Awaited<ReturnType<typeof txBody>>;
     try {
-      return await this.prisma.$transaction(txBody, {
+      created = await this.prisma.$transaction(txBody, {
         isolationLevel: 'Serializable',
       });
     } catch (err) {
@@ -274,12 +284,37 @@ export class TimeTrackingService {
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2034'
       ) {
-        return this.prisma.$transaction(txBody, {
+        created = await this.prisma.$transaction(txBody, {
           isolationLevel: 'Serializable',
         });
+      } else {
+        throw err;
       }
-      throw err;
     }
+
+    // OBS-015 — emit AFTER the SERIALIZABLE tx commits, never inside it. The
+    // audit hash-chain read (audit-persistence.service.ts) relies on READ
+    // COMMITTED per-statement snapshot semantics to see the latest committed
+    // prevHash; run inside a SERIALIZABLE tx it would either fork the chain off
+    // a frozen-snapshot prevHash or trip SSI (P2034) on a conflict unrelated to
+    // the cap check, burning the single retry. Non-atomic await-after-write
+    // matches the OBS-006 single-row-create precedent.
+    await this.auditPersistence.log({
+      action: AuditAction.TIME_ENTRY_CREATED,
+      entityType: 'TimeEntry',
+      entityId: created.id,
+      actorId: currentUser.id,
+      payload: {
+        taskId: taskId ?? null,
+        projectId: effectiveProjectId ?? null,
+        hours,
+        activityType,
+        date,
+        declaredForThirdParty: actor.kind === 'thirdParty',
+      },
+    });
+
+    return created;
   }
 
   private async resolveActor(
@@ -681,6 +716,16 @@ export class TimeTrackingService {
       },
     });
 
+    // OBS-015 — durable before/after audit row for a time-entry edit. Awaited
+    // after the single-row update (no surrounding tx); actor = the editing user.
+    await this.auditPersistence.log({
+      action: AuditAction.TIME_ENTRY_UPDATED,
+      entityType: 'TimeEntry',
+      entityId: id,
+      actorId: currentUser.id,
+      payload: { before: existing, after: entry },
+    });
+
     return entry;
   }
 
@@ -700,6 +745,17 @@ export class TimeTrackingService {
 
     await this.prisma.timeEntry.delete({
       where: { id },
+    });
+
+    // OBS-015 — capture the full row (snapshot above, before the delete) so the
+    // deletion is reconstructable from the immutable trail; actor = the
+    // deleting user. Awaited after the delete (no surrounding tx).
+    await this.auditPersistence.log({
+      action: AuditAction.TIME_ENTRY_DELETED,
+      entityType: 'TimeEntry',
+      entityId: id,
+      actorId: currentUser.id,
+      payload: { snapshot: entry },
     });
 
     return { message: 'Entrée de temps supprimée avec succès' };

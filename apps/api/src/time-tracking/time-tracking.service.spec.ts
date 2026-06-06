@@ -12,6 +12,9 @@ import { PermissionsService } from '../rbac/permissions.service';
 import { ThirdPartiesService } from '../third-parties/third-parties.service';
 import { OwnershipService } from '../common/services/ownership.service';
 import { AccessScopeService } from '../common/services/access-scope.service';
+import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { TimeTrackingService } from './time-tracking.service';
 
@@ -55,6 +58,10 @@ describe('TimeTrackingService', () => {
     assertCanAccessProject: vi.fn(),
   };
 
+  const mockAuditPersistence = {
+    log: vi.fn(),
+  };
+
   const currentUser: { id: string; role: string | null } = {
     id: 'user-1',
     role: 'MANAGER',
@@ -72,6 +79,10 @@ describe('TimeTrackingService', () => {
         },
         { provide: OwnershipService, useValue: mockOwnershipService },
         { provide: AccessScopeService, useValue: mockAccessScopeService },
+        {
+          provide: AuditPersistenceService,
+          useValue: mockAuditPersistence,
+        },
       ],
     }).compile();
     service = module.get<TimeTrackingService>(TimeTrackingService);
@@ -1567,6 +1578,129 @@ describe('TimeTrackingService', () => {
           }),
         }),
       );
+    });
+  });
+
+  // OBS-015 — time entries are payroll-adjacent; create/update/delete must each
+  // leave a durable audit_logs row. Witness = capture the payload handed to the
+  // mocked AuditPersistence.log + assert the REAL strict payload schema accepts
+  // it (validatePayloadForAction). actorId must be the declaring user, not the
+  // target. The dismissal toggle (hours:0, isDismissal:true) is intentionally
+  // NOT audited — see service comment.
+  describe('OBS-015 audit emits', () => {
+    const findCall = (action: AuditAction) =>
+      mockAuditPersistence.log.mock.calls.find(
+        (c) => c[0]?.action === action,
+      )?.[0];
+
+    it('emits TIME_ENTRY_CREATED with a schema-conformant payload (actor = declaredById)', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
+      mockAccessScopeService.assertCanReadTask.mockResolvedValue(undefined);
+      mockAccessScopeService.assertCanAccessProject.mockResolvedValue(
+        undefined,
+      );
+      mockPrismaService.task.findUnique.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-1',
+      });
+      mockPrismaService.timeEntry.create.mockResolvedValue({
+        id: 'te-1',
+        userId: 'user-1',
+        declaredById: 'user-1',
+      });
+
+      await service.create(currentUser, {
+        date: '2025-01-01',
+        hours: 8,
+        activityType: 'DEVELOPMENT' as const,
+        taskId: 'task-1',
+        projectId: 'project-1',
+        description: 'Working on feature',
+      });
+
+      const call = findCall(AuditAction.TIME_ENTRY_CREATED);
+      expect(call).toMatchObject({
+        action: AuditAction.TIME_ENTRY_CREATED,
+        entityType: 'TimeEntry',
+        entityId: 'te-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        taskId: 'task-1',
+        projectId: 'project-1',
+        hours: 8,
+        activityType: 'DEVELOPMENT',
+        declaredForThirdParty: false,
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.TIME_ENTRY_CREATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('emits TIME_ENTRY_UPDATED with a before/after, schema-conformant payload', async () => {
+      const existing = {
+        id: 'te-1',
+        userId: 'user-1',
+        thirdPartyId: null,
+        taskId: 'task-1',
+        projectId: 'project-1',
+        hours: 4,
+        activityType: 'DEVELOPMENT',
+        date: new Date('2025-01-01'),
+      };
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue(existing);
+      mockOwnershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.timeEntry.update.mockResolvedValue({
+        ...existing,
+        hours: 6,
+      });
+
+      await service.update('te-1', { hours: 6 }, currentUser);
+
+      const call = findCall(AuditAction.TIME_ENTRY_UPDATED);
+      expect(call).toMatchObject({
+        action: AuditAction.TIME_ENTRY_UPDATED,
+        entityType: 'TimeEntry',
+        entityId: 'te-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        before: expect.objectContaining({ hours: 4 }),
+        after: expect.objectContaining({ hours: 6 }),
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.TIME_ENTRY_UPDATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('emits TIME_ENTRY_DELETED with a snapshot of the deleted entry', async () => {
+      const existing = {
+        id: 'te-1',
+        userId: 'user-1',
+        thirdPartyId: null,
+        hours: 8,
+        activityType: 'DEVELOPMENT',
+        date: new Date('2025-01-01'),
+      };
+      mockPrismaService.timeEntry.findUnique.mockResolvedValue(existing);
+      mockOwnershipService.isOwner.mockResolvedValue(true);
+      mockPrismaService.timeEntry.delete.mockResolvedValue(existing);
+
+      await service.remove('te-1', currentUser);
+
+      const call = findCall(AuditAction.TIME_ENTRY_DELETED);
+      expect(call).toMatchObject({
+        action: AuditAction.TIME_ENTRY_DELETED,
+        entityType: 'TimeEntry',
+        entityId: 'te-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        snapshot: expect.objectContaining({ id: 'te-1' }),
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.TIME_ENTRY_DELETED, call?.payload),
+      ).not.toThrow();
     });
   });
 });

@@ -105,4 +105,13 @@ export enum AuditAction {
   PROJECT_ARCHIVED = 'PROJECT_ARCHIVED',
   PROJECT_UNARCHIVED = 'PROJECT_UNARCHIVED',
   PROJECT_DELETED = 'PROJECT_DELETED',
+  // OBS-015 — time-entry lifecycle (TimeTrackingService). Time declarations are
+  // payroll-adjacent in a French government context: create / update / delete of
+  // logged hours each leave a durable row. The actor is the DECLARING user
+  // (declaredById), distinct from the target userId when an admin declares on
+  // behalf of a third party. The idempotent dismissal toggle (hours:0) is NOT
+  // audited — it is a UI marker, not a payroll declaration.
+  TIME_ENTRY_CREATED = 'TIME_ENTRY_CREATED',
+  TIME_ENTRY_UPDATED = 'TIME_ENTRY_UPDATED',
+  TIME_ENTRY_DELETED = 'TIME_ENTRY_DELETED',
 }

@@ -5850,7 +5850,7 @@ N/A — manual verification
 
 ### OBS-015 — time-tracking: create/update/delete emit no audit_log row
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -5900,6 +5900,7 @@ curl -s -H 'Authorization: Bearer <TOKEN>' -X DELETE http://localhost:3000/time-
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: AuditAction enum (audit-action.enum.ts) has no TIME_ENTRY_* members, confirming no audit emission was ever added. Constructor verified: only PrismaService, ThirdPartiesService, PermissionsService, OwnershipService, AccessScopeService. Code at line 208 matches verbatim.
+- **2026-06-06 — DONE.** Audit-emit cluster slice 3. Added TIME_ENTRY_CREATED/UPDATED/DELETED (entityType `TimeEntry`) to the 3 compile-locked layers + injected `AuditPersistenceService` and wired emits. AC#1/#2/#3/#4 covered: create→TIME_ENTRY_CREATED {taskId,projectId,hours,activityType,date,declaredForThirdParty}, update→TIME_ENTRY_UPDATED {before,after}, remove→TIME_ENTRY_DELETED {snapshot}; actorId=currentUser.id (declaredById) in all three. **Key correction (advisor):** create() runs the insert in a SERIALIZABLE tx with a one-shot P2034 retry — the audit emit is placed AFTER the tx commits, NOT inside it, because the hash-chain read relies on READ COMMITTED per-statement snapshot semantics (inside SERIALIZABLE it forks the chain off a frozen prevHash or trips SSI, burning the retry). update()/remove() are non-transactional single writes → awaited after. The idempotent **dismissal toggle** (hours:0, isDismissal:true — a UI marker, not a payroll declaration) is intentionally NOT audited (avoids a CREATED-on-update mislabel for ~zero forensic value). Witnesses in `time-tracking.service.spec` capture each emit + assert the real strict `validatePayloadForAction` (RED-by-absence captured: 3 fail before the emits exist). Gate green: nest build (compile-locked Records) + api vitest 2233 + lint 0-err + coherence.
 
 **Closed_by:** (empty — TODO)
 
