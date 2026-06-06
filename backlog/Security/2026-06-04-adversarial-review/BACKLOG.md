@@ -11956,7 +11956,7 @@ grep -n 'deleteMany\|\$transaction' apps/api/src/events/events.service.ts
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Extending recurrenceEndDate never regenerates children; this is a separate limitation (not filed as a separate finding — insufficient confidence that this is unintentional vs. out-of-scope). Adversarial check: $transaction closes at line 535 (closing brace of async tx callback + .catch handler). The deleteMany at lines 551-556 executes via `this.prisma.event.deleteMany` (not `tx.event.deleteMany`), confirming it is outside the transaction scope. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d8426eff
 
 ---
 
@@ -12185,7 +12185,7 @@ grep -n 'findOne\|assertProjectMembership\|epic.update\|epic.delete' apps/api/sr
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d8426eff
 
 ---
 
@@ -12253,7 +12253,7 @@ grep -n 'P2002\|skipDuplicates\|existingParticipation' apps/api/src/events/event
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: DB integrity is safe due to the unique constraint. Only the error response code is affected in the concurrent scenario. Adversarial check: AllExceptionsFilter (apps/api/src/common/filters/all-exceptions.filter.ts) maps all non-HttpException errors to HTTP 500 with opaque 'Internal server error' message (line 71-101). P2002 is a PrismaClientKnownRequestError (not an HttpException), so it will return 500. No P2002 catch in addParticipant(). Other services (holidays, departments, leaves, clients) explicitly catch P2002 — this service does not. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d8426eff
 
 ---
 
@@ -12311,7 +12311,7 @@ grep -n 'findOne\|assertProjectMembership\|milestone.update\|milestone.delete' a
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d8426eff
 
 ---
 
@@ -15345,7 +15345,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verbatim confirmed: MS_PER_DAY at line 20, daysFromNow computation at lines 97-98. Low blast radius — affects display only. The aggregate overdue/completed/upcoming counts use direct date comparison (milestone.dueDate < now) which is unaffected by this issue.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d8426eff
 
 ---
 
@@ -15728,7 +15728,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verbatim confirmed at lines 32-45. The service implements OnModuleInit (line 28, 47-51) but only for logging — no OnModuleDestroy or onApplicationShutdown. The redis field is typed as `private readonly redis: Redis` with no teardown. This is a correctness/resource-management issue rather than a functional bug. The cron job itself works correctly.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d8426eff
 
 ---
 
@@ -15778,7 +15778,7 @@ N/A — manual verification via network tab in devtools
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed. useAuthBootstrap (src/hooks/useAuthBootstrap.ts:48-53) fetches both /auth/me and /auth/me/permissions in parallel on every mount via Promise.all. The login page also fetches /auth/me/permissions at line 29-31. Confirmed redundancy.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d8426eff
 
 ---
 
@@ -16587,7 +16587,7 @@ grep -n "status: 'ACTIVE'" apps/api/src/projects/projects.service.ts
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d8426eff
 
 ---
 
@@ -16637,7 +16637,7 @@ grep -n 'recalcTaskProgress\|getTaskProgress\|progress' apps/api/src/tasks/tasks
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: recalcTaskProgress at line 2063 exits early if subtasks.length === 0, so it would not fix this if called from update().
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d8426eff
 
 ---
 
@@ -17660,7 +17660,7 @@ grep -n 'end <= start\|end < start' apps/api/src/tasks/tasks.service.ts
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-COR-009` to avoid ID collision with the primary run; original id `COR-009` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** d8426eff
 
 ---
 
