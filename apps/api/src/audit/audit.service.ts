@@ -53,9 +53,11 @@ const ENTITY_TYPE_BY_ACTION: Record<
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
+  [AuditAction.LOGOUT]: 'Auth',
   [AuditAction.ACCOUNT_LOCKED]: 'Auth',
   [AuditAction.ACCESS_DENIED]: 'Auth',
   [AuditAction.REGISTER]: 'User',
+  [AuditAction.USER_CREATED]: 'User',
   [AuditAction.ROLE_CHANGE]: 'User',
   [AuditAction.USER_DEACTIVATED]: 'User',
   [AuditAction.USER_REACTIVATED]: 'User',

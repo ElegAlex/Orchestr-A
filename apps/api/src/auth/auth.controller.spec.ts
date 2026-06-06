@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuditService, AuditAction } from '../audit/audit.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 import {
   UnauthorizedException,
   ConflictException,
@@ -49,6 +51,8 @@ describe('AuthController', () => {
     isBlacklisted: vi.fn(),
   };
 
+  const mockAuditService = { log: vi.fn() };
+
   const mockReq = { headers: {}, ip: '127.0.0.1', ips: [] };
 
   beforeEach(async () => {
@@ -58,6 +62,10 @@ describe('AuthController', () => {
         {
           provide: AuthService,
           useValue: mockAuthService,
+        },
+        {
+          provide: AuditService,
+          useValue: mockAuditService,
         },
         {
           provide: RefreshTokenService,
@@ -335,6 +343,53 @@ describe('AuthController', () => {
       // a Redis outage must not leave the refresh token alive or the cookie uncleared.
       expect(mockRefreshTokenService.revoke).toHaveBeenCalledWith('rt');
       expect(reply.header).toHaveBeenCalled();
+    });
+
+    // OBS-003 — session termination must leave a durable audit row. RED before
+    // the AuditService.log emit was wired into logout().
+    it('OBS-003: emits a LOGOUT audit event for the session owner', async () => {
+      mockBlacklist.blacklist.mockResolvedValue(undefined);
+      mockRefreshTokenService.revoke.mockResolvedValue(undefined);
+      const { reply } = captureReply();
+
+      await controller.logout(
+        { refreshToken: 'rt' } as any,
+        logoutUser as any,
+        {
+          headers: { 'user-agent': 'jest-ua' },
+          ip: '10.0.0.9',
+          ips: [],
+        } as any,
+        reply as any,
+      );
+
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: AuditAction.LOGOUT,
+          userId: logoutUser.id,
+          success: true,
+        }),
+      );
+      // No PII (login/email) in the details — opaque id only (OBS-027).
+      const event = mockAuditService.log.mock.calls.find(
+        (c) => c[0]?.action === AuditAction.LOGOUT,
+      )?.[0];
+      expect(JSON.stringify(event)).not.toContain(mockUser.login);
+    });
+
+    // OBS-003 — the persisted LOGOUT row uses the security envelope; assert the
+    // envelope the AuditService would build conforms to the registered schema.
+    it('OBS-003: LOGOUT payload conforms to the registered envelope schema', () => {
+      const envelope = {
+        ip: '10.0.0.9',
+        details: 'User u1 logged out',
+        success: true,
+        timestamp: new Date('2026-06-06T00:00:00.000Z').toISOString(),
+        ua: 'jest-ua',
+      };
+      expect(() =>
+        validatePayloadForAction(AuditAction.LOGOUT, envelope),
+      ).not.toThrow();
     });
   });
 

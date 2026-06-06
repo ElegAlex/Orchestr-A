@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
+import { AuditService, AuditAction } from '../audit/audit.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { JwtBlacklistService } from './jwt-blacklist.service';
 import { LoginDto } from './dto/login.dto';
@@ -125,6 +126,7 @@ function readRefreshCookie(req: {
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly auditService: AuditService,
     private readonly refreshTokenService: RefreshTokenService,
     private readonly blacklist: JwtBlacklistService,
   ) {}
@@ -240,6 +242,20 @@ export class AuthController {
         await this.blacklist.blacklist(user.jti, remaining);
       }
     }
+
+    // OBS-003 — durable audit trail for session termination, symmetric with the
+    // LOGIN_SUCCESS emit. Fire-and-forget (AuditService.log), so a Redis/DB audit
+    // failure never turns a completed logout into an error. Subject = the user
+    // whose session ended; reference by opaque id only (OBS-027), no PII.
+    const uaRaw = req?.headers?.['user-agent'];
+    this.auditService.log({
+      action: AuditAction.LOGOUT,
+      userId: user.id,
+      ip: clientIp(req),
+      ua: typeof uaRaw === 'string' ? uaRaw.slice(0, 512) : undefined,
+      details: `User ${user.id} logged out`,
+      success: true,
+    });
   }
 
   @Public()

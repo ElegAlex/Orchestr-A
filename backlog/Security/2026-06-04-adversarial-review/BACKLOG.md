@@ -1270,7 +1270,7 @@ curl -s -X POST http://localhost:3000/api/tasks -H 'Authorization: Bearer <token
 
 ### OBS-016 — POST /users/import bulk-creates users with no audit row per created user
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** cross-validated
@@ -1325,7 +1325,7 @@ grep -n 'auditPersistence\|auditService\|AuditAction' apps/api/src/users/users.s
 
 ### OBS-017 — POST /users (admin-side user creation) emits no audit row
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** cross-validated
@@ -5196,7 +5196,7 @@ N/A — manual verification: grep -n 'getRequestId' apps/api/src/audit/audit.ser
 
 ### OBS-003 — POST /auth/logout emits no audit row — session termination is untracked
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only

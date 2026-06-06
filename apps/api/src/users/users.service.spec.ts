@@ -28,8 +28,9 @@ import { RefreshTokenService } from '../auth/refresh-token.service';
 import { JwtNotBeforeService } from '../auth/jwt-not-before.service';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
 import { AccessScopeService } from '../common/services/access-scope.service';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, AuditAction } from '../audit/audit.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 import { ForbiddenException } from '@nestjs/common';
 
 describe('UsersService', () => {
@@ -3080,6 +3081,16 @@ describe('UsersService', () => {
         entityId: 'new-obs017',
       }),
     );
+    // OBS-017 — the emitted payload must satisfy the registered strict schema
+    // (else AuditPersistenceService rejects the row at INSERT). Discriminating:
+    // a wrong/missing key throws here.
+    const createPayload = mockAuditPersistence.log.mock.calls.find(
+      (c) => c[0]?.action === AuditAction.USER_CREATED,
+    )?.[0]?.payload;
+    expect(() =>
+      validatePayloadForAction(AuditAction.USER_CREATED, createPayload),
+    ).not.toThrow();
+    expect(createPayload).toMatchObject({ source: 'admin' });
   });
 
   // OBS-016 — importUsers() must emit a USER_CREATED audit row for each
@@ -3130,6 +3141,14 @@ describe('UsersService', () => {
         entityId: 'created-obs016',
       }),
     );
+    // OBS-016 — emitted import payload must satisfy the registered strict schema.
+    const importPayload = mockAuditPersistence.log.mock.calls.find(
+      (c) => c[0]?.action === AuditAction.USER_CREATED,
+    )?.[0]?.payload;
+    expect(() =>
+      validatePayloadForAction(AuditAction.USER_CREATED, importPayload),
+    ).not.toThrow();
+    expect(importPayload).toMatchObject({ source: 'import' });
   });
 
   // SA-DAT-004 — hardDelete() must write the USER_DELETED audit AFTER the

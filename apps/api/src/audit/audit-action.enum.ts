@@ -18,6 +18,10 @@
 export enum AuditAction {
   LOGIN_SUCCESS = 'LOGIN_SUCCESS',
   LOGIN_FAILURE = 'LOGIN_FAILURE',
+  // OBS-003 — session termination (POST /auth/logout). Symmetric with
+  // LOGIN_SUCCESS: subject = the user whose session ended; emitted via the
+  // AuditService security envelope (entityType 'Auth').
+  LOGOUT = 'LOGOUT',
   // SEC-006 — a per-(account, IP) progressive lockout was armed after repeated
   // failed logins (LoginLockoutService). Subject = the targeted account
   // identifier (sanitized, like LOGIN_FAILURE); payload carries the lock's
@@ -39,6 +43,12 @@ export enum AuditAction {
   // from USER_DEACTIVATED (the soft-deactivation path), which is the canonical
   // removal action for a user that already authored audit history.
   USER_DELETED = 'USER_DELETED',
+  // OBS-016 / OBS-017 — admin-side user provisioning. Emitted on POST /users
+  // (source 'admin') and per successfully imported row of POST /users/import
+  // (source 'import'). Symmetric with USER_DELETED so the full create/delete
+  // lifecycle is traceable. (Was emitted via a `'USER_CREATED' as AuditAction`
+  // cast pending this member; the cast is now removed.)
+  USER_CREATED = 'USER_CREATED',
   // OBS-005 — institutional-role (table `roles`) lifecycle mutations. Distinct
   // from ROLE_CHANGE, which records a *user* being reassigned to another role.
   ROLE_CREATED = 'ROLE_CREATED',

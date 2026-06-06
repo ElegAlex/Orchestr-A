@@ -224,7 +224,7 @@ export class UsersService {
     // create/delete lifecycle is traceable. AuditAction.USER_CREATED is added
     // to the enum in audit-action.enum.ts (cross_file_needs OBS-017).
     await this.auditPersistence.log({
-      action: 'USER_CREATED' as AuditAction,
+      action: AuditAction.USER_CREATED,
       entityType: 'User',
       entityId: user.id,
       actorId: callerId ?? null,
@@ -1493,7 +1493,7 @@ export class UsersService {
         // is caught by the outer catch so it is reported as a row error rather
         // than silently swallowed, but a future failure model may fire-and-forget.
         await this.auditPersistence.log({
-          action: 'USER_CREATED' as AuditAction,
+          action: AuditAction.USER_CREATED,
           entityType: 'User',
           entityId: user.id,
           actorId: callerId ?? null,

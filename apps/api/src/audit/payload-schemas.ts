@@ -159,6 +159,8 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
   [AuditAction.REGISTER]: securityEnvelope,
   [AuditAction.ACCESS_DENIED]: securityEnvelope,
   [AuditAction.PASSWORD_CHANGED]: securityEnvelope,
+  // OBS-003 — logout, AuditService security envelope.
+  [AuditAction.LOGOUT]: securityEnvelope,
 
   // User mutations — direct before/after emitters (UsersService).
   [AuditAction.ROLE_CHANGE]: beforeAfter,
@@ -177,6 +179,17 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
     .object({ targetLogin: z.string(), before: snapshot, after: snapshot })
     .strict(),
   [AuditAction.USER_DELETED]: deletionSnapshot,
+  // OBS-016 / OBS-017 — admin user provisioning (create + import). One schema
+  // covers both emit shapes: create → { roleId, departmentId, source:'admin' },
+  // import → { source:'import', row, roleId }.
+  [AuditAction.USER_CREATED]: z
+    .object({
+      roleId: z.string().nullable().optional(),
+      departmentId: z.string().nullable().optional(),
+      source: z.enum(['admin', 'import']),
+      row: z.number().optional(),
+    })
+    .strict(),
 
   // Institutional-role lifecycle (rbac/roles.service.ts, OBS-005).
   [AuditAction.ROLE_CREATED]: z.object({ after: snapshot }).strict(),
