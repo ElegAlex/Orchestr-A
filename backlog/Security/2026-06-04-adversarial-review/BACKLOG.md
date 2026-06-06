@@ -7243,7 +7243,7 @@ curl -s http://localhost:4000/api/health | jq 'keys'
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verified verbatim in health.service.ts lines 78-86. health.controller.ts confirms @Public() decorator with no auth guard. The comment 'Does NOT expose process.uptime, NODE_ENV, or any internal process info' is accurate for those specific fields but db/redis component names ARE infrastructure detail and are exposed. Finding confirmed as-is.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -11617,7 +11617,7 @@ grep -n 'generateResetToken\|PASSWORD_CHANGED\|auditService.log\|auditPersistenc
 - Cross-validated: independently flagged by both 2026-06-04 runs (primary OBS-021 ⇄ sessionA OBS-006).
 - Audit note: DOWNGRADED from high to medium. Original finding incorrectly stated auditService.log() goes to 'console/SecurityAudit sink only — NOT persisted to audit_logs'. Adversarial verification of audit.service.ts lines 152-207 shows AuditService.log() performs a DAT-002 dual-write: it calls auditPersistence.log() fire-and-forget for every action. ENTITY_TYPE_BY_ACTION[PASSWORD_CHANGED]='User' is defined, so the persistence call succeeds. The event IS durably logged. The mislabeled action code (PASSWORD_CHANGED vs PASSWORD_RESET_TOKEN_ISSUED) is confirmed real and reduces finding to a data-quality/anal … [truncated — full text in findings.json]
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -12013,7 +12013,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Whether errorDetails should also be cleared depends on desired UX — keeping row-level skip details can help the user fix their file even after a rollback. Adversarial check: result.skipped++ increments confirmed inside the $transaction callback at lines 3478, 3490, 3502, 3508, 3524, 3542. Catch block at lines 3627-3637 only resets result.created. Code verbatim confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -12132,7 +12132,7 @@ grep -n 'PrismaClientKnownRequestError\|P2002' apps/api/src/auth/auth.service.ts
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Same pattern in users.service.ts create() at lines 94-116. The fix is the same in both places. Adversarial check: grep confirmed zero P2002 or PrismaClientKnownRequestError references in auth.service.ts or users.service.ts. Other services (departments, leaves, holidays) do handle P2002 correctly — the omission is specific to these two files. AllExceptionsFilter confirmed: non-HttpException → opaque 500 with no P2002 translation.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -12373,7 +12373,7 @@ N/A — manual verification via concurrent HTTP test.
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Low exploitability (requires concurrent admin requests to /roles). Marked nit. The partial index fix would be the most robust mitigation. Adversarial check: schema.prisma confirmed Role model has @@index([isDefault]) (an index, not a unique constraint) — no DB-level singleton enforcement. Code evidence verbatim at lines 139-157.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -12436,7 +12436,7 @@ curl -s -o /dev/null -w '%{http_code}' -X DELETE http://localhost:3000/api/setti
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verbatim confirmed at lines 310-321. Controller (settings.controller.ts line 108) calls settingsService.remove(key) with no pre-validation. The ALLOWED_KEYS guard lives only in update(), not in remove(). No global Prisma exception filter was found to convert P2025 to 404.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -15396,7 +15396,7 @@ TZ=Europe/Paris node -e "const d=new Date('2026-06-04'); d.setHours(0,0,0,0); co
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Low practical impact if the Docker container always runs TZ=UTC (common default), but not enforced in code — marked nit rather than blocking. Adversarial check: neither docker-compose.yml nor docker-compose.prod.yml set TZ environment variable for the API container, confirming no enforcement. Code evidence verbatim at lines 1680-1684.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -15458,7 +15458,7 @@ grep 'req.body.login' apps/api/src/common/fastify/redact.config.ts
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: ADVERSARIAL REVIEW: Fully confirmed. Code evidence for lines 1-37 is verbatim correct (minor quote style difference: file uses straight quotes, finding uses escaped double quotes, but content is semantically identical). The full redact.config.ts was read: req.body.login does NOT appear in paths. Severity remains nit because Fastify does not serialize bodies by default — the risk is latent.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -15507,7 +15507,7 @@ N/A — manual verification: inspect audit.service.ts hashAttemptedLogin impleme
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at lines 103-104. DB persistence path at line 255 correctly uses createHmac. The asymmetry between stdout (unkeyed SHA256) and DB (HMAC) paths is real. Attempts to disprove: no wrapper or key injection surrounds hashAttemptedLogin — it is called directly at line 142 with attemptedEmail. No mitigating guard found.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -17451,7 +17451,7 @@ grep -n 'METRICS_TOKEN' .env.example .env.production.example
 - sessionA-only finding (99-run). Namespaced `SA-SEC-012` to avoid ID collision with the primary run; original id `SEC-012` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Related (same run): SEC-011.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -17501,7 +17501,7 @@ grep -rn 'console\.' /home/alex/Documents/REPO/ORCHESTRA/apps/api/src --include=
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-OBS-010` to avoid ID collision with the primary run; original id `OBS-010` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -17552,7 +17552,7 @@ grep -n 'console\.' /home/alex/Documents/REPO/ORCHESTRA/apps/api/src/settings/se
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-OBS-011` to avoid ID collision with the primary run; original id `OBS-011` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
@@ -18470,7 +18470,7 @@ curl -s http://localhost:4000/ | jq .
 **Notes:**
 - sessionA-only finding (99-run). Namespaced `SA-SEC-017` to avoid ID collision with the primary run; original id `SEC-017` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 2a770ebb
 
 ---
 
