@@ -92,7 +92,7 @@ export class DocumentsService {
     projectId?: string,
     currentUser?: AccessUser,
   ) {
-    const safeLimit = Math.min(limit || 1000, 1000);
+    const safeLimit = Math.min(limit ?? 1000, 100); // PER-043: hard cap lowered 1000→100
     const skip = (page - 1) * safeLimit;
     const where: Prisma.DocumentWhereInput = { deletedAt: null }; // DAT-025: exclude soft-deleted
     if (projectId) where.projectId = projectId;

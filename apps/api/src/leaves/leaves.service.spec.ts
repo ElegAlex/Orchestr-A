@@ -1959,6 +1959,18 @@ describe('LeavesService', () => {
       );
     });
 
+    // PER-046: getOwnLeaves must apply take:200 to bound the result set
+    it('PER-046 — passes take:200 to findMany to cap per-user leave history', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.leave.findMany.mockResolvedValue([mockLeave]);
+
+      await service.getOwnLeaves('user-1');
+
+      expect(mockPrismaService.leave.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 200 }),
+      );
+    });
+
     it('should compute canEdit/canDelete per leave status on owned leaves', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.leave.findMany.mockResolvedValue([

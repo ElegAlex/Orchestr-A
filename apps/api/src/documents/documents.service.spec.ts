@@ -155,6 +155,20 @@ describe('DocumentsService', () => {
         }),
       );
     });
+
+    // PER-043: hard cap must be 100 regardless of caller-supplied limit
+    it('PER-043 — caps safeLimit at 100 even when limit=500 is supplied', async () => {
+      mockPrismaService.document.findMany.mockResolvedValue([]);
+      mockPrismaService.document.count.mockResolvedValue(0);
+
+      const result = await service.findAll(1, 500);
+
+      expect(result.meta.limit).toBeLessThanOrEqual(100);
+      const call = mockPrismaService.document.findMany.mock.calls[0][0] as {
+        take: number;
+      };
+      expect(call.take).toBeLessThanOrEqual(100);
+    });
   });
 
   describe('findOne', () => {

@@ -452,7 +452,7 @@ export class TimeTrackingService {
       );
     }
 
-    const safeLimit = Math.min(limit || 1000, 1000);
+    const safeLimit = Math.min(limit || 1000, 100); // PER-056: hard cap lowered 1000→100
     const skip = (page - 1) * safeLimit;
 
     const where: Prisma.TimeEntryWhereInput = {};

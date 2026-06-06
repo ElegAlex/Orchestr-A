@@ -1466,4 +1466,32 @@ describe('PredefinedTasksService', () => {
       expect(crossError).toBeUndefined();
     });
   });
+
+  // PER-049: findAssignments must be bounded at 1000 rows
+  describe('PER-049 — findAssignments hard cap', () => {
+    it('passes take:1000 to the findMany call', async () => {
+      mockPrismaService.predefinedTaskAssignment.findMany.mockResolvedValue([]);
+
+      await service.findAssignments({ userId: 'user-1' });
+
+      expect(
+        mockPrismaService.predefinedTaskAssignment.findMany,
+      ).toHaveBeenCalledWith(expect.objectContaining({ take: 1000 }));
+    });
+  });
+
+  // PER-050: findRecurringRules must be bounded at 500 rows
+  describe('PER-050 — findRecurringRules hard cap', () => {
+    it('passes take:500 to the findMany call', async () => {
+      mockPrismaService.predefinedTaskRecurringRule.findMany.mockResolvedValue(
+        [],
+      );
+
+      await service.findRecurringRules({ userId: 'user-1' });
+
+      expect(
+        mockPrismaService.predefinedTaskRecurringRule.findMany,
+      ).toHaveBeenCalledWith(expect.objectContaining({ take: 500 }));
+    });
+  });
 });

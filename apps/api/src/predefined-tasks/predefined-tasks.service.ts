@@ -223,6 +223,7 @@ export class PredefinedTasksService {
     predefinedTaskId?: string;
   }) {
     return this.prisma.predefinedTaskAssignment.findMany({
+      take: 1000, // PER-049: hard cap on unbounded assignment queries
       where: {
         ...(filters.userId && { userId: filters.userId }),
         ...(filters.predefinedTaskId && {
@@ -392,6 +393,7 @@ export class PredefinedTasksService {
     predefinedTaskId?: string;
   }) {
     return this.prisma.predefinedTaskRecurringRule.findMany({
+      take: 500, // PER-050: hard cap on unbounded recurring-rules queries
       where: {
         isActive: true,
         ...(filters.userId && { userId: filters.userId }),

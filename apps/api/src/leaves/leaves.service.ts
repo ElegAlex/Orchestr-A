@@ -1150,6 +1150,7 @@ export class LeavesService {
 
     const leaves = await this.prisma.leave.findMany({
       where: { userId: currentUserId },
+      take: 200, // PER-046: hard cap — a user rarely accumulates >200 leaves
       include: {
         user: {
           select: {

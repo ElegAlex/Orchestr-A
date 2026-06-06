@@ -62,7 +62,7 @@ export class CommentsService {
     taskId?: string,
     currentUser?: AccessUser,
   ) {
-    const safeLimit = Math.min(limit || 1000, 1000);
+    const safeLimit = Math.min(limit ?? 1000, 100); // PER-041: hard cap lowered 1000→100
     const skip = (page - 1) * safeLimit;
     const where: any = taskId ? { taskId } : {};
     if (currentUser) {

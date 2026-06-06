@@ -494,6 +494,20 @@ describe('TimeTrackingService', () => {
         }),
       );
     });
+
+    // PER-056: hard cap must be 100 regardless of caller-supplied limit
+    it('PER-056 — caps safeLimit at 100 even when limit=2000 is supplied', async () => {
+      mockPrismaService.timeEntry.findMany.mockResolvedValue([]);
+      mockPrismaService.timeEntry.count.mockResolvedValue(0);
+
+      const result = await service.findAll(currentUser, 1, 2000);
+
+      expect(result.meta.limit).toBeLessThanOrEqual(100);
+      const call = mockPrismaService.timeEntry.findMany.mock.calls[0][0] as {
+        take: number;
+      };
+      expect(call.take).toBeLessThanOrEqual(100);
+    });
   });
 
   describe('findOne', () => {

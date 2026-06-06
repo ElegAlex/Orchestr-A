@@ -15,6 +15,7 @@ describe('SettingsService', () => {
       findMany: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
       update: vi.fn(),
       upsert: vi.fn(),
       delete: vi.fn(),
@@ -301,8 +302,9 @@ describe('SettingsService', () => {
         .spyOn(console, 'warn')
         .mockImplementation(() => undefined);
 
-      // Force initializeDefaultSettings to throw so the catch branch is hit.
-      mockPrismaService.appSettings.findUnique.mockRejectedValue(
+      // PER-053: initializeDefaultSettings now calls createMany (not findUnique+create).
+      // Force the single createMany call to throw so the catch branch is hit.
+      mockPrismaService.appSettings.createMany.mockRejectedValueOnce(
         new Error('Table does not exist'),
       );
 
@@ -311,6 +313,24 @@ describe('SettingsService', () => {
 
       expect(consoleWarnSpy).not.toHaveBeenCalled();
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  // PER-053 — initializeDefaultSettings uses a single createMany round-trip
+  describe('PER-053 — initializeDefaultSettings uses createMany', () => {
+    it('calls createMany with skipDuplicates instead of a serial loop', async () => {
+      mockPrismaService.appSettings.createMany.mockResolvedValueOnce({
+        count: 3,
+      });
+
+      await service.onModuleInit();
+
+      expect(mockPrismaService.appSettings.createMany).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.appSettings.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skipDuplicates: true }),
+      );
+      // findUnique must NOT have been called (no more serial loop)
+      expect(mockPrismaService.appSettings.findUnique).not.toHaveBeenCalled();
     });
   });
 });

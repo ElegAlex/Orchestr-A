@@ -111,6 +111,20 @@ describe('CommentsService', () => {
 
       expect(result.data).toHaveLength(2);
     });
+
+    // PER-041: hard cap must be 100 regardless of caller-supplied limit
+    it('PER-041 — caps safeLimit at 100 even when limit=500 is supplied', async () => {
+      mockPrismaService.comment.findMany.mockResolvedValue([]);
+      mockPrismaService.comment.count.mockResolvedValue(0);
+
+      const result = await service.findAll(1, 500, 'task-1');
+
+      expect(result.meta.limit).toBeLessThanOrEqual(100);
+      const call = mockPrismaService.comment.findMany.mock.calls[0][0] as {
+        take: number;
+      };
+      expect(call.take).toBeLessThanOrEqual(100);
+    });
   });
 
   describe('update', () => {

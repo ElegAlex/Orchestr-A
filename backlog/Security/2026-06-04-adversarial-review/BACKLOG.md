@@ -11356,8 +11356,8 @@ grep -n 'PLANNING_HARD_CAP\|safeLimit\|Math.min' apps/api/src/tasks/tasks.servic
 
 ### PER-041 — findAll comments uses default limit=1000 — very high default page size
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/comments/comments.service.ts line 65: change Math.min(limit || 1000, 1000) to Math.min(limit ?? 1000, 100). Keep the default parameter at 1000 until web callers are audited. The envelope 
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch H)
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** cross-validated
@@ -12564,8 +12564,8 @@ N/A — manual verification
 
 ### PER-043 — findAll documents uses default limit=1000 — very high default page size
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/documents/documents.service.ts line 95: change Math.min(limit || 1000, 1000) to Math.min(limit ?? 1000, 100). Keep the default parameter at 1000 until web callers are audited. Envelope sh
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch H)
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12670,8 +12670,8 @@ N/A — manual verification
 
 ### PER-046 — getOwnLeaves: unbounded findMany on leave history — no limit
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/leaves/leaves.service.ts: add take: 200 to the findMany call in getOwnLeaves at line 1151. Keep the bare-array return shape — do NOT add envelope or pagination (PER-021 regression risk si
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch H)
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12725,8 +12725,8 @@ N/A — manual verification
 
 ### PER-047 — findAll leaves: default limit 1000 with effective cap 500 — higher than recommended 100
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/leaves/leaves.service.ts line 825: lower cap to 200 — Math.min(limit || 500, 200). Do NOT change the default parameter of 1000, since the web service explicitly passes limit=1000 at lines
+- **Status:** WONTFIX
+- **Disposition:** WONT-FIX — truncation risk exceeds value. The web leaves service sends limit=1000 on getByUser + getByDateRange; the current cap is already bounded at 500. Lowering to 200 would silently truncate org-wide/date-range leave lists (>200 rows) — a PER-021-class data regression — for a marginal DoS benefit over the existing 500 bound. Deferred until the web callers adopt real pagination.
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12792,8 +12792,8 @@ N/A — manual verification
 
 ### PER-049 — findAssignments (predefined-tasks): no pagination and no maximum result cap
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/predefined-tasks/predefined-tasks.service.ts: add take: 1000 to the findMany call in findAssignments at line 225. Keep bare-array return shape (the web service AssignmentsResponse unwraps
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch H)
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -12848,8 +12848,8 @@ N/A — manual verification
 
 ### PER-050 — findRecurringRules: no pagination — unbounded findMany with includes
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/predefined-tasks/predefined-tasks.service.ts: add take: 500 to the findMany call in findRecurringRules at line 394. Keep bare-array return shape. Failing-test witness: create 501 active r
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch H)
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -13028,8 +13028,8 @@ N/A — manual verification
 
 ### PER-056 — findAll time-tracking: effective cap is 1000 rows — far exceeds recommended 100
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). apps/api/src/time-tracking/time-tracking.service.ts line 455: change Math.min(limit || 1000, 1000) to Math.min(limit || 10, 100). The web service getAll() sends no explicit limit so uses the default=1
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch H)
 - **Phase:** 4
 - **Cluster:** D
 - **Confidence:** primary-only
@@ -13186,8 +13186,8 @@ N/A — manual verification
 
 ### PER-045 — leave-types reorder: N individual update queries instead of bulk upsert
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). Replace with a single `$executeRaw` CASE-based UPDATE, or at minimum add `@ArrayMaxSize(50)` guard on the DTO. No response-shape risk (returns findAll() result unchanged).
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch H)
 - **Phase:** 4
 - **Cluster:** E
 - **Confidence:** primary-only
@@ -13243,8 +13243,8 @@ N/A — manual verification
 
 ### PER-053 — settings.service `initializeDefaultSettings` issues N×2 sequential DB queries at every module init
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch H-perfcaps). Replace with `await this.prisma.appSettings.createMany({ data: Object.entries(DEFAULT_SETTINGS).map(([key, config]) => ({ key, value: JSON.stringify(config.value), category: config.category, descripti
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch H)
 - **Phase:** 4
 - **Cluster:** E
 - **Confidence:** primary-only

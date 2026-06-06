@@ -5,7 +5,10 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { LeaveTypesService } from './leave-types.service';
+import { ReorderLeaveTypesDto } from './dto/reorder-leave-types.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
 describe('LeaveTypesService', () => {
@@ -248,6 +251,28 @@ describe('LeaveTypesService', () => {
 
       expect(result.deactivated).toBe(true);
       expect(mockPrismaService.leaveTypeConfig.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  // PER-045 — ReorderLeaveTypesDto must reject arrays larger than 50 entries
+  describe('PER-045 — ReorderLeaveTypesDto @ArrayMaxSize(50)', () => {
+    // Valid UUID v4 for test fixtures
+    const validUUID = '550e8400-e29b-41d4-a716-446655440000';
+
+    it('rejects orderedIds with 51 entries', async () => {
+      const dto = plainToInstance(ReorderLeaveTypesDto, {
+        orderedIds: Array.from({ length: 51 }, () => validUUID),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'orderedIds')).toBe(true);
+    });
+
+    it('accepts orderedIds with exactly 50 entries', async () => {
+      const dto = plainToInstance(ReorderLeaveTypesDto, {
+        orderedIds: Array.from({ length: 50 }, () => validUUID),
+      });
+      const errors = await validate(dto);
+      expect(errors.some((e) => e.property === 'orderedIds')).toBe(false);
     });
   });
 });

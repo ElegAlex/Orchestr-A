@@ -119,22 +119,16 @@ export class SettingsService implements OnModuleInit {
    * Initialiser les paramètres par défaut s'ils n'existent pas
    */
   private async initializeDefaultSettings() {
-    for (const [key, config] of Object.entries(DEFAULT_SETTINGS)) {
-      const existing = await this.prisma.appSettings.findUnique({
-        where: { key },
-      });
-
-      if (!existing) {
-        await this.prisma.appSettings.create({
-          data: {
-            key,
-            value: JSON.stringify(config.value),
-            category: config.category,
-            description: config.description,
-          },
-        });
-      }
-    }
+    // PER-053: single round-trip instead of N×2 sequential findUnique+create calls
+    await this.prisma.appSettings.createMany({
+      data: Object.entries(DEFAULT_SETTINGS).map(([key, config]) => ({
+        key,
+        value: JSON.stringify(config.value),
+        category: config.category,
+        description: config.description ?? null,
+      })),
+      skipDuplicates: true,
+    });
   }
 
   /**
