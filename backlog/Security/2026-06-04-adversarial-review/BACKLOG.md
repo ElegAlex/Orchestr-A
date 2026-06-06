@@ -7478,7 +7478,7 @@ curl -s -X POST http://localhost:3000/api/auth/login -H 'Host: evil.com' -H 'Con
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed. DOWNGRADED from high to medium: adversarial review found that the NestJS API does NOT use the `host` request header anywhere in its source — password-reset URLs are built from `process.env.FRONTEND_URL` (auth.service.ts:540), not from the request host. No `req.headers.host` or equivalent usage found in apps/api/src/. The structural gap (missing `host` in the filter set) is real but its impact is currently limited to leaking the public hostname to the internal API; there is no active exploit path in the current codebase. Remains confirmed because the defensive … [truncated — full text in findings.json]
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -7538,7 +7538,7 @@ N/A — manual verification: throttle /auth/me/permissions in devtools; confirm 
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed in login/page.tsx lines 27-43 and register/page.tsx lines 37-54. auth.service.ts:persistSession() at line 68 is called within authService.login() before the caller has a chance to fetch permissions. No guard elsewhere reverses this. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -7604,7 +7604,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: verified at lines 958-965. handleHardDeleteProject immediately below (line 968) uses try/catch — confirms the missing pattern is inconsistent. No higher-level global error handler wraps this call. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -7677,7 +7677,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: code verified verbatim at lines 323-337. No surrounding try/catch in callers. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -7740,7 +7740,7 @@ cd /home/alex/Documents/REPO/ORCHESTRA && npx eslint apps/web/app/\[locale\]/pro
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: usePermissions already wraps hasPermission in useCallback([permissions]) — so hasPermission IS stable when permissions don't change. However, when permissions DO change (e.g. role swap), the new hasPermission reference is NOT in fetchProjects dep array, so the callback is never re-created. The stale closure is real. Same pattern in tasks/page.tsx — see frontend-F2-2.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -7793,7 +7793,7 @@ grep -n 'useLocale\|locale' apps/web/app/\[locale\]/reports/components/ProjectsD
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verified verbatim. No useLocale import present in ProjectsDetailTable.tsx. Routes only exist under [locale]/ (confirmed by directory scan) — /projects/abc has no corresponding page at app root. next-intl middleware (middleware.ts) uses createIntlMiddleware and only redirects on full-page requests, not client-side Link/router.push. PortfolioGantt.tsx line 72-78 confirmed to correctly use useLocale() and /${locale}/projects/${row.id}.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -7908,7 +7908,7 @@ grep -n 'usersService.getAll' apps/web/app/\[locale\]/telework/page.tsx
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code is verbatim confirmed at lines 395-404. No .catch() is present anywhere on this promise chain.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -8014,7 +8014,7 @@ grep -n 'Promise.all' apps/web/app/\[locale\]/clients/page.tsx
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code confirmed verbatim at lines 147-155. The `> 100` confirm dialog at line 130 suggests the developer was aware of scale issues but chose UI friction over a proper fix.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -8069,7 +8069,7 @@ grep -n 'milestonesService.getAll' apps/web/app/\[locale\]/projects/\[id\]/page.
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: milestonesService.getAll() confirmed verbatim at projects/[id]/page.tsx:182 and tasks/[id]/page.tsx:97. getByProject(projectId) confirmed at milestonesService line 17. Note: getAll() fetches with ?limit=1000 — truly unbounded for any real deployment. getByProject returns Milestone[] directly (already scoped). Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -8138,7 +8138,7 @@ grep -n 'QueryClientProvider\|QueryClient' apps/web/app/\[locale\]/reports/compo
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verified verbatim byte-for-byte (lines 8-30). The component is loaded via dynamic() with ssr:false in reports/page.tsx, which mitigates the cross-request SSR concern, but the isolated cache and full refetch-per-tab-switch issues remain. The parent QueryProvider in layout.tsx confirmed at line 26 with NextIntlClientProvider wrapper.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -15616,7 +15616,7 @@ curl -s -I https://localhost:3000/ | grep -i content-security-policy
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed in apps/web/src/lib/csp.ts lines 16-25. Neither object-src nor base-uri appear in the directives array. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -16044,7 +16044,7 @@ find apps/web/app/\[locale\] -name 'error.tsx'
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verified: `find /home/alex/Documents/REPO/ORCHESTRA/apps/web/app/[locale] -name 'error.tsx'` returned no results. The layout.tsx code is verbatim. No error.tsx at any subdirectory level either.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -16097,7 +16097,7 @@ N/A — manual verification: throw in IcsExportSection render, confirm error bou
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed. No error.tsx file exists anywhere under apps/web/app/ (confirmed via find). No ErrorBoundary component import in profile/page.tsx or in the IcsExportSection/IcsImportSection component files. Next.js ErrorBoundary references found are internal framework code only (in .next/ build artifacts), not app-level usage. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
@@ -16149,7 +16149,7 @@ find apps/web/app/\[locale\]/projects apps/web/app/\[locale\]/tasks apps/web/app
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Adversarial check: no error.tsx found in any of the three directories. No ErrorBoundary import found in these pages. Confirmed.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 7f2e1d55
 
 ---
 
