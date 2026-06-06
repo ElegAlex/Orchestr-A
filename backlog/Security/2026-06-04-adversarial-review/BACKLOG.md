@@ -14656,7 +14656,7 @@ psql $DATABASE_URL -c "SELECT confupdtype FROM pg_constraint WHERE conname='audi
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: pg_constraint.confupdtype: 'a' = NO ACTION, 'c' = CASCADE, 'r' = RESTRICT. Current state after migration: 'c' (CASCADE). Expected after fix: 'a' (NO ACTION). Code evidence verbatim confirmed at lines 101-104. No subsequent migration modifies this FK — the most recent migration touching audit_logs (20260604103344_dat008_026_user_fk_full_erasure) explicitly states 'NOT touched: audit_logs.actorId' in its header comment. users.id uses @default(uuid()) in schema.prisma — UUID reassignment is not done in practice by any existing service method, confirming low probability but non-zero architectural … [truncated — full text in findings.json]
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
@@ -14966,7 +14966,7 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='events'::regclass AND
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at lines 4-6 of add_event_recurrence migration. Searched all migration SQL files for 'recurrenceDay' and 'recurrenceWeekInterval' combined with 'check' or 'constraint' — found zero results. Only the creation migration references these columns; no later migration adds CHECK constraints. REMAINS OPEN — no fix migration exists. Confidence stays medium because recurrenceDay semantic range depends on application logic (may be 0-6 for weekly or 1-31 for monthly).
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
@@ -15119,7 +15119,7 @@ psql -c "SELECT conname FROM pg_constraint WHERE conrelid='telework_recurring_ru
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code evidence verbatim confirmed at lines 5 and 52 of add_predefined_tasks_telework_recurring_password_reset migration. Searched all migration SQL files for any 'dayOfWeek' combined with 'check' or 'constraint' — found zero results. Migration 20260424124537_add_recurrence_and_completion makes dayOfWeek nullable in predefined_task_recurring_rules (for MONTHLY_ORDINAL/MONTHLY_DAY recurrence types) but adds no CHECK. REMAINS OPEN — no fix migration exists.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
@@ -15176,7 +15176,7 @@ SELECT id, contentSha256 FROM documents WHERE contentSha256 IS NOT NULL AND cont
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: CONFIRMED. Code evidence is verbatim. Full search of all migrations confirms contentSha256 appears only once (in dat025_document_fk_softdelete) and no subsequent migration adds a CHECK constraint. Schema.prisma declares it as `String?` (TEXT in PostgreSQL) with comment 'nullable — no upload pipeline yet'. Pre-emptive but appropriate to flag before the pipeline is built.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
@@ -15231,7 +15231,7 @@ N/A — manual verification
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Schema confirmed: only @@unique([userId, date]) at line 733, no @@index([date, userId]). The Postgres query planner may already use the unique index effectively for small tables; this finding applies at scale. Verified code evidence at lines 431-449 of telework.service.ts.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
@@ -15295,7 +15295,7 @@ docker exec orchestr-a-db psql -U postgres -d orchestra -c "EXPLAIN SELECT * FRO
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: The `[date, userId]` composite index covers the common (date-scoped) query path. This finding only applies to unbounded userId-only queries.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
@@ -18148,7 +18148,7 @@ grep -A10 'model AuditLog' packages/database/prisma/schema.prisma
 - sessionA-only finding (99-run). Namespaced `SA-PERF-025` to avoid ID collision with the primary run; original id `PERF-025` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: Prisma may not support sort-direction indexes in schema.prisma PSL — a raw SQL migration may be required.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
@@ -18249,7 +18249,7 @@ grep -rn 'recurrenceDay.*BETWEEN\|dayOfWeek.*BETWEEN\|recurrenceDay.*ck\|dayOfWe
 - sessionA-only finding (99-run). Namespaced `SA-DAT-008` to avoid ID collision with the primary run; original id `DAT-008` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: All three columns documented as 0-6 range in schema comments but no DB CHECK found across all 74 migrations.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
@@ -18301,7 +18301,7 @@ grep -rn 'weekInterval.*CHECK\|monthlyOrdinal.*CHECK\|monthlyDayOfMonth.*CHECK\|
 - sessionA-only finding (99-run). Namespaced `SA-DAT-009` to avoid ID collision with the primary run; original id `DAT-009` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: weekInterval added in migration 20260330185549 with DEFAULT 1 but no CHECK. monthlyOrdinal and monthlyDayOfMonth added in 20260424124537 with no CHECK.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
@@ -18352,7 +18352,7 @@ grep -rn 'tasks_time_order\|events_time_order\|predefined_tasks_time_order' /hom
 - sessionA-only finding (99-run). Namespaced `SA-DAT-010` to avoid ID collision with the primary run; original id `DAT-010` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: DAT-013 migration confirms format CHECKs exist but contains no ordering constraint. HH:MM lexicographic comparison is a reliable ordering for this format.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
@@ -18407,7 +18407,7 @@ grep -rn 'project_members.*dates_ck\|project_members.*CHECK.*date' /home/alex/Do
 - sessionA-only finding (99-run). Namespaced `SA-DAT-011` to avoid ID collision with the primary run; original id `DAT-011` in audits/2026-06-04-adversarial-review-sessionA/findings.json.
 - Audit note: DAT-003 migration covers six tables but not project_members. NULL semantics are handled in that migration's preamble and would apply here without changes.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 59dc0c68
 
 ---
 
