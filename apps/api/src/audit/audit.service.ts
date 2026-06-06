@@ -37,6 +37,8 @@ export { AuditAction };
  *               free-string codes by OBS-024.
  *   - `TimeEntry` — time-entry lifecycle (create / update / delete). The subject
  *               is a row in the `time_entries` table (OBS-015).
+ *   - `Task` — task lifecycle (create / update / delete). The subject is a row
+ *               in the `tasks` table (OBS-012).
  *
  * Typed as an exhaustive `Record<AuditAction, ...>` so adding an AuditAction
  * without a subject type is a compile error, not a silent 'unknown'.
@@ -53,6 +55,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   | 'SystemMaintenance'
   | 'Project'
   | 'TimeEntry'
+  | 'Task'
 > = {
   [AuditAction.LOGIN_SUCCESS]: 'Auth',
   [AuditAction.LOGIN_FAILURE]: 'Auth',
@@ -94,6 +97,9 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.TIME_ENTRY_CREATED]: 'TimeEntry',
   [AuditAction.TIME_ENTRY_UPDATED]: 'TimeEntry',
   [AuditAction.TIME_ENTRY_DELETED]: 'TimeEntry',
+  [AuditAction.TASK_CREATED]: 'Task',
+  [AuditAction.TASK_UPDATED]: 'Task',
+  [AuditAction.TASK_DELETED]: 'Task',
 };
 
 /**

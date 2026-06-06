@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit-action.enum';
 import {
   emitDataExported,
   type ExportMeta,
@@ -282,6 +283,21 @@ export class TasksService {
             },
           },
         },
+      },
+    });
+
+    // OBS-012 — durable audit row for task creation (only CSV export was audited
+    // before). Awaited after the single-row create (no surrounding tx);
+    // actor = the creating user.
+    await this.auditPersistence.log({
+      action: AuditAction.TASK_CREATED,
+      entityType: 'Task',
+      entityId: task.id,
+      actorId: user.id,
+      payload: {
+        taskId: task.id,
+        projectId: task.projectId ?? null,
+        status: task.status,
       },
     });
 
@@ -801,7 +817,7 @@ export class TasksService {
       }
 
       // Mettre à jour la tâche
-      return tx.task.update({
+      const updated = await tx.task.update({
         where: { id },
         data: {
           ...taskData,
@@ -855,6 +871,24 @@ export class TasksService {
           },
         },
       });
+
+      // OBS-012 — durable before/after audit row for a task edit (captures the
+      // status transition, AC#1). Emitted INSIDE this default-isolation
+      // ($transaction is READ COMMITTED) tx, passing `tx`, so the audit insert
+      // is atomic with the task update per the projects precedent. actor = the
+      // editing user.
+      await this.auditPersistence.log(
+        {
+          action: AuditAction.TASK_UPDATED,
+          entityType: 'Task',
+          entityId: id,
+          actorId: currentUserId ?? null,
+          payload: { before: existingTask, after: updated },
+        },
+        tx,
+      );
+
+      return updated;
     });
 
     return task;
@@ -904,6 +938,17 @@ export class TasksService {
 
     await this.prisma.task.delete({
       where: { id },
+    });
+
+    // OBS-012 — capture the full row (snapshot taken above, before the delete)
+    // so the deletion is reconstructable from the immutable trail; actor = the
+    // deleting user (may be absent for system-initiated removals).
+    await this.auditPersistence.log({
+      action: AuditAction.TASK_DELETED,
+      entityType: 'Task',
+      entityId: id,
+      actorId: user?.id ?? null,
+      payload: { snapshot: task },
     });
 
     return { message: 'Tâche supprimée avec succès' };

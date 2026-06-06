@@ -12,6 +12,8 @@ import { getTaskProgress } from './task-progress.helper';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AccessScopeService } from '../common/services/access-scope.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 
 describe('TasksService', () => {
   let service: TasksService;
@@ -2503,6 +2505,119 @@ describe('TasksService', () => {
       const findManyCalls =
         mockPrismaService.taskDependency.findMany.mock.calls.length;
       expect(findManyCalls).toBe(1);
+    });
+  });
+
+  // OBS-012 — task lifecycle (create/update/delete) must each leave a durable
+  // audit_logs row (only CSV export was audited before). Witness = capture the
+  // payload to the mocked AuditPersistence.log + assert the REAL strict schema
+  // accepts it (validatePayloadForAction).
+  describe('OBS-012 audit emits', () => {
+    const findCall = (action: AuditAction) =>
+      mockAuditPersistence.log.mock.calls.find(
+        (c) => c[0]?.action === action,
+      )?.[0];
+
+    it('create() emits TASK_CREATED with a schema-conformant payload', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'P',
+      });
+      mockPrismaService.task.create.mockResolvedValue({
+        id: 'task-1',
+        projectId: 'project-1',
+        status: 'TODO',
+      });
+
+      await service.create(
+        {
+          title: 'T',
+          projectId: 'project-1',
+          status: 'TODO' as const,
+          priority: 'NORMAL' as const,
+        },
+        { id: 'user-1', role: Role.ADMIN },
+      );
+
+      const call = findCall(AuditAction.TASK_CREATED);
+      expect(call).toMatchObject({
+        action: AuditAction.TASK_CREATED,
+        entityType: 'Task',
+        entityId: 'task-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        taskId: 'task-1',
+        projectId: 'project-1',
+        status: 'TODO',
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.TASK_CREATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('update() emits TASK_UPDATED with a before/after, schema-conformant payload', async () => {
+      const existingTask = {
+        id: 'task-1',
+        status: 'TODO',
+        projectId: null,
+        assignees: [],
+      };
+      mockPrismaService.task.findUnique.mockResolvedValue(existingTask);
+      mockPrismaService.task.update.mockResolvedValue({
+        ...existingTask,
+        status: 'IN_PROGRESS',
+      });
+
+      await service.update(
+        'task-1',
+        { status: 'IN_PROGRESS' as const },
+        'user-1',
+        'MANAGER',
+      );
+
+      const call = findCall(AuditAction.TASK_UPDATED);
+      expect(call).toMatchObject({
+        action: AuditAction.TASK_UPDATED,
+        entityType: 'Task',
+        entityId: 'task-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        before: expect.objectContaining({ status: 'TODO' }),
+        after: expect.objectContaining({ status: 'IN_PROGRESS' }),
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.TASK_UPDATED, call?.payload),
+      ).not.toThrow();
+    });
+
+    it('remove() emits TASK_DELETED with a snapshot of the deleted task', async () => {
+      const mockTask = {
+        id: 'task-1',
+        title: 'Test',
+        assigneeId: 'user-1',
+        dependents: [],
+        assignees: [],
+      };
+      mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+      mockPrismaService.task.delete.mockResolvedValue(mockTask);
+
+      await service.remove('task-1', { id: 'user-1', role: 'MANAGER' });
+
+      const call = findCall(AuditAction.TASK_DELETED);
+      expect(call).toMatchObject({
+        action: AuditAction.TASK_DELETED,
+        entityType: 'Task',
+        entityId: 'task-1',
+        actorId: 'user-1',
+      });
+      expect(call?.payload).toMatchObject({
+        snapshot: expect.objectContaining({ id: 'task-1' }),
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.TASK_DELETED, call?.payload),
+      ).not.toThrow();
     });
   });
 });

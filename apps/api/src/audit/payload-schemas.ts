@@ -260,6 +260,19 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
     .strict(),
   [AuditAction.TIME_ENTRY_UPDATED]: beforeAfter,
   [AuditAction.TIME_ENTRY_DELETED]: deletionSnapshot,
+
+  // Task lifecycle (OBS-012) — CREATED references the row + project + status;
+  // UPDATE carries before/after (captures the status transition); DELETE a
+  // full snapshot.
+  [AuditAction.TASK_CREATED]: z
+    .object({
+      taskId: z.string(),
+      projectId: z.string().nullable(),
+      status: z.string(),
+    })
+    .strict(),
+  [AuditAction.TASK_UPDATED]: beforeAfter,
+  [AuditAction.TASK_DELETED]: deletionSnapshot,
 } satisfies Record<AuditAction, z.ZodTypeAny>;
 
 /**

@@ -114,4 +114,11 @@ export enum AuditAction {
   TIME_ENTRY_CREATED = 'TIME_ENTRY_CREATED',
   TIME_ENTRY_UPDATED = 'TIME_ENTRY_UPDATED',
   TIME_ENTRY_DELETED = 'TIME_ENTRY_DELETED',
+  // OBS-012 — task lifecycle (TasksService). Status/assignee/priority changes are
+  // material for project governance; only CSV export (DATA_EXPORTED) was audited
+  // before. CREATED on create(); UPDATED carries before/after (captures the
+  // status transition AC); DELETED carries a snapshot before the row is removed.
+  TASK_CREATED = 'TASK_CREATED',
+  TASK_UPDATED = 'TASK_UPDATED',
+  TASK_DELETED = 'TASK_DELETED',
 }

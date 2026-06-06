@@ -5675,7 +5675,7 @@ N/A — manual verification
 
 ### OBS-012 — Task create, update, and delete emit no audit rows — only CSV export is audited
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only
@@ -5732,6 +5732,7 @@ grep -n 'auditPersistence\|auditService\|AuditAction\|emitDataExported' apps/api
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Verified: tasks.service.ts grep shows only two audit references — line 45 (injection) and line 1907 (emitDataExported for CSV export). remove() at lines 841-885 confirmed verbatim with no audit call. TASK_* action codes absent from audit-action.enum.ts. Finding confirmed.
+- **2026-06-06 — DONE.** Audit-emit cluster slice 4. Added TASK_CREATED/UPDATED/DELETED (entityType `Task`) to the 3 compile-locked layers; `auditPersistence` was already injected. AC#1/#2 covered (create also audited for full lifecycle): create→TASK_CREATED {taskId,projectId,status} awaited after the single-row create; update→TASK_UPDATED {before,after} emitted INSIDE the existing default-isolation (`$transaction`, READ COMMITTED) tx passing `tx` (atomic with the update, projects precedent) — before=existingTask, after=updated, so the status transition is captured (AC#1); remove→TASK_DELETED {snapshot} awaited after the delete (snapshot taken before). actorId = creating/editing/deleting user. Witnesses in `tasks.service.spec` capture each emit + real `validatePayloadForAction` (RED-by-absence: 3 fail before the emits exist). Gate green: nest build + api vitest 2236 + lint 0-err + coherence.
 
 **Closed_by:** (empty — TODO)
 
