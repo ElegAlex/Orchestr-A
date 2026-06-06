@@ -5359,8 +5359,9 @@ N/A — manual verification
 **Notes:**
 - Primary-run-only (268-run); not independently surfaced by the sessionA run.
 - Audit note: Code at lines 64-73 matches verbatim. AuditPersistenceService IS injected (line 39) but only DOCUMENT_READ is emitted (line 144-166). create() (line 64), update() (line 172), and remove() (line 183/204) have no audit emission calls. AuditAction enum has no DOCUMENT_CREATED, DOCUMENT_UPDATED, or DOCUMENT_DELETED members — only DOCUMENT_READ and DOCUMENT_DOWNLOADED. DocumentsController.update() does not inject @CurrentUser, so update() currently receives no actor identity.
+- **2026-06-06 — DONE `98c31c76`.** All 3 AC covered: DOCUMENT_CREATED (create), DOCUMENT_UPDATED (update, before/after metadata snapshot — AC#3), DOCUMENT_DELETED (soft-delete) added to the 3 compile-locked layers + emitted (awaited). NOTE: the audit note's "update() does not inject @CurrentUser" was stale — the COR-010 fix already threads `@CurrentUser` into `documents.controller.update()`, so the actor is captured. Witnesses in `documents.service.spec` (emit + `validatePayloadForAction` schema conformance, RED captured by action-swap). Cluster slice 2.
 
-**Closed_by:** (empty — TODO)
+**Closed_by:** 98c31c76
 
 ---
 
