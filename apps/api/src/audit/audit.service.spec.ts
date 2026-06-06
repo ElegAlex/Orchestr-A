@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { AuditService, AuditAction } from './audit.service';
 import { AuditPersistenceService } from './audit-persistence.service';
 import { runWithRequestId } from '../common/fastify/request-id.context';
@@ -415,6 +415,50 @@ describe('AuditService', () => {
           payload: expect.objectContaining({ requestId: 'req-test-123' }),
         }),
       );
+    });
+
+    // SEC-034 — hashAttemptedLogin uses unkeyed SHA256: rainbow-reversible.
+    // After fix it must use HMAC with AUDIT_HASH_KEY.
+    // Witness: stdout digest !== unkeyed SHA256 of the same input AND === the HMAC.
+    it('SEC-034: stdout attemptedEmailHash uses keyed HMAC, not plain SHA256', () => {
+      const warnSpy = vi
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => {});
+
+      const rawLogin = 'test.user@example.com';
+      service.log({
+        action: AuditAction.LOGIN_FAILURE,
+        attemptedEmail: rawLogin,
+        success: false,
+      });
+
+      const auditCall = warnSpy.mock.calls.find((call) => {
+        try {
+          return (
+            JSON.parse(call[0] as string).action === AuditAction.LOGIN_FAILURE
+          );
+        } catch {
+          return false;
+        }
+      });
+      expect(auditCall).toBeDefined();
+      const entry = JSON.parse(auditCall![0] as string);
+      const digest: string = entry.attemptedEmailHash;
+      expect(digest).toMatch(/^[0-9a-f]{8}$/);
+
+      // Must NOT equal the unkeyed SHA256 of the same input
+      const unkeyed = createHash('sha256')
+        .update(rawLogin)
+        .digest('hex')
+        .slice(0, 8);
+      expect(digest).not.toBe(unkeyed);
+
+      // Must equal the HMAC of the normalised (trim+lower) value
+      const expected = createHmac('sha256', process.env['AUDIT_HASH_KEY']!)
+        .update(rawLogin.trim().toLowerCase())
+        .digest('hex')
+        .slice(0, 8);
+      expect(digest).toBe(expected);
     });
 
     it('OBS-002 — payload has no requestId key outside an HTTP request scope', () => {

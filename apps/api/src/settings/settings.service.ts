@@ -1,4 +1,10 @@
-import { Injectable, OnModuleInit, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  BadRequestException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { AppSettingsCategory } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
@@ -88,6 +94,8 @@ const DEFAULT_SETTINGS: Record<string, SettingConfig> = {
 
 @Injectable()
 export class SettingsService implements OnModuleInit {
+  private readonly logger = new Logger(SettingsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditPersistence: AuditPersistenceService,
@@ -101,9 +109,8 @@ export class SettingsService implements OnModuleInit {
       await this.initializeDefaultSettings();
     } catch (error) {
       // Log but don't fail startup if settings table doesn't exist yet
-      console.warn(
-        'Warning: Could not initialize default settings. Table may not exist yet.',
-        error instanceof Error ? error.message : error,
+      this.logger.warn(
+        `Warning: Could not initialize default settings. Table may not exist yet. ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -350,7 +357,11 @@ export class SettingsService implements OnModuleInit {
     const previous = await this.prisma.appSettings.findUnique({
       where: { key },
     });
-    const before = previous ? this.parseValue(previous.value) : null;
+    // COR-061 — prisma.delete() throws P2025 for a missing record; surface a
+    // 404 before reaching the delete so the caller gets a clean NotFoundException
+    // instead of an unhandled 500.
+    if (!previous) throw new NotFoundException(`Setting '${key}' not found`);
+    const before = this.parseValue(previous.value);
 
     await this.prisma.appSettings.delete({
       where: { key },

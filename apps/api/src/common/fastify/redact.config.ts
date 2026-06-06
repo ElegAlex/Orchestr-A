@@ -9,6 +9,7 @@ export const fastifyLoggerOptions = {
       'req.headers["proxy-authorization"]',
 
       // Request body — auth / token fields
+      'req.body.login',
       'req.body.password',
       'req.body.currentPassword',
       'req.body.newPassword',

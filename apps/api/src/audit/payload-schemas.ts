@@ -159,6 +159,10 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
   [AuditAction.REGISTER]: securityEnvelope,
   [AuditAction.ACCESS_DENIED]: securityEnvelope,
   [AuditAction.PASSWORD_CHANGED]: securityEnvelope,
+  // OBS-021 — token-issuance event (generateResetToken). Uses the generic
+  // AuditService security envelope: only ip/details/success/timestamp/ua/reason
+  // are present (no before/after — no password was changed yet).
+  [AuditAction.PASSWORD_RESET_TOKEN_ISSUED]: securityEnvelope,
   // OBS-003 — logout, AuditService security envelope.
   [AuditAction.LOGOUT]: securityEnvelope,
 

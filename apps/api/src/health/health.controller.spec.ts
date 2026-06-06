@@ -40,21 +40,20 @@ describe('HealthController (OBS-019)', () => {
   });
 
   describe('GET /health — happy path', () => {
-    it('returns {status, db, redis} with no uptime field', async () => {
-      mockHealthService.check.mockResolvedValue({
-        status: 'ok',
-        db: 'ok',
-        redis: 'ok',
-      });
+    it('returns {status:"ok"} with no uptime, db, or redis fields (SEC-007 + OBS-019)', async () => {
+      mockHealthService.check.mockResolvedValue({ status: 'ok' });
 
       const result = await controller.getHealth();
 
-      expect(result).toEqual({ status: 'ok', db: 'ok', redis: 'ok' });
+      expect(result).toEqual({ status: 'ok' });
       // OBS-019 core: uptime MUST NOT be in the response
       expect(result).not.toHaveProperty('uptime');
       // NODE_ENV must not leak either
       expect(result).not.toHaveProperty('environment');
       expect(result).not.toHaveProperty('timestamp');
+      // SEC-007: per-component infra detail must NOT be in the response
+      expect(result).not.toHaveProperty('db');
+      expect(result).not.toHaveProperty('redis');
     });
   });
 

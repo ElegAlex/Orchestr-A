@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
@@ -257,6 +257,60 @@ describe('SettingsService', () => {
           calls[0].payload,
         ),
       ).not.toThrow();
+    });
+  });
+
+  // COR-061 — remove() must surface 404 for a non-existent custom key instead
+  // of letting prisma.delete() throw P2025 (unhandled 500).
+  describe('COR-061 — remove() non-existent key', () => {
+    it('throws NotFoundException when the key is not in DB and not a default', async () => {
+      mockPrismaService.appSettings.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.remove('nonexistent-custom-key'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('does NOT call prisma.delete when the key is missing', async () => {
+      mockPrismaService.appSettings.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.remove('nonexistent-custom-key'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(mockPrismaService.appSettings.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes an existing custom key and returns the success message', async () => {
+      mockPrismaService.appSettings.findUnique.mockResolvedValue(
+        makeSetting('customKey', 'value'),
+      );
+      mockPrismaService.appSettings.delete.mockResolvedValue({});
+
+      const result = await service.remove('customKey');
+      expect(result).toMatchObject({ message: 'Paramètre supprimé' });
+      expect(mockPrismaService.appSettings.delete).toHaveBeenCalledWith({
+        where: { key: 'customKey' },
+      });
+    });
+  });
+
+  // SA-OBS-011 — onModuleInit must use this.logger.warn, not console.warn.
+  describe('SA-OBS-011 — onModuleInit uses Logger, not console.warn', () => {
+    it('does not call console.warn when initializeDefaultSettings fails', async () => {
+      const consoleWarnSpy = vi
+        .spyOn(console, 'warn')
+        .mockImplementation(() => undefined);
+
+      // Force initializeDefaultSettings to throw so the catch branch is hit.
+      mockPrismaService.appSettings.findUnique.mockRejectedValue(
+        new Error('Table does not exist'),
+      );
+
+      // onModuleInit swallows the error; it must not call console.warn.
+      await service.onModuleInit();
+
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
     });
   });
 });

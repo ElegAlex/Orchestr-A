@@ -69,4 +69,9 @@ describe('fastifyLoggerOptions redact paths', () => {
   it('redacts proxy-authorization header', () => {
     expect(paths).toContain('req.headers["proxy-authorization"]');
   });
+
+  // OBS-023 — user login identifier (prenom.nom PII) must be redacted
+  it('redacts body.login (user identifier — OBS-023)', () => {
+    expect(paths).toContain('req.body.login');
+  });
 });

@@ -126,6 +126,10 @@ services:
       # .env.production never reaches the container and the app crash-loops on boot.
       AUDIT_HASH_KEY: ${AUDIT_HASH_KEY:?AUDIT_HASH_KEY is required}
 
+      # SA-SEC-012 — protects GET /api/metrics (Prometheus scraping).
+      # Generate with: openssl rand -hex 32
+      METRICS_TOKEN: ${METRICS_TOKEN:?METRICS_TOKEN required in production}
+
       # CORS
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?ALLOWED_ORIGINS is required}
 

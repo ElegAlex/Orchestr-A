@@ -3810,7 +3810,10 @@ export class LeavesService {
     } catch (error) {
       // A leave.create failure (or any unrecoverable DB error) aborts the
       // entire $transaction. Record a single error for the whole batch.
+      // COR-055 — the transaction rolls back all rows, so skipped counts
+      // accumulated inside the tx are also meaningless; reset both.
       result.created = 0;
+      result.skipped = 0;
       result.errors++;
       // COR-037 — translate the DB exclusion-constraint violation to a clean message.
       const message = isLeaveOverlapViolation(error)

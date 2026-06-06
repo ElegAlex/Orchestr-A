@@ -7,11 +7,17 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import Redis from 'ioredis';
 
+/** Public HTTP response shape — no per-component detail (SEC-007). */
 export interface HealthStatus {
+  status: 'ok' | 'degraded';
+}
+
+/** Internal shape used for server-side logging only. */
+type HealthDetail = {
   status: 'ok' | 'degraded';
   db: 'ok' | 'down';
   redis: 'ok' | 'down';
-}
+};
 
 /**
  * OBS-019 — Real health check: pings DB (SELECT 1) and Redis (PING).
@@ -76,13 +82,15 @@ export class HealthService {
     }
 
     if (dbStatus === 'down' || redisStatus === 'down') {
-      throw new ServiceUnavailableException({
+      const detail: HealthDetail = {
         status: 'degraded',
         db: dbStatus,
         redis: redisStatus,
-      });
+      };
+      this.logger.warn(`Health check degraded: ${JSON.stringify(detail)}`);
+      throw new ServiceUnavailableException({ status: 'degraded' });
     }
 
-    return { status: 'ok', db: dbStatus, redis: redisStatus };
+    return { status: 'ok' };
   }
 }

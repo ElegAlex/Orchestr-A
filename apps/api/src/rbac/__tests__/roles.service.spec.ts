@@ -35,6 +35,7 @@ describe('RolesService — V3 F', () => {
       updateMany: ReturnType<typeof vi.fn>;
       delete: ReturnType<typeof vi.fn>;
     };
+    $transaction: ReturnType<typeof vi.fn>;
   };
   let perms: { invalidateRoleCache: ReturnType<typeof vi.fn> };
   // OBS-005 — durable audit emitter. Injected as the 3rd ctor arg; pre-fix the
@@ -53,6 +54,11 @@ describe('RolesService — V3 F', () => {
         updateMany: vi.fn().mockResolvedValue({ count: 0 }),
         delete: vi.fn().mockResolvedValue(undefined),
       },
+      // COR-059 — forward the same prisma object as the tx client so existing
+      // mock queues (role.create, role.update, role.updateMany) are consumed
+      // transparently; tests that need to assert tx-level isolation override
+      // this mock locally.
+      $transaction: vi.fn(async (cb: any) => cb(prisma)),
     };
     perms = { invalidateRoleCache: vi.fn().mockResolvedValue(undefined) };
     audit = { log: vi.fn().mockResolvedValue(undefined) };
@@ -756,6 +762,92 @@ describe('RolesService — V3 F', () => {
           }),
         );
       });
+    });
+  });
+
+  // COR-059 — createRole/updateRole isDefault singleton management must be
+  // atomic: both unsetCurrentDefault + create/update must run on the SAME
+  // transaction client so concurrent requests cannot leave two defaults.
+  describe('COR-059 — isDefault singleton atomicity ($transaction)', () => {
+    it('createRole(isDefault=true) runs unsetCurrentDefault and create on the same tx client', async () => {
+      const tx = {
+        role: {
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          create: vi.fn().mockResolvedValue({
+            id: 'r-new',
+            code: 'CUSTOM_TX',
+            label: 'Tx Role',
+            templateKey: 'BASIC_USER',
+            description: null,
+            isSystem: false,
+            isDefault: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            _count: { users: 0 },
+          }),
+        },
+      };
+
+      // Override $transaction to inject a sentinel tx (not the shared prisma).
+      prisma.$transaction.mockImplementationOnce((cb: any) => cb(tx));
+      prisma.role.findUnique.mockResolvedValue(null); // no code conflict
+
+      await service.createRole({
+        code: 'CUSTOM_TX',
+        label: 'Tx Role',
+        templateKey: 'BASIC_USER',
+        isDefault: true,
+      });
+
+      // Both ops must have fired on the sentinel tx, NOT on the outer prisma.
+      expect(tx.role.updateMany).toHaveBeenCalledWith({
+        where: { isDefault: true },
+        data: { isDefault: false },
+      });
+      expect(tx.role.create).toHaveBeenCalled();
+      // The outer prisma.role.create must NOT have been called directly.
+      expect(prisma.role.create).not.toHaveBeenCalled();
+    });
+
+    it('updateRole(isDefault=true) runs unsetCurrentDefault and update on the same tx client', async () => {
+      const tx = {
+        role: {
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          update: vi.fn().mockResolvedValue({
+            id: 'r-1',
+            code: 'CUSTOM',
+            label: 'Custom',
+            templateKey: 'BASIC_USER',
+            description: null,
+            isSystem: false,
+            isDefault: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            _count: { users: 0 },
+          }),
+        },
+      };
+
+      prisma.$transaction.mockImplementationOnce((cb: any) => cb(tx));
+      prisma.role.findUnique.mockResolvedValue({
+        id: 'r-1',
+        code: 'CUSTOM',
+        isSystem: false,
+        templateKey: 'BASIC_USER',
+        label: 'Custom',
+        description: null,
+        isDefault: false, // false→true transition triggers the tx wrap
+      });
+
+      await service.updateRole('r-1', { isDefault: true });
+
+      expect(tx.role.updateMany).toHaveBeenCalledWith({
+        where: { isDefault: true },
+        data: { isDefault: false },
+      });
+      expect(tx.role.update).toHaveBeenCalled();
+      // The outer prisma.role.update must NOT have been called directly.
+      expect(prisma.role.update).not.toHaveBeenCalled();
     });
   });
 });

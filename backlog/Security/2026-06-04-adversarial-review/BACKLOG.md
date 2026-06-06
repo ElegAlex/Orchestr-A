@@ -7193,8 +7193,8 @@ N/A — manual verification: note displayed date, reload page, confirm it does N
 
 ### SEC-007 — Unauthenticated health endpoint reveals per-component infrastructure status (DB/Redis) to any caller
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/health/health.service.ts: define a public `HealthStatus = { status: 'ok' | 'degraded' }` return shape; keep per-component status in a private type. Log component detail server-side (alrea
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 2
 - **Cluster:** K
 - **Confidence:** primary-only
@@ -11571,8 +11571,8 @@ grep -n 'MaxLength\|description' apps/api/src/projects/dto/create-project.dto.ts
 
 ### OBS-021 — generateResetToken() logs PASSWORD_CHANGED (wrong action) — action mislabeling confirmed, non-persistence claim refuted
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). 1. apps/api/src/audit/audit-action.enum.ts: add `PASSWORD_RESET_TOKEN_ISSUED = 'PASSWORD_RESET_TOKEN_ISSUED'`. 2. apps/api/src/audit/audit.service.ts ENTITY_TYPE_BY_ACTION: add entry 'User'. 3. apps/a
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** G
 - **Confidence:** cross-validated
@@ -11962,8 +11962,8 @@ grep -n 'deleteMany\|\$transaction' apps/api/src/events/events.service.ts
 
 ### COR-055 — importLeaves catch block resets result.created=0 but not result.skipped — error response reports misleading skipped count after full tx rollback
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/leaves/leaves.service.ts — add `result.skipped = 0;` in the catch block at line 3813 alongside `result.created = 0;`. Optionally clear `result.errorDetails` before pushing the 'Import ann
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** B
 - **Confidence:** primary-only
@@ -12075,8 +12075,8 @@ N/A — manual verification
 
 ### COR-050 — auth.service register() and users.service create(): duplicate-check race condition surfaces as 500 instead of 409 when two concurrent registrations collide on the DB unique constraint
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/auth/auth.service.ts and apps/api/src/users/users.service.ts — wrap each `prisma.user.create()` in try/catch: catch PrismaClientKnownRequestError with code 'P2002', throw ConflictExceptio
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -12317,8 +12317,8 @@ grep -n 'findOne\|assertProjectMembership\|milestone.update\|milestone.delete' a
 
 ### COR-059 — roles.service createRole()/updateRole(): isDefault singleton management is non-atomic — two concurrent requests can create two roles with isDefault=true
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/rbac/roles.service.ts — wrap `unsetCurrentDefault()` + `role.create/update` in `this.prisma.$transaction(async (tx) => {...})` passing tx to both operations. Consider adding a DB-level pa
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -12379,8 +12379,8 @@ N/A — manual verification via concurrent HTTP test.
 
 ### COR-061 — SettingsService.remove throws unhandled Prisma P2025 for non-existent non-default keys
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). apps/api/src/settings/settings.service.ts:353 — insert `if (!previous) throw new NotFoundException(\`Setting '${key}' not found\`);` after the findUnique null check. Test: call remove('nonexistent-cus
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** C
 - **Confidence:** primary-only
@@ -15351,8 +15351,8 @@ N/A — manual verification
 
 ### COR-064 — getUsersPresence(): setHours(0,0,0,0) uses local server timezone — presence window is offset when Node.js process timezone differs from UTC
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch D-correctness). users.service.ts lines 1753 and 1755: replace `setHours(0, 0, 0, 0)` with `setUTCHours(0, 0, 0, 0)` and `setHours(23, 59, 59, 999)` with `setUTCHours(23, 59, 59, 999)`. Failing-test: integration test 
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** J
 - **Confidence:** primary-only
@@ -15402,8 +15402,8 @@ TZ=Europe/Paris node -e "const d=new Date('2026-06-04'); d.setHours(0,0,0,0); co
 
 ### OBS-023 — req.body.login not in Fastify redact paths — user identifier would appear in logs if body serialization is enabled
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/common/fastify/redact.config.ts: add 'req.body.login' to the paths array under the auth/token block. Test: assert `fastifyLoggerOptions.redact.paths` contains 'req.body.login'.
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -15464,8 +15464,8 @@ grep 'req.body.login' apps/api/src/common/fastify/redact.config.ts
 
 ### SEC-034 — Stdout audit log uses unkeyed plain SHA256 (8 chars) for attempted-login identifier — rainbow-table reversible for common emails
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). In audit.service.ts, replace `hashAttemptedLogin`: `const hashAttemptedLogin = (value: string): string => createHmac('sha256', process.env['AUDIT_HASH_KEY']!).update(value.trim().toLowerCase()).digest
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** L
 - **Confidence:** primary-only
@@ -17400,8 +17400,8 @@ grep -n 'test.skip(true' /home/alex/Documents/REPO/ORCHESTRA/e2e/tests/kanban.sp
 
 ### SA-SEC-012 — METRICS_TOKEN not documented in env templates — metrics endpoint is open by default
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). Add `METRICS_TOKEN=` with a generation comment to .env.example (MONITORING section) and as required (`METRICS_TOKEN=` with comment 'REQUIRED: generate with openssl rand -hex 32') to .env.production.ex
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** R
 - **Confidence:** secondary-only
@@ -17457,8 +17457,8 @@ grep -n 'METRICS_TOKEN' .env.example .env.production.example
 
 ### SA-OBS-010 — console.error() in UsersService.create() bypasses NestJS Logger and Fastify log redaction
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/users/users.service.ts:151: replace `console.error(...)` with `this.logger.error('[CRITICAL] bcrypt hash verification failed (login redacted)')` omitting the raw login value. Verify `priv
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** S
 - **Confidence:** secondary-only
@@ -17507,8 +17507,8 @@ grep -rn 'console\.' /home/alex/Documents/REPO/ORCHESTRA/apps/api/src --include=
 
 ### SA-OBS-011 — console.warn() in SettingsService.onModuleInit() bypasses NestJS Logger
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/settings/settings.service.ts: add `private readonly logger = new Logger(SettingsService.name);` and replace console.warn() with `this.logger.warn(...)`. Failing test: same grep assertion 
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 4
 - **Cluster:** S
 - **Confidence:** secondary-only
@@ -18413,8 +18413,8 @@ grep -rn 'project_members.*dates_ck\|project_members.*CHECK.*date' /home/alex/Do
 
 ### SA-SEC-017 — AppController GET / exposes docs and internal API endpoint list publicly without auth
 
-- **Status:** TODO
-- **Disposition:** OPEN-FIXABLE — OPEN-FIXABLE — scheduled to FOLD (batch E-secobs). apps/api/src/app.controller.ts: replace the return value with `{ status: 'operational', message: 'API is running. Access endpoints via /api/*' }` (remove version string and endpoints object). Failing-
+- **Status:** DONE
+- **Disposition:** FOLDED (was OPEN-FIXABLE, batch DE)
 - **Phase:** 5
 - **Cluster:** M
 - **Confidence:** secondary-only

@@ -4,7 +4,9 @@ import {
   ConflictException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
+import { Prisma } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
 import {
@@ -49,6 +51,8 @@ export interface UserDependenciesResponse {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly refreshTokenService: RefreshTokenService,
@@ -148,67 +152,82 @@ export class UsersService {
       passwordHash,
     );
     if (!hashValid) {
-      console.error(
-        `[CRITICAL] bcrypt hash verification failed for user ${createUserDto.login}`,
+      // SA-OBS-010 — use NestJS Logger (routes through pino redaction pipeline);
+      // omit the raw login to avoid PII leaking into broadly-shipped stdout logs.
+      this.logger.error(
+        '[CRITICAL] bcrypt hash verification failed (login redacted)',
       );
       throw new Error('Password hash verification failed');
     }
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: createUserDto.email,
-        login: createUserDto.login,
-        passwordHash,
-        firstName: createUserDto.firstName,
-        lastName: createUserDto.lastName,
-        roleId,
-        departmentId: createUserDto.departmentId,
-        avatarUrl: createUserDto.avatarUrl,
-        // SEC-011 — isActive is server-controlled on create (Model A: admins
-        // create active users). The CreateUserDto no longer carries this field,
-        // so the value is never caller-supplied. State changes go through the
-        // UPDATE path, which audits USER_DEACTIVATED / USER_REACTIVATED.
-        isActive: true,
-      },
-      select: {
-        id: true,
-        email: true,
-        login: true,
-        firstName: true,
-        lastName: true,
-        avatarUrl: true,
-        avatarPreset: true,
-        roleId: true,
-        role: {
-          select: {
-            id: true,
-            code: true,
-            label: true,
-            templateKey: true,
-            isSystem: true,
-          },
+    const user = await this.prisma.user
+      .create({
+        data: {
+          email: createUserDto.email,
+          login: createUserDto.login,
+          passwordHash,
+          firstName: createUserDto.firstName,
+          lastName: createUserDto.lastName,
+          roleId,
+          departmentId: createUserDto.departmentId,
+          avatarUrl: createUserDto.avatarUrl,
+          // SEC-011 — isActive is server-controlled on create (Model A: admins
+          // create active users). The CreateUserDto no longer carries this field,
+          // so the value is never caller-supplied. State changes go through the
+          // UPDATE path, which audits USER_DEACTIVATED / USER_REACTIVATED.
+          isActive: true,
         },
-        departmentId: true,
-        isActive: true,
-        createdAt: true,
-        department: {
-          select: {
-            id: true,
-            name: true,
+        select: {
+          id: true,
+          email: true,
+          login: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+          avatarPreset: true,
+          roleId: true,
+          role: {
+            select: {
+              id: true,
+              code: true,
+              label: true,
+              templateKey: true,
+              isSystem: true,
+            },
           },
-        },
-        userServices: {
-          select: {
-            service: {
-              select: {
-                id: true,
-                name: true,
+          departmentId: true,
+          isActive: true,
+          createdAt: true,
+          department: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          userServices: {
+            select: {
+              service: {
+                select: {
+                  id: true,
+                  name: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      })
+      // COR-050 — race between findFirst and create: two concurrent creates can
+      // both pass the duplicate check and collide on the DB unique constraint.
+      // Map P2002 to 409 instead of the 500 AllExceptionsFilter would emit.
+      .catch((e) => {
+        if (
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          e.code === 'P2002'
+        ) {
+          throw new ConflictException('Email ou login déjà utilisé');
+        }
+        throw e;
+      });
 
     if (createUserDto.serviceIds && createUserDto.serviceIds.length > 0) {
       await this.prisma.userService.createMany({
@@ -1750,9 +1769,11 @@ export class UsersService {
   async getUsersPresence(dateStr?: string) {
     const targetDate = dateStr ? new Date(dateStr) : new Date();
     const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
+    // COR-064 — use setUTCHours so the day boundary is always UTC midnight
+    // regardless of the Node.js process timezone (not pinned in Docker).
+    startOfDay.setUTCHours(0, 0, 0, 0);
     const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    endOfDay.setUTCHours(23, 59, 59, 999);
 
     type PresenceRow = {
       id: string;

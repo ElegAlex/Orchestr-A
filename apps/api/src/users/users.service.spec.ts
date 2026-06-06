@@ -5,7 +5,12 @@ import { join, resolve, sep } from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import { Prisma } from 'database';
 import * as bcrypt from 'bcrypt';
 
 // Mock fs/promises for avatar tests
@@ -325,6 +330,90 @@ describe('UsersService', () => {
         'Ce login est déjà utilisé',
       );
     });
+
+    // COR-050 — race: two concurrent creates both pass findFirst, the second
+    // prisma.user.create() throws P2002. Without the try/catch it surfaces as 500.
+    // Uses real bcrypt (ESM module — can't be spied on in this spec).
+    it('COR-050: maps Prisma P2002 from user.create() to ConflictException (409)', async () => {
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+      mockPrismaService.department.findUnique.mockResolvedValue({
+        id: 'dept-1',
+        name: 'IT',
+      });
+      mockPrismaService.service.findMany.mockResolvedValue([
+        { id: 'service-1', name: 'Dev' },
+      ]);
+      mockPrismaService.role.findUnique.mockResolvedValue({
+        id: 'role-contrib',
+        isSystem: false,
+      });
+      mockPrismaService.user.create.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+          meta: { target: ['email'] },
+        }),
+      );
+
+      await expect(service.create(createUserDto)).rejects.toThrow(
+        ConflictException,
+      );
+    }, 10000);
+
+    // SA-OBS-010 — console.error bypasses NestJS Logger (and its redaction pipeline)
+    // and leaks the raw login PII. After fix: this.logger.error is used, no raw login.
+    // Structural witness: UsersService must expose a NestJS Logger instance so the
+    // error path routes through pino redaction. Pre-fix: no logger property; post-fix: present.
+    it('SA-OBS-010: UsersService has a NestJS logger property (routes through pino redaction)', async () => {
+      // Structural guard: the logger property must exist on the service instance.
+      // Pre-fix the service had no `logger` field (console.error used directly).
+      expect(
+        (service as unknown as Record<string, unknown>)['logger'],
+      ).toBeDefined();
+
+      // Behavioral guard: a normal create() must not trigger console.error.
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const mockDepartment = { id: 'dept-1', name: 'IT' };
+      const mockCreatedUser = {
+        id: '1',
+        email: createUserDto.email,
+        login: createUserDto.login,
+        firstName: createUserDto.firstName,
+        lastName: createUserDto.lastName,
+        role: {
+          id: 'r',
+          code: 'CONTRIBUTEUR',
+          label: 'C',
+          templateKey: 'CONTRIBUTOR',
+          isSystem: false,
+        },
+        roleId: 'r',
+        departmentId: createUserDto.departmentId,
+        avatarUrl: null,
+        isActive: true,
+        createdAt: new Date(),
+        department: mockDepartment,
+        userServices: [],
+      };
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+      mockPrismaService.department.findUnique.mockResolvedValue(mockDepartment);
+      mockPrismaService.service.findMany.mockResolvedValue([
+        { id: 'service-1', name: 'Dev' },
+      ]);
+      mockPrismaService.role.findUnique.mockResolvedValue({
+        id: 'r',
+        isSystem: false,
+      });
+      mockPrismaService.user.create.mockResolvedValue(mockCreatedUser);
+      mockPrismaService.userService.createMany.mockResolvedValue({ count: 1 });
+
+      await service.create(createUserDto);
+
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    }, 10000);
 
     it('should throw error when department does not exist', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
@@ -2667,6 +2756,40 @@ describe('UsersService', () => {
 
       expect(result).toHaveProperty('date');
       expect(result.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    // COR-064 — setHours() uses local TZ; when the container is not UTC the
+    // day boundary shifts. Must use setUTCHours() so the window is always
+    // anchored at UTC midnight regardless of the Node process timezone.
+    it('COR-064: getUsersPresence() computes day boundaries in UTC (startOfDay = UTC midnight)', async () => {
+      // Intercept the $queryRaw call to capture all Date params passed to the query.
+      const capturedDates: Date[] = [];
+      mockPrismaService.$queryRaw.mockImplementationOnce(
+        (_sql: unknown, ...params: unknown[]) => {
+          // Prisma tagged template params are the interpolated values in order.
+          for (const p of params) {
+            if (p instanceof Date) capturedDates.push(p);
+          }
+          return Promise.resolve([]);
+        },
+      );
+
+      await service.getUsersPresence('2026-01-15');
+
+      // There must be at least two Date params (startOfDay and endOfDay).
+      expect(capturedDates.length).toBeGreaterThanOrEqual(2);
+
+      // One param must be exactly UTC midnight (startOfDay).
+      const startOfDay = capturedDates.find(
+        (d) => d.toISOString() === '2026-01-15T00:00:00.000Z',
+      );
+      expect(startOfDay).toBeDefined();
+
+      // One param must be exactly UTC end-of-day (endOfDay).
+      const endOfDay = capturedDates.find(
+        (d) => d.toISOString() === '2026-01-15T23:59:59.999Z',
+      );
+      expect(endOfDay).toBeDefined();
     });
 
     it('should return correct totals', async () => {

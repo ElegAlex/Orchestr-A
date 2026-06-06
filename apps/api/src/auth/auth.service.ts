@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -340,36 +341,49 @@ export class AuthService {
     }
 
     // Créer l'utilisateur
-    const user = await this.prisma.user.create({
-      data: {
-        email: registerDto.email,
-        login: registerDto.login,
-        passwordHash,
-        firstName: registerDto.firstName,
-        lastName: registerDto.lastName,
-        roleId: defaultRole.id,
-        // New registrations require admin activation for security
-        isActive: false,
-      },
-      select: {
-        id: true,
-        email: true,
-        login: true,
-        firstName: true,
-        lastName: true,
-        roleId: true,
-        role: {
-          select: {
-            id: true,
-            code: true,
-            label: true,
-            templateKey: true,
-          },
+    const user = await this.prisma.user
+      .create({
+        data: {
+          email: registerDto.email,
+          login: registerDto.login,
+          passwordHash,
+          firstName: registerDto.firstName,
+          lastName: registerDto.lastName,
+          roleId: defaultRole.id,
+          // New registrations require admin activation for security
+          isActive: false,
         },
-        departmentId: true,
-        createdAt: true,
-      },
-    });
+        select: {
+          id: true,
+          email: true,
+          login: true,
+          firstName: true,
+          lastName: true,
+          roleId: true,
+          role: {
+            select: {
+              id: true,
+              code: true,
+              label: true,
+              templateKey: true,
+            },
+          },
+          departmentId: true,
+          createdAt: true,
+        },
+      })
+      // COR-050 — race between findFirst and create: two concurrent registrations
+      // can both pass the duplicate check and collide on the DB unique constraint.
+      // Map P2002 to 409 instead of the 500 AllExceptionsFilter would emit.
+      .catch((e) => {
+        if (
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          e.code === 'P2002'
+        ) {
+          throw new ConflictException('Email ou login déjà utilisé');
+        }
+        throw e;
+      });
 
     this.auditService.log({
       action: AuditAction.REGISTER,
@@ -535,7 +549,7 @@ export class AuthService {
     });
 
     this.auditService.log({
-      action: AuditAction.PASSWORD_CHANGED,
+      action: AuditAction.PASSWORD_RESET_TOKEN_ISSUED,
       userId: createdById,
       details: `Password reset token generated for user ${targetUser.id}`, // OBS-027: opaque id, not login
       success: true,

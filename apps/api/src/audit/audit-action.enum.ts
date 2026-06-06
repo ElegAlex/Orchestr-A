@@ -33,6 +33,10 @@ export enum AuditAction {
   USER_DEACTIVATED = 'USER_DEACTIVATED',
   USER_REACTIVATED = 'USER_REACTIVATED',
   PASSWORD_CHANGED = 'PASSWORD_CHANGED',
+  // OBS-021 — a reset token was issued (POST /auth/reset-password-token). Distinct
+  // from PASSWORD_CHANGED (which records the actual password update) so analytics
+  // queries for "password changed" are not polluted with token-issuance events.
+  PASSWORD_RESET_TOKEN_ISSUED = 'PASSWORD_RESET_TOKEN_ISSUED',
   PASSWORD_RESET_BY_ADMIN = 'PASSWORD_RESET_BY_ADMIN',
   SERVICE_MEMBERSHIP_CHANGED = 'SERVICE_MEMBERSHIP_CHANGED',
   DEPARTMENT_CHANGED = 'DEPARTMENT_CHANGED',

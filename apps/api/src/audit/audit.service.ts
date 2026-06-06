@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createHash, createHmac } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { AuditPersistenceService } from './audit-persistence.service';
 import { AuditAction } from './audit-action.enum';
 import { getRequestId } from '../common/fastify/request-id.context';
@@ -85,6 +85,7 @@ const ENTITY_TYPE_BY_ACTION: Record<
   [AuditAction.USER_DEACTIVATED]: 'User',
   [AuditAction.USER_REACTIVATED]: 'User',
   [AuditAction.PASSWORD_CHANGED]: 'User',
+  [AuditAction.PASSWORD_RESET_TOKEN_ISSUED]: 'User',
   [AuditAction.PASSWORD_RESET_BY_ADMIN]: 'User',
   [AuditAction.SERVICE_MEMBERSHIP_CHANGED]: 'User',
   [AuditAction.DEPARTMENT_CHANGED]: 'User',
@@ -161,8 +162,14 @@ const BCRYPT_SHAPE = /\$2[aby]\$/;
  * (OBS-028 — the PERSISTED `entityId` is likewise no longer raw: it is a KEYED
  * HMAC, see `resolveEntityId` / `hashAttemptedSubject`.)
  */
+// SEC-034 — use a keyed HMAC (same AUDIT_HASH_KEY as hashAttemptedSubject)
+// so the stdout digest is not dictionary-reversible via rainbow tables.
+// The key is boot-asserted in main.ts (assertAuditHashKey), so the `!` is safe.
 const hashAttemptedLogin = (value: string): string =>
-  createHash('sha256').update(value).digest('hex').slice(0, 8);
+  createHmac('sha256', process.env['AUDIT_HASH_KEY']!)
+    .update(value.trim().toLowerCase())
+    .digest('hex')
+    .slice(0, 8);
 
 @Injectable()
 export class AuditService {

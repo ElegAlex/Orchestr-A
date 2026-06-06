@@ -11,6 +11,7 @@ import {
   type RoleTemplate,
   type RoleTemplateKey,
 } from 'rbac';
+import { Prisma } from 'database';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { AuditAction } from '../audit/audit.service';
@@ -136,24 +137,29 @@ export class RolesService {
     // when we will actually emit (caller present). +1 findFirst on the
     // default-setting path only; no extra roundtrip otherwise.
     let prevDefaultRoleId: string | null = null;
-    if (dto.isDefault) {
-      if (caller) {
-        prevDefaultRoleId = await this.captureCurrentDefaultId();
-      }
-      await this.unsetCurrentDefault();
+    if (dto.isDefault && caller) {
+      prevDefaultRoleId = await this.captureCurrentDefaultId();
     }
 
-    const created = await this.prisma.role.create({
-      data: {
-        code: dto.code,
-        label: dto.label,
-        templateKey: dto.templateKey,
-        description: dto.description ?? null,
-        isSystem: false, // Force false — la création de rôles système est
-        // exclusivement faite par le seed.
-        isDefault: dto.isDefault ?? false,
-      },
-      include: { _count: { select: { users: true } } },
+    // COR-059 — wrap unsetCurrentDefault + create in a single $transaction so
+    // that concurrent isDefault=true requests cannot leave two rows flagged
+    // default (non-atomic two-step race).
+    const created = await this.prisma.$transaction(async (tx) => {
+      if (dto.isDefault) {
+        await this.unsetCurrentDefault(tx);
+      }
+      return tx.role.create({
+        data: {
+          code: dto.code,
+          label: dto.label,
+          templateKey: dto.templateKey,
+          description: dto.description ?? null,
+          isSystem: false, // Force false — la création de rôles système est
+          // exclusivement faite par le seed.
+          isDefault: dto.isDefault ?? false,
+        },
+        include: { _count: { select: { users: true } } },
+      });
     });
 
     // OBS-005 — durable audit trail. Caller-undefined (seed/internal/test
@@ -202,24 +208,29 @@ export class RolesService {
     // OBS-005 — read the prior default before unsetting it (only on the
     // false→true transition, where the singleton holder is some *other* row).
     let prevDefaultRoleId: string | null = null;
-    if (defaultGoingTrue) {
-      if (caller) {
-        prevDefaultRoleId = await this.captureCurrentDefaultId();
-      }
-      await this.unsetCurrentDefault();
+    if (defaultGoingTrue && caller) {
+      prevDefaultRoleId = await this.captureCurrentDefaultId();
     }
 
+    // COR-059 — wrap unsetCurrentDefault + update in a single $transaction so
+    // that concurrent isDefault=true requests cannot leave two rows flagged
+    // default (non-atomic two-step race).
     // templateKey est immuable après création (cf. TSDoc classe) — on ne
     // le touche jamais, même si le DTO en contenait un (validation DTO le
     // refuse déjà, ce chemin est purement défensif).
-    const updated = await this.prisma.role.update({
-      where: { id },
-      data: {
-        label: dto.label ?? existing.label,
-        description: dto.description ?? existing.description,
-        isDefault: dto.isDefault ?? existing.isDefault,
-      },
-      include: { _count: { select: { users: true } } },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (defaultGoingTrue) {
+        await this.unsetCurrentDefault(tx);
+      }
+      return tx.role.update({
+        where: { id },
+        data: {
+          label: dto.label ?? existing.label,
+          description: dto.description ?? existing.description,
+          isDefault: dto.isDefault ?? existing.isDefault,
+        },
+        include: { _count: { select: { users: true } } },
+      });
     });
 
     // OBS-005 — ROLE_UPDATED tracks the free-text descriptive scalars
@@ -318,8 +329,10 @@ export class RolesService {
 
   // ─── Helpers ───────────────────────────────────────────────────────────
 
-  private async unsetCurrentDefault(): Promise<void> {
-    await this.prisma.role.updateMany({
+  private async unsetCurrentDefault(
+    client: Pick<Prisma.TransactionClient, 'role'> = this.prisma,
+  ): Promise<void> {
+    await client.role.updateMany({
       where: { isDefault: true },
       data: { isDefault: false },
     });

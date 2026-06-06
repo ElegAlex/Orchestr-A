@@ -11,8 +11,10 @@ import {
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { Prisma } from 'database';
 import { PermissionsService } from '../rbac/permissions.service';
 import { AuditService, AuditAction } from '../audit/audit.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 import { RefreshTokenService } from './refresh-token.service';
 import { ConfigService } from '@nestjs/config';
 import { RoleHierarchyService } from '../common/services/role-hierarchy.service';
@@ -595,6 +597,30 @@ describe('AuthService', () => {
       expect(mockAuditService.log).not.toHaveBeenCalled();
     });
 
+    // COR-050 — race: findFirst passes for both concurrent requests, then the
+    // second prisma.user.create() throws P2002 (unique constraint). Without the
+    // try/catch the AllExceptionsFilter maps it to 500; with it, 409.
+    it('COR-050: maps Prisma P2002 from user.create() to ConflictException (409)', async () => {
+      mockPrismaService.user.findFirst.mockResolvedValue(null);
+      mockPrismaService.role.findFirst.mockResolvedValue({
+        id: 'default-role-id',
+      });
+      vi.mocked(bcrypt.hash).mockResolvedValue(
+        '$2b$12$hashedpassword' as never,
+      );
+      mockPrismaService.user.create.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+          meta: { target: ['email'] },
+        }),
+      );
+
+      await expect(service.register(registerDto)).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
     it('should always assign the default role regardless of input', async () => {
       mockPrismaService.user.findFirst.mockResolvedValue(null);
       mockPrismaService.role.findFirst.mockResolvedValue({
@@ -929,15 +955,58 @@ describe('AuthService', () => {
           }),
         }),
       );
-      // TST-011 — PASSWORD_CHANGED audit emission at auth.service.ts:407
-      // (reset-token generated). The actor is the caller (createdById).
+      // OBS-021 — generateResetToken() must emit PASSWORD_RESET_TOKEN_ISSUED,
+      // not PASSWORD_CHANGED. FAILS pre-fix (currently PASSWORD_CHANGED).
       expect(mockAuditService.log).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: AuditAction.PASSWORD_CHANGED,
+          action: AuditAction.PASSWORD_RESET_TOKEN_ISSUED,
           userId: 'admin-id',
           success: true,
         }),
       );
+    });
+
+    // OBS-021 cluster witness: the payload passed to auditService.log() must
+    // satisfy the real validatePayloadForAction schema (3-layer compile-lock check).
+    it('OBS-021: generateResetToken() emits PASSWORD_RESET_TOKEN_ISSUED with a valid schema payload', async () => {
+      arrangeUsers({
+        target: { id: 'user-id-1', login: 'jdoe', roleCode: 'CONTRIBUTEUR' },
+        caller: { roleCode: 'ADMIN' },
+      });
+      mockPrismaService.passwordResetToken.updateMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.passwordResetToken.deleteMany.mockResolvedValue({
+        count: 0,
+      });
+      mockPrismaService.passwordResetToken.create.mockResolvedValue({
+        id: 'token-id',
+      });
+
+      await service.generateResetToken('user-id-1', 'admin-id');
+
+      const call = (mockAuditService.log as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as {
+        action: AuditAction;
+        details?: string;
+        success: boolean;
+      };
+      expect(call.action).toBe(AuditAction.PASSWORD_RESET_TOKEN_ISSUED);
+
+      // Build the payload exactly as AuditService.log() would pass to AuditPersistence
+      // (securityEnvelope shape: ip?, details?, success, timestamp, ua?, reason?, requestId?)
+      const payload = {
+        success: call.success,
+        timestamp: new Date().toISOString(),
+        ...(call.details !== undefined ? { details: call.details } : {}),
+      };
+      // Cluster witness: real schema validation must not throw
+      expect(() =>
+        validatePayloadForAction(
+          AuditAction.PASSWORD_RESET_TOKEN_ISSUED,
+          payload,
+        ),
+      ).not.toThrow();
     });
 
     it('should throw NotFoundException if user does not exist', async () => {
