@@ -29,13 +29,20 @@ export const ROLE_LOGINS: Record<Role, string> = {
   observateur: "observateur-test",
 };
 
+// Anchor at the repo root (this file lives in <root>/e2e/fixtures) so the
+// storage states are written to the SAME place the Playwright config reads
+// them from, regardless of the process cwd. Without this, `pnpm --filter web
+// exec playwright` (cwd = apps/web) wrote states to apps/web/playwright/.auth/
+// while the role projects read <root>/playwright/.auth/ — using stale states.
+const AUTH_DIR = path.resolve(__dirname, "..", "..", "playwright", ".auth");
+
 export const ROLE_STORAGE_PATHS: Record<Role, string> = {
-  admin: path.join("playwright", ".auth", "admin.json"),
-  responsable: path.join("playwright", ".auth", "responsable.json"),
-  manager: path.join("playwright", ".auth", "manager.json"),
-  referent: path.join("playwright", ".auth", "referent.json"),
-  contributeur: path.join("playwright", ".auth", "contributeur.json"),
-  observateur: path.join("playwright", ".auth", "observateur.json"),
+  admin: path.join(AUTH_DIR, "admin.json"),
+  responsable: path.join(AUTH_DIR, "responsable.json"),
+  manager: path.join(AUTH_DIR, "manager.json"),
+  referent: path.join(AUTH_DIR, "referent.json"),
+  contributeur: path.join(AUTH_DIR, "contributeur.json"),
+  observateur: path.join(AUTH_DIR, "observateur.json"),
 };
 
 export const ROLE_PASSWORD = "Test1234!";

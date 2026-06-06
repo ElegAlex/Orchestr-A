@@ -1,4 +1,11 @@
+import * as path from "path";
 import { defineConfig, devices } from "@playwright/test";
+
+// Absolute, repo-root-anchored auth dir — must match e2e/fixtures/roles.ts
+// (ROLE_STORAGE_PATHS) so the role projects read exactly what auth.setup wrote,
+// independent of the process cwd (e.g. `pnpm --filter web exec` runs in apps/web).
+const authPath = (role: string) =>
+  path.resolve(__dirname, "playwright", ".auth", `${role}.json`);
 
 const baseURL = process.env.CI
   ? "http://localhost:3000"
@@ -52,7 +59,7 @@ export default defineConfig({
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "playwright/.auth/admin.json",
+        storageState: authPath("admin"),
       },
     },
     {
@@ -61,7 +68,7 @@ export default defineConfig({
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "playwright/.auth/responsable.json",
+        storageState: authPath("responsable"),
       },
     },
     {
@@ -70,7 +77,7 @@ export default defineConfig({
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "playwright/.auth/manager.json",
+        storageState: authPath("manager"),
       },
     },
     {
@@ -79,7 +86,7 @@ export default defineConfig({
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "playwright/.auth/referent.json",
+        storageState: authPath("referent"),
       },
     },
     {
@@ -88,7 +95,7 @@ export default defineConfig({
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "playwright/.auth/contributeur.json",
+        storageState: authPath("contributeur"),
       },
     },
     {
@@ -97,7 +104,7 @@ export default defineConfig({
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "playwright/.auth/observateur.json",
+        storageState: authPath("observateur"),
       },
     },
 

@@ -17,7 +17,10 @@
  * @param env — pass `process.env` in production, or a stub in tests.
  */
 export function shouldSeedE2EUsers(
-  env: Pick<NodeJS.ProcessEnv, 'E2E_SEED' | 'NODE_ENV'>,
+  env: Record<string, string | undefined>,
 ): boolean {
-  return (env.E2E_SEED === 'true' || env.NODE_ENV === 'test') && env.NODE_ENV !== 'production';
+  return (
+    (env.E2E_SEED === "true" || env.NODE_ENV === "test") &&
+    env.NODE_ENV !== "production"
+  );
 }

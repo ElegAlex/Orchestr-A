@@ -285,6 +285,10 @@ jobs:
         run: pnpm --filter web exec playwright test --config ../../playwright.config.ts --grep @smoke --workers=4
         env:
           CI: true
+          # globalSetup reseeds the e2e DB after reset — needs the DB URL (steps
+          # do not inherit prior-step env). Must match the API's DATABASE_URL.
+          DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
+          DATABASE_MIGRATION_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
 
       # TST-022: gate on all 6 role storage states existing and non-empty.
       # auth.setup.ts hard-fails on non-OK login, but a partially-written or
@@ -433,6 +437,10 @@ jobs:
         run: pnpm --filter web exec playwright test --config ../../playwright.config.ts
         env:
           CI: true
+          # globalSetup reseeds the e2e DB after reset — needs the DB URL (steps
+          # do not inherit prior-step env). Must match the API's DATABASE_URL.
+          DATABASE_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
+          DATABASE_MIGRATION_URL: postgresql://orchestr_a:orchestr_a_dev_password@localhost:5432/orchestr_a_v2_e2e
 
       # TST-022: gate on all 6 role storage states existing and non-empty.
       # auth.setup.ts hard-fails on non-OK login, but a partially-written or

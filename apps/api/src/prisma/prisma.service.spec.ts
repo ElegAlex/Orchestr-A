@@ -143,43 +143,79 @@ describe('PrismaService', () => {
       process.env.NODE_ENV = originalEnv;
     });
 
-    it('should call deleteMany on models with that method in non-production', async () => {
+    it('should refuse to clean a database whose name is not a test target', async () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'test';
 
       const service = new PrismaService();
+      // Dev/prod-shaped name → must be rejected before any TRUNCATE.
+      (service as any).$queryRaw = vi
+        .fn()
+        .mockResolvedValue([{ db: 'orchestr_a_v2' }]);
+      const execSpy = vi.fn().mockResolvedValue(undefined);
+      (service as any).$executeRawUnsafe = execSpy;
 
-      // Inject a mock model with deleteMany
-      const mockDeleteMany = vi.fn().mockResolvedValue({ count: 0 });
-      (service as any).testModel = { deleteMany: mockDeleteMany };
-      // A key starting with _ should be filtered out by the Reflect.ownKeys filter
-      Object.defineProperty(service, '_privateKey', {
-        value: { deleteMany: vi.fn() },
-        enumerable: true,
-      });
-      // A key with no deleteMany method — should resolve to Promise.resolve()
-      (service as any).nonModelProp = 'just a string';
-
-      const result = await service.cleanDatabase();
-
-      expect(Array.isArray(result)).toBe(true);
-      expect(mockDeleteMany).toHaveBeenCalled();
+      await expect(service.cleanDatabase()).rejects.toThrow(
+        /Refusing to clean non-test database "orchestr_a_v2"/,
+      );
+      expect(execSpy).not.toHaveBeenCalled();
 
       process.env.NODE_ENV = originalEnv;
     });
 
-    it('should skip non-model properties that are not objects with deleteMany', async () => {
+    it('should TRUNCATE every public table (except migrations) on a test database', async () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'test';
 
       const service = new PrismaService();
-      // No real models that respond, just primitive properties
-      (service as any).aStringProp = 'value';
-      (service as any).aNumberProp = 42;
+      // 1st $queryRaw → current_database(); 2nd → table list.
+      (service as any).$queryRaw = vi
+        .fn()
+        .mockResolvedValueOnce([{ db: 'orchestr_a_v2_e2e' }])
+        .mockResolvedValueOnce([
+          { tablename: 'users' },
+          { tablename: 'audit_logs' },
+        ]);
+      const execSpy = vi.fn().mockResolvedValue(undefined);
+      (service as any).$executeRawUnsafe = execSpy;
 
-      // Should not throw — just resolve
-      const result = await service.cleanDatabase();
-      expect(Array.isArray(result)).toBe(true);
+      await expect(service.cleanDatabase()).resolves.toBeUndefined();
+
+      const calls = execSpy.mock.calls.map((c) => String(c[0]));
+      // audit_logs immutability triggers toggled around the truncate.
+      expect(calls.some((s) => /DISABLE TRIGGER USER/.test(s))).toBe(true);
+      expect(calls.some((s) => /ENABLE TRIGGER USER/.test(s))).toBe(true);
+      // Single atomic TRUNCATE listing the discovered tables.
+      const truncate = calls.find((s) => s.startsWith('TRUNCATE TABLE'));
+      expect(truncate).toBeDefined();
+      expect(truncate).toContain('"users"');
+      expect(truncate).toContain('"audit_logs"');
+      expect(truncate).toContain('RESTART IDENTITY CASCADE');
+
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('should re-enable audit_logs triggers even if the TRUNCATE fails', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'test';
+
+      const service = new PrismaService();
+      (service as any).$queryRaw = vi
+        .fn()
+        .mockResolvedValueOnce([{ db: 'orchestr_a_v2_e2e' }])
+        .mockResolvedValueOnce([{ tablename: 'users' }]);
+      const execSpy = vi.fn().mockImplementation((sql: string) => {
+        if (sql.startsWith('TRUNCATE')) {
+          return Promise.reject(new Error('boom'));
+        }
+        return Promise.resolve(undefined);
+      });
+      (service as any).$executeRawUnsafe = execSpy;
+
+      await expect(service.cleanDatabase()).rejects.toThrow('boom');
+      const calls = execSpy.mock.calls.map((c) => String(c[0]));
+      // The finally block must still restore the triggers.
+      expect(calls.some((s) => /ENABLE TRIGGER USER/.test(s))).toBe(true);
 
       process.env.NODE_ENV = originalEnv;
     });
