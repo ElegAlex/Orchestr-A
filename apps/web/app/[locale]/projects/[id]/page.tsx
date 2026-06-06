@@ -177,12 +177,10 @@ export default function ProjectDetailPage() {
           }
         }
 
-        // Fetch milestones
+        // Fetch milestones (server-side filtered by project)
         try {
-          const milestonesData = await milestonesService.getAll();
-          const projectMilestones = milestonesData.data.filter(
-            (m: Milestone) => m.projectId === projectId,
-          );
+          const projectMilestones =
+            await milestonesService.getByProject(projectId);
           setMilestones(projectMilestones);
         } catch (err) {
           setMilestones([]);
@@ -523,11 +521,9 @@ export default function ProjectDetailPage() {
         toast.success(t("messages.milestoneCreateSuccess"));
       }
 
-      // Refresh milestones
-      const milestonesData = await milestonesService.getAll();
-      const projectMilestones = milestonesData.data.filter(
-        (m: Milestone) => m.projectId === projectId,
-      );
+      // Refresh milestones (server-side filtered by project)
+      const projectMilestones =
+        await milestonesService.getByProject(projectId);
       setMilestones(projectMilestones);
       setShowMilestoneModal(false);
       setEditingMilestone(null);
@@ -778,11 +774,9 @@ export default function ProjectDetailPage() {
         logger.error("Import errors:", result.errorDetails);
       }
 
-      // Refresh milestones
-      const milestonesData = await milestonesService.getAll();
-      const projectMilestones = milestonesData.data.filter(
-        (m: Milestone) => m.projectId === projectId,
-      );
+      // Refresh milestones (server-side filtered by project)
+      const projectMilestones =
+        await milestonesService.getByProject(projectId);
       setMilestones(projectMilestones);
 
       setShowMilestonesPreview(false);
