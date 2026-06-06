@@ -9,6 +9,8 @@ import {
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { AccessScopeService } from '../common/services/access-scope.service';
 import { AuditPersistenceService } from '../audit/audit-persistence.service';
+import { AuditAction } from '../audit/audit.service';
+import { validatePayloadForAction } from '../audit/payload-schemas';
 import { Prisma } from 'database';
 
 describe('DocumentsService', () => {
@@ -99,6 +101,33 @@ describe('DocumentsService', () => {
       expect(result).toBeDefined();
       expect(result.name).toBe(createDto.name);
       expect(mockPrismaService.document.create).toHaveBeenCalled();
+    });
+
+    // OBS-006 — document creation must leave a durable audit row.
+    it('OBS-006: emits DOCUMENT_CREATED with a schema-conformant payload', async () => {
+      const createDto = {
+        name: 'Test Document',
+        url: 'https://example.com/doc.pdf',
+        type: 'PDF',
+        size: 1024,
+        projectId: 'project-1',
+      };
+      mockPrismaService.document.create.mockResolvedValue(mockDocument);
+
+      await service.create('user-1', createDto);
+
+      const call = mockAuditPersistence.log.mock.calls.find(
+        (c) => c[0]?.action === AuditAction.DOCUMENT_CREATED,
+      )?.[0];
+      expect(call).toMatchObject({
+        action: AuditAction.DOCUMENT_CREATED,
+        entityType: 'Document',
+        entityId: 'doc-1',
+        actorId: 'user-1',
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.DOCUMENT_CREATED, call?.payload),
+      ).not.toThrow();
     });
   });
 
@@ -240,6 +269,35 @@ describe('DocumentsService', () => {
 
       expect(result.name).toBe('Updated Document');
     });
+
+    // OBS-006 — metadata edits must leave a durable before/after audit row.
+    it('OBS-006: emits DOCUMENT_UPDATED with a before/after, schema-conformant payload', async () => {
+      const updateDto = { name: 'Updated Document' };
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+      mockPrismaService.document.update.mockResolvedValue({
+        ...mockDocument,
+        ...updateDto,
+      });
+
+      await service.update('doc-1', updateDto, { id: 'editor-1', role: null });
+
+      const call = mockAuditPersistence.log.mock.calls.find(
+        (c) => c[0]?.action === AuditAction.DOCUMENT_UPDATED,
+      )?.[0];
+      expect(call).toMatchObject({
+        action: AuditAction.DOCUMENT_UPDATED,
+        entityType: 'Document',
+        entityId: 'doc-1',
+        actorId: 'editor-1',
+      });
+      expect(call?.payload).toMatchObject({
+        before: expect.objectContaining({ name: 'Test Document' }),
+        after: expect.objectContaining({ name: 'Updated Document' }),
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.DOCUMENT_UPDATED, call?.payload),
+      ).not.toThrow();
+    });
   });
 
   // COR-009 — update() must guard against race-window mutation of a soft-deleted
@@ -372,6 +430,29 @@ describe('DocumentsService', () => {
         }),
       );
       expect(mockPrismaService.document.delete).not.toHaveBeenCalled();
+    });
+
+    // OBS-006 — the soft-delete must leave a durable audit row.
+    it('OBS-006: emits DOCUMENT_DELETED with a schema-conformant payload', async () => {
+      mockPrismaService.document.findUnique.mockResolvedValue(mockDocument);
+      mockPrismaService.document.update.mockResolvedValue({
+        ...mockDocument,
+        deletedAt: new Date(),
+      });
+
+      await service.remove('doc-1');
+
+      const call = mockAuditPersistence.log.mock.calls.find(
+        (c) => c[0]?.action === AuditAction.DOCUMENT_DELETED,
+      )?.[0];
+      expect(call).toMatchObject({
+        action: AuditAction.DOCUMENT_DELETED,
+        entityType: 'Document',
+        entityId: 'doc-1',
+      });
+      expect(() =>
+        validatePayloadForAction(AuditAction.DOCUMENT_DELETED, call?.payload),
+      ).not.toThrow();
     });
   });
 

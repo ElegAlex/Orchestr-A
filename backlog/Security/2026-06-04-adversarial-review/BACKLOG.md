@@ -5310,7 +5310,7 @@ N/A — manual verification
 
 ### OBS-006 — documents: create and soft-delete emit no audit_log row (only DOCUMENT_READ is audited)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Phase:** 2
 - **Cluster:** G
 - **Confidence:** primary-only

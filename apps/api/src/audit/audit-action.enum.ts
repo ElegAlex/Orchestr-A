@@ -61,6 +61,13 @@ export enum AuditAction {
   // `Document.url`, so byte transfer bypasses the API and is not observable here.
   DOCUMENT_READ = 'DOCUMENT_READ',
   DOCUMENT_DOWNLOADED = 'DOCUMENT_DOWNLOADED',
+  // OBS-006 — document lifecycle. CREATED on metadata create (DocumentsService
+  // .create); UPDATED on metadata patch (before/after); DELETED on the DAT-025
+  // soft-delete (remove() sets deletedAt). The pre-existing DOCUMENT_READ only
+  // covered the read path.
+  DOCUMENT_CREATED = 'DOCUMENT_CREATED',
+  DOCUMENT_UPDATED = 'DOCUMENT_UPDATED',
+  DOCUMENT_DELETED = 'DOCUMENT_DELETED',
   LEAVE_APPROVED = 'LEAVE_APPROVED',
   LEAVE_REJECTED = 'LEAVE_REJECTED',
   // OBS-021 — full leave lifecycle beyond approve/reject. LEAVE_CANCELLED was

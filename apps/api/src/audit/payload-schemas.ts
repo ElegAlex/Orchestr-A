@@ -202,6 +202,22 @@ export const AUDIT_PAYLOAD_SCHEMAS = {
   // Document access (OBS-006).
   [AuditAction.DOCUMENT_READ]: documentAccess,
   [AuditAction.DOCUMENT_DOWNLOADED]: documentAccess,
+  // Document lifecycle (OBS-006) — create/delete reference the row + project;
+  // update carries before/after metadata snapshots.
+  [AuditAction.DOCUMENT_CREATED]: z
+    .object({ documentId: z.string(), projectId: z.string() })
+    .strict(),
+  [AuditAction.DOCUMENT_UPDATED]: z
+    .object({
+      documentId: z.string(),
+      projectId: z.string(),
+      before: snapshot,
+      after: snapshot,
+    })
+    .strict(),
+  [AuditAction.DOCUMENT_DELETED]: z
+    .object({ documentId: z.string(), projectId: z.string() })
+    .strict(),
 
   // Leaves lifecycle (OBS-003 / OBS-021). LEAVE_APPROVED is dual-provenance
   // (rich direct row in approve() + envelope self-approval row).

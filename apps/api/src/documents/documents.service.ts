@@ -61,7 +61,7 @@ export class DocumentsService {
       );
     }
 
-    return this.prisma.document.create({
+    const created = await this.prisma.document.create({
       data: {
         ...createDocumentDto,
         uploadedBy: userId,
@@ -70,6 +70,20 @@ export class DocumentsService {
         project: { select: { id: true, name: true } },
       },
     });
+
+    // OBS-006 — durable audit trail for document creation (the pre-existing
+    // emit only covered DOCUMENT_READ). Reference the row + project by opaque
+    // id; await so a payload-schema violation surfaces rather than silently
+    // dropping the row.
+    await this.auditPersistence.log({
+      action: AuditAction.DOCUMENT_CREATED,
+      entityType: 'Document',
+      entityId: created.id,
+      actorId: userId,
+      payload: { documentId: created.id, projectId: created.projectId },
+    });
+
+    return created;
   }
 
   async findAll(
@@ -197,13 +211,44 @@ export class DocumentsService {
     // logically-deleted document. Prisma returns P2025 when no live row matches;
     // we translate that to NotFoundException for consistent HTTP semantics.
     try {
-      return await this.prisma.document.update({
+      const updated = await this.prisma.document.update({
         where: { id, deletedAt: null },
         data: updateDocumentDto,
         include: {
           project: { select: { id: true, name: true } },
         },
       });
+
+      // OBS-006 — durable audit trail for metadata edits, with a before/after
+      // snapshot of the document-level fields so an auditor can reconstruct what
+      // changed (e.g. a project re-assignment — see COR-010).
+      const metaOf = (d: {
+        name: string;
+        url: string;
+        mimeType: string;
+        size: number;
+        projectId: string;
+      }) => ({
+        name: d.name,
+        url: d.url,
+        mimeType: d.mimeType,
+        size: d.size,
+        projectId: d.projectId,
+      });
+      await this.auditPersistence.log({
+        action: AuditAction.DOCUMENT_UPDATED,
+        entityType: 'Document',
+        entityId: id,
+        actorId: currentUser?.id ?? null,
+        payload: {
+          documentId: id,
+          projectId: updated.projectId,
+          before: metaOf(existing),
+          after: metaOf(updated),
+        },
+      });
+
+      return updated;
     } catch (err) {
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
@@ -241,6 +286,17 @@ export class DocumentsService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+
+    // OBS-006 — durable audit trail for the soft-delete, symmetric with
+    // DOCUMENT_CREATED. actorId is the deleting user when known.
+    await this.auditPersistence.log({
+      action: AuditAction.DOCUMENT_DELETED,
+      entityType: 'Document',
+      entityId: id,
+      actorId: currentUser?.id ?? null,
+      payload: { documentId: id, projectId: document.projectId },
+    });
+
     return { message: 'Document supprimé avec succès' };
   }
 }
