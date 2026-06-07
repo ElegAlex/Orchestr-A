@@ -270,6 +270,9 @@ jobs:
           REDIS_URL: redis://localhost:6379
           PORT: 4000
           ALLOWED_ORIGINS: http://localhost:3000
+          # OBS-028: main.ts hard-refuses to boot without AUDIT_HASH_KEY (>=32 chars).
+          # Non-secret CI-only value (mirrors the JWT_SECRET test placeholder above).
+          AUDIT_HASH_KEY: ci-e2e-audit-hash-key-not-a-secret-0123456789
           TZ: Europe/Paris
 
       - name: Start Frontend
@@ -409,6 +412,9 @@ jobs:
           REDIS_URL: redis://localhost:6379
           PORT: 4000
           ALLOWED_ORIGINS: http://localhost:3000
+          # OBS-028: main.ts hard-refuses to boot without AUDIT_HASH_KEY (>=32 chars).
+          # Non-secret CI-only value (mirrors the JWT_SECRET test placeholder above).
+          AUDIT_HASH_KEY: ci-e2e-audit-hash-key-not-a-secret-0123456789
           TZ: Europe/Paris
 
       - name: Start Frontend
