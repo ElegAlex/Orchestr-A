@@ -36,15 +36,37 @@ function apiUrl(baseURL: string | undefined, path: string): string {
   return `${base.replace(/\/$/, "")}/api${path}`;
 }
 
+/**
+ * Per-test throttle-bucket isolation.
+ *
+ * POST /auth/login is throttled to 5 req / 60s, keyed on the real client IP
+ * (ThrottlerBehindProxyGuard → clientIp → Fastify trustProxy). Under workers>1
+ * the whole CI suite (auth.setup's 6 logins + these tests) shares ONE IP, so the
+ * bucket is already partially consumed before SEC-05 even starts — the cause of
+ * the flaky `[401,401,401,429,…]`.
+ *
+ * Give each auth test its own client identity via X-Forwarded-For. TRUST_PROXY =
+ * ['loopback','uniquelocal'] resolves the leftmost UNTRUSTED hop as the client,
+ * so a public TEST-NET-2 address (198.51.100.0/24, outside uniquelocal) becomes
+ * the throttle key — a private bucket per test. The web proxy forwards
+ * x-forwarded-for verbatim (only x-real-ip / x-forwarded-host are stripped).
+ * This simulates distinct clients (production reality); it does NOT weaken the
+ * throttle — SEC-05 still proves the 6th attempt for ITS client returns 429.
+ */
+function xffHeaders(ip: string): Record<string, string> {
+  return { "X-Forwarded-For": ip };
+}
+
 async function loginAs(
   request: import("@playwright/test").APIRequestContext,
   baseURL: string | undefined,
   login: string,
   password: string,
+  clientIp: string,
 ) {
   const res = await request.post(apiUrl(baseURL, "/auth/login"), {
     data: { login, password },
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...xffHeaders(clientIp) },
   });
   if (!res.ok()) {
     throw new Error(`login failed: ${res.status()} ${await res.text()}`);
@@ -97,6 +119,7 @@ test.describe("Security — auth hardening (SEC-03/04/05)", () => {
       baseURL,
       ROLE_LOGINS.contributeur,
       ROLE_PASSWORD,
+      "198.51.100.3",
     );
     // role is an object {id, code, label, templateKey, isSystem} — assert the code.
     // The seeded user contributeur-test has role code BASIC_USER (see seed.ts:1722).
@@ -162,16 +185,19 @@ test.describe("Security — auth hardening (SEC-03/04/05)", () => {
     request,
     baseURL,
   }) => {
-    // Use a login that does not collide with seeded roles/throttle buckets in
-    // other tests — a random unknown login still triggers the throttle (it
-    // keys on IP/route, not on login identity).
+    // Own client IP (X-Forwarded-For) → a private 5/60s throttle bucket that no
+    // other test or auth.setup login touches, so the first 5 attempts are the
+    // only consumers and the 6th deterministically trips 429.
     const unknownLogin = `throttle-probe-${Date.now()}`;
     const statuses: number[] = [];
 
     for (let i = 0; i < 6; i++) {
       const res = await request.post(apiUrl(baseURL, "/auth/login"), {
         data: { login: unknownLogin, password: "wrong-password-xyz" },
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...xffHeaders("198.51.100.50"),
+        },
       });
       statuses.push(res.status());
     }
@@ -193,6 +219,7 @@ test.describe("Security — auth hardening (SEC-03/04/05)", () => {
       baseURL,
       ROLE_LOGINS.contributeur,
       ROLE_PASSWORD,
+      "198.51.100.41",
     );
 
     // Sanity — token works before logout.
@@ -229,6 +256,7 @@ test.describe("Security — auth hardening (SEC-03/04/05)", () => {
       baseURL,
       ROLE_LOGINS.referent,
       ROLE_PASSWORD,
+      "198.51.100.42",
     );
 
     // 1. Legitimate rotation: exchange old refresh for a new pair.
