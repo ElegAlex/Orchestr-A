@@ -6,7 +6,7 @@ import { skillsService } from "@/services/skills.service";
 import { SkillCategory, SkillLevel } from "@/types";
 import toast from "react-hot-toast";
 import { UserAvatar } from "@/components/UserAvatar";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface MatrixData {
   totalUsers: number;

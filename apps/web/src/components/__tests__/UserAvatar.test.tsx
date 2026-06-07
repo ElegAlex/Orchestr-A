@@ -85,9 +85,12 @@ describe("UserAvatar", () => {
       );
       // axios baseURL is /api → the /api prefix is stripped before the call.
       await waitFor(() =>
-        expect(mockedGet).toHaveBeenCalledWith("/uploads/avatars/sec016-a.png", {
-          responseType: "blob",
-        }),
+        expect(mockedGet).toHaveBeenCalledWith(
+          "/uploads/avatars/sec016-a.png",
+          {
+            responseType: "blob",
+          },
+        ),
       );
       const img = await screen.findByAltText("Alice Martin");
       expect(img).toHaveAttribute("src", "blob:mock-avatar");

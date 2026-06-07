@@ -4,11 +4,11 @@ Trois surfaces UI à densité élevée dont l'implémentation est gatée par une
 
 ## Surfaces concernées
 
-| Surface | Epic | Fichier | Story bloquée si non validé |
-|---|---|---|---|
-| Popover de transition de statut d'exécution | E3.2 | [E3.2-status-popover.html](./E3.2-status-popover.html) | W2 — T3.2.1 `AssignmentStatusBadge` |
+| Surface                                            | Epic | Fichier                                                                  | Story bloquée si non validé         |
+| -------------------------------------------------- | ---- | ------------------------------------------------------------------------ | ----------------------------------- |
+| Popover de transition de statut d'exécution        | E3.2 | [E3.2-status-popover.html](./E3.2-status-popover.html)                   | W2 — T3.2.1 `AssignmentStatusBadge` |
 | Modale Planning équilibré (configuration + aperçu) | E4.3 | [E4.3-balanced-planning-modal.html](./E4.3-balanced-planning-modal.html) | W3 — T4.3.1 `BalancedPlanningModal` |
-| Grille Vue Activité (pivot jours × tâches) | E5.2 | [E5.2-activity-grid.html](./E5.2-activity-grid.html) | W4 — T5.2.1 `ActivityGrid` |
+| Grille Vue Activité (pivot jours × tâches)         | E5.2 | [E5.2-activity-grid.html](./E5.2-activity-grid.html)                     | W4 — T5.2.1 `ActivityGrid`          |
 
 ## Processus de validation PO
 
@@ -23,11 +23,11 @@ Trois surfaces UI à densité élevée dont l'implémentation est gatée par une
 
 ## Validations PO (2026-04-24)
 
-| Surface | Variante choisie | Rationale |
-|---|---|---|
-| E3.2 popover transition de statut | **C — Expansion inline dans la cellule** | Pas de z-index ni overlay, cohérent avec pattern "edit-in-place" ; la cellule DayCell s'élargit au clic, motif NOT_APPLICABLE saisi in-place |
-| E4.3 Modale Planning équilibré | **C — Split layout config à gauche, aperçu à droite** | Config + résultats visibles en même temps (≥ 1280px), itérations rapides sans scroll |
-| E5.2 Grille Vue Activité | **B — Grille aérée, avatars 32px** | Lisibilité prioritaire sur densité maximale ; badge statut textuel à droite du groupe d'avatars |
+| Surface                           | Variante choisie                                      | Rationale                                                                                                                                    |
+| --------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| E3.2 popover transition de statut | **C — Expansion inline dans la cellule**              | Pas de z-index ni overlay, cohérent avec pattern "edit-in-place" ; la cellule DayCell s'élargit au clic, motif NOT_APPLICABLE saisi in-place |
+| E4.3 Modale Planning équilibré    | **C — Split layout config à gauche, aperçu à droite** | Config + résultats visibles en même temps (≥ 1280px), itérations rapides sans scroll                                                         |
+| E5.2 Grille Vue Activité          | **B — Grille aérée, avatars 32px**                    | Lisibilité prioritaire sur densité maximale ; badge statut textuel à droite du groupe d'avatars                                              |
 
 Ces choix sont contraignants pour les tâches W2.5 (E3.2), W3.3 (E4.3), W4.3 (E5.2).
 

@@ -14,7 +14,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { IcsExportSection } from "@/components/planning-export/IcsExportSection";
 import { IcsImportSection } from "@/components/planning-export/IcsImportSection";
 import { PERSONA_PRESETS } from "@/constants/avatar-presets";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 import type { User } from "@/types";
 
 const INITIALS_PRESET = "initials";
@@ -143,7 +143,8 @@ export default function ProfilePage() {
 
   // OBS-019: lastLoginAt will be present once the API exposes it; cast is safe
   // because User type will gain this field (cross_file_needs: apps/web/src/types/index.ts)
-  const lastLoginAt = (user as User & { lastLoginAt?: string | null }).lastLoginAt;
+  const lastLoginAt = (user as User & { lastLoginAt?: string | null })
+    .lastLoginAt;
 
   return (
     <MainLayout>

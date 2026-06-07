@@ -24,7 +24,9 @@ import { ROLE_STORAGE_PATHS } from "../../fixtures/roles";
 
 const tokenCache: Partial<Record<string, string>> = {};
 
-function getTokenFromStorageState(role: keyof typeof ROLE_STORAGE_PATHS): string {
+function getTokenFromStorageState(
+  role: keyof typeof ROLE_STORAGE_PATHS,
+): string {
   if (tokenCache[role]) return tokenCache[role]!;
 
   const storagePath = ROLE_STORAGE_PATHS[role];
@@ -41,7 +43,9 @@ function getTokenFromStorageState(role: keyof typeof ROLE_STORAGE_PATHS): string
   );
 
   if (!tokenEntry?.value) {
-    throw new Error(`No access_token found in storage state for role "${role}"`);
+    throw new Error(
+      `No access_token found in storage state for role "${role}"`,
+    );
   }
 
   tokenCache[role] = tokenEntry.value;
@@ -70,12 +74,19 @@ test.describe("Project archive", () => {
         headers: authHeaders,
         params: { archived: "active", limit: "1" },
       });
-      expect(listRes.status(), "GET /api/projects?archived=active should succeed").toBe(200);
+      expect(
+        listRes.status(),
+        "GET /api/projects?archived=active should succeed",
+      ).toBe(200);
 
       const listBody = await listRes.json();
       // Response shape: { data: [...], meta: { total, ... } }
-      const projects: Array<{ id: string; name: string }> = listBody.data ?? listBody;
-      expect(projects.length, "Need at least one active project in the database").toBeGreaterThan(0);
+      const projects: Array<{ id: string; name: string }> =
+        listBody.data ?? listBody;
+      expect(
+        projects.length,
+        "Need at least one active project in the database",
+      ).toBeGreaterThan(0);
 
       const { id: projectId, name: projectName } = projects[0];
 
@@ -145,7 +156,9 @@ test.describe("Project archive", () => {
         const analyticsRes = await request.get(`${baseURL}/api/analytics`, {
           headers: authHeaders,
         });
-        expect(analyticsRes.status(), "GET /api/analytics should succeed").toBe(200);
+        expect(analyticsRes.status(), "GET /api/analytics should succeed").toBe(
+          200,
+        );
 
         const analyticsBody = await analyticsRes.json();
         // Response: { metrics, projectProgressData, taskStatusData, projectDetails: [{ id, ... }] }

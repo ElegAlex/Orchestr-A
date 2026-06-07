@@ -1,5 +1,11 @@
 import React from "react";
-import { render, screen, act, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  act,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before any imports that pull in the mocked modules
@@ -54,9 +60,9 @@ jest.mock("next-intl", () => ({
         archive: "Archiver",
         unarchive: "Désarchiver",
         delete: "Supprimer",
-        "showArchived": "Afficher archivés",
-        "hideArchived": "Masquer archivés",
-        "memberMeFilter": "Mes projets seulement",
+        showArchived: "Afficher archivés",
+        hideArchived: "Masquer archivés",
+        memberMeFilter: "Mes projets seulement",
       };
       return m[key] ?? key;
     };

@@ -311,10 +311,9 @@ test.describe("RBAC — Protection contre l'escalade de privilèges", () => {
         expect(escalation.status()).not.toBe(200);
 
         // 3. Témoin réel : re-fetch admin → le rôle de la cible est INCHANGÉ.
-        const refetch = await adminPage.request.get(
-          `/api/users/${target.id}`,
-          { failOnStatusCode: false },
-        );
+        const refetch = await adminPage.request.get(`/api/users/${target.id}`, {
+          failOnStatusCode: false,
+        });
         expect(refetch.status()).toBe(200);
         const refetched = await refetch.json();
         expect(refetched.role?.code).toBe(originalRoleCode);

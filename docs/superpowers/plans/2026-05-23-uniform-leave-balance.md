@@ -19,6 +19,7 @@
 ### Files to modify
 
 Backend:
+
 - `packages/database/prisma/schema.prisma` — drop `maxDaysPerYear` column from `LeaveTypeConfig`
 - `packages/database/prisma/migrations/2026XXXX_drop_max_days_per_year/migration.sql` — new migration (Prisma generates the file)
 - `apps/api/src/leaves/leaves.service.ts` — replace lines 367-386 (gate) + lines 393-403 (validator/status); add helpers
@@ -29,10 +30,12 @@ Backend:
 - `apps/api/src/rbac/__tests__/permissions.service.spec.ts` — bump catalog count (116 → 117)
 
 RBAC:
+
 - `packages/rbac/atomic-permissions.ts` — add `"leaves:self_approve"` to `PermissionCode` union (alphabetical in leaves group), to `LEAVES_SELF_SERVICE` bundle, and to `CATALOG_PERMISSIONS` (alphabetical)
 - `packages/rbac/__tests__/templates.spec.ts` — bump catalog assertion (116 → 117), update `EXPECTED_COUNTS` for every template that gains the permission (TDD-driven)
 
 Frontend:
+
 - `apps/web/src/types/index.ts` — drop `maxDaysPerYear` (line 666)
 - `apps/web/src/services/leave-types.service.ts` — drop `maxDaysPerYear` from 3 interfaces (lines 12, 31, 42)
 - `apps/web/src/services/__tests__/leave-types.service.test.ts` — drop `maxDaysPerYear` from mock + tests (lines 23, 93)
@@ -40,6 +43,7 @@ Frontend:
 - `apps/web/app/[locale]/leaves/page.tsx` — drop `(N j/an)` suffix in two `<option>` renderings (lines 1299, 1444)
 
 E2E:
+
 - `e2e/tests/workflows/leave-balance-gating.spec.ts` — new file: scenarios for balanced/unlimited types + self-approval
 
 ### Files to read (no changes) for context
@@ -53,6 +57,7 @@ E2E:
 ## Task 1: Drop `maxDaysPerYear` column from Prisma schema and generate migration
 
 **Files:**
+
 - Modify: `packages/database/prisma/schema.prisma:556`
 - Create: `packages/database/prisma/migrations/<timestamp>_drop_max_days_per_year/migration.sql`
 
@@ -141,6 +146,7 @@ Expected: `OK: type removed` (or no matches).
 ## Task 2: Add helpers `hasConfiguredBalance` and `getAvailableDays` to `LeavesService`
 
 **Files:**
+
 - Modify: `apps/api/src/leaves/leaves.service.ts` (add two helper methods near `resolveAllocatedDays` at line 1750)
 
 These two helpers split the concerns of the existing `resolveAllocatedDays` so the create-gate can ask "is there a configured balance?" separately from "how many days are available?".
@@ -237,6 +243,7 @@ Expected: each name appears at least twice (declaration + later usage that we'll
 ## Task 3: Replace the leave-creation gate (uniform balance check)
 
 **Files:**
+
 - Modify: `apps/api/src/leaves/leaves.service.ts:367-386`
 
 - [ ] **Step 1: Replace the CP-only + maxDaysPerYear blocks with the generic gate**
@@ -244,50 +251,50 @@ Expected: each name appears at least twice (declaration + later usage that we'll
 Locate the existing block at line 367-386:
 
 ```typescript
-    // Vérifier le solde pour les congés payés (code CP)
-    if (leaveTypeConfig.code === 'CP') {
-      const balance = await this.getLeaveBalance(userId);
+// Vérifier le solde pour les congés payés (code CP)
+if (leaveTypeConfig.code === "CP") {
+  const balance = await this.getLeaveBalance(userId);
 
-      if (balance.available < days) {
-        throw new BadRequestException(
-          `Solde de congés insuffisant. Disponible: ${balance.available} jours, Demandé: ${days} jours`,
-        );
-      }
-    }
+  if (balance.available < days) {
+    throw new BadRequestException(
+      `Solde de congés insuffisant. Disponible: ${balance.available} jours, Demandé: ${days} jours`,
+    );
+  }
+}
 
-    // Vérifier la limite annuelle si définie
-    if (leaveTypeConfig.maxDaysPerYear) {
-      const usedDays = await this.getUsedDaysForType(userId, leaveTypeId);
-      if (usedDays + days > leaveTypeConfig.maxDaysPerYear) {
-        throw new BadRequestException(
-          `Limite annuelle dépassée pour ${leaveTypeConfig.name}. Disponible: ${leaveTypeConfig.maxDaysPerYear - usedDays} jours, Demandé: ${days} jours`,
-        );
-      }
-    }
+// Vérifier la limite annuelle si définie
+if (leaveTypeConfig.maxDaysPerYear) {
+  const usedDays = await this.getUsedDaysForType(userId, leaveTypeId);
+  if (usedDays + days > leaveTypeConfig.maxDaysPerYear) {
+    throw new BadRequestException(
+      `Limite annuelle dépassée pour ${leaveTypeConfig.name}. Disponible: ${leaveTypeConfig.maxDaysPerYear - usedDays} jours, Demandé: ${days} jours`,
+    );
+  }
+}
 ```
 
 Replace it with:
 
 ```typescript
-    // Vérifier le solde si la typologie en a un de configuré (sinon : illimité).
-    const requestYear = start.getFullYear();
-    const hasBalance = await this.hasConfiguredBalance(
-      userId,
-      leaveTypeId,
-      requestYear,
+// Vérifier le solde si la typologie en a un de configuré (sinon : illimité).
+const requestYear = start.getFullYear();
+const hasBalance = await this.hasConfiguredBalance(
+  userId,
+  leaveTypeId,
+  requestYear,
+);
+if (hasBalance) {
+  const available = await this.getAvailableDays(
+    userId,
+    leaveTypeId,
+    requestYear,
+  );
+  if (available < days) {
+    throw new BadRequestException(
+      `Solde insuffisant pour ${leaveTypeConfig.name}. Disponible: ${available} jours, Demandé: ${days} jours`,
     );
-    if (hasBalance) {
-      const available = await this.getAvailableDays(
-        userId,
-        leaveTypeId,
-        requestYear,
-      );
-      if (available < days) {
-        throw new BadRequestException(
-          `Solde insuffisant pour ${leaveTypeConfig.name}. Disponible: ${available} jours, Demandé: ${days} jours`,
-        );
-      }
-    }
+  }
+}
 ```
 
 Note: `start` is the parsed `Date` already available in scope from line 280-281.
@@ -305,6 +312,7 @@ Expected: build clean. If there's a TypeScript error about `getUsedDaysForType` 
 ## Task 4: Update `LeavesService` spec for the new gate
 
 **Files:**
+
 - Modify: `apps/api/src/leaves/leaves.service.spec.ts`
 
 - [ ] **Step 1: Update the mock leave type fixture (line 108) to drop the dropped field**
@@ -313,11 +321,11 @@ Delete the `maxDaysPerYear: null,` line from `mockLeaveTypeConfig` (around line 
 
 ```typescript
 const mockLeaveTypeConfig = {
-  id: 'leave-type-1',
-  name: 'Congés payés',
-  code: 'CP',
-  color: '#10B981',
-  icon: '🌴',
+  id: "leave-type-1",
+  name: "Congés payés",
+  code: "CP",
+  color: "#10B981",
+  icon: "🌴",
   isPaid: true,
   isActive: true,
   requiresApproval: true,
@@ -336,19 +344,23 @@ Locate the test that asserts CP balance refusal (around line 320-330, the one th
 Rewrite the test to:
 
 ```typescript
-it('should throw BadRequestException when configured balance is exceeded', async () => {
+it("should throw BadRequestException when configured balance is exceeded", async () => {
   // Type quelconque (par ex. RTT) avec une LeaveBalance globale de 10 jours
-  const typeWithBalance = { ...mockLeaveTypeConfig, code: 'RTT' };
+  const typeWithBalance = { ...mockLeaveTypeConfig, code: "RTT" };
   mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-  mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(typeWithBalance);
+  mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+    typeWithBalance,
+  );
 
   // hasConfiguredBalance : pas d'override individuel, un global existe
   mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null); // individual
-  mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ id: 'g1' }); // global presence
+  mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ id: "g1" }); // global presence
 
   // getAvailableDays → resolveAllocatedDays : individual null, global 10
   mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
-  mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ totalDays: 10 });
+  mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+    totalDays: 10,
+  });
 
   mockPrismaService.leave.findMany
     .mockResolvedValueOnce([]) // overlap check
@@ -357,12 +369,15 @@ it('should throw BadRequestException when configured balance is exceeded', async
 
   // Le DTO demande 12 jours, donc 10 - 0 - 0 = 10 < 12 → rejet
   await expect(
-    service.create('user-1', { ...createLeaveDto, /* days will be computed to >10 by the date range */ }),
+    service.create("user-1", {
+      ...createLeaveDto /* days will be computed to >10 by the date range */,
+    }),
   ).rejects.toThrow(BadRequestException);
 });
 ```
 
 The exact mock-resolution order depends on the helpers' internal calls; verify by reading `hasConfiguredBalance` and `resolveAllocatedDays` carefully. Adjust the mock resolution chain so:
+
 1. `hasConfiguredBalance` returns `true` (one individual lookup returning null, one global lookup returning a row)
 2. `getAvailableDays` calls `resolveAllocatedDays` (one individual lookup returning null, one global lookup returning `{ totalDays: 10 }`) then the two `findMany` calls for approved and pending
 
@@ -371,10 +386,12 @@ The exact mock-resolution order depends on the helpers' internal calls; verify b
 Add after the test above:
 
 ```typescript
-it('should allow leave when type has no configured balance (unlimited)', async () => {
-  const typeWithoutBalance = { ...mockLeaveTypeConfig, code: 'OTHER' };
+it("should allow leave when type has no configured balance (unlimited)", async () => {
+  const typeWithoutBalance = { ...mockLeaveTypeConfig, code: "OTHER" };
   mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-  mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(typeWithoutBalance);
+  mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+    typeWithoutBalance,
+  );
 
   // hasConfiguredBalance : aucune ligne (individual + global tous deux null)
   mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
@@ -383,7 +400,7 @@ it('should allow leave when type has no configured balance (unlimited)', async (
   mockPrismaService.leave.findMany.mockResolvedValueOnce([]); // overlap check only
   mockPrismaService.leave.create.mockResolvedValue(mockLeave);
 
-  const result = await service.create('user-1', createLeaveDto);
+  const result = await service.create("user-1", createLeaveDto);
   expect(result).toBeDefined();
   expect(mockPrismaService.leave.create).toHaveBeenCalled();
 });
@@ -392,17 +409,19 @@ it('should allow leave when type has no configured balance (unlimited)', async (
 - [ ] **Step 5: Add a new test: "individual override beats global balance"**
 
 ```typescript
-it('should use individual override when both individual and global balances exist', async () => {
-  const typeRtt = { ...mockLeaveTypeConfig, code: 'RTT' };
+it("should use individual override when both individual and global balances exist", async () => {
+  const typeRtt = { ...mockLeaveTypeConfig, code: "RTT" };
   mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
   mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(typeRtt);
 
   // hasConfiguredBalance : individual existe
-  mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce({ id: 'i1' });
+  mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce({ id: "i1" });
   // hasConfiguredBalance returns immediately, no global lookup
 
   // getAvailableDays → resolveAllocatedDays : individual gives totalDays=3 (override)
-  mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce({ totalDays: 3 });
+  mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce({
+    totalDays: 3,
+  });
 
   mockPrismaService.leave.findMany
     .mockResolvedValueOnce([]) // overlap
@@ -411,7 +430,9 @@ it('should use individual override when both individual and global balances exis
 
   // Demande 5 jours, override = 3 → rejet
   await expect(
-    service.create('user-1', { ...createLeaveDto /* shape that produces 5 days */ }),
+    service.create("user-1", {
+      ...createLeaveDto /* shape that produces 5 days */,
+    }),
   ).rejects.toThrow(BadRequestException);
 });
 ```
@@ -429,6 +450,7 @@ Expected: all leave-service tests pass. If a test fails with `getUsedDaysForType
 ## Task 5: Drop `maxDaysPerYear` from backend DTOs and service mapping; commit Batch 1
 
 **Files:**
+
 - Modify: `apps/api/src/leave-types/dto/create-leave-type.dto.ts:75-83`
 - Modify: `apps/api/src/leave-types/dto/update-leave-type.dto.ts` (line 62 region)
 - Modify: `apps/api/src/leave-types/leave-types.service.ts:39`
@@ -509,6 +531,7 @@ git commit -m "Uniform leave balance gating: drop maxDaysPerYear, use LeaveBalan
 ## Task 6: Add `leaves:self_approve` to the RBAC catalog
 
 **Files:**
+
 - Modify: `packages/rbac/atomic-permissions.ts` (3 edits)
 
 - [ ] **Step 1: Add to the `PermissionCode` union (alphabetical in `leaves` group)**
@@ -527,6 +550,7 @@ Also update the comment count above the leaves group: change `// leaves (10)` (o
 - [ ] **Step 2: Add to a bundle**
 
 Decide where to add. Three reasonable options:
+
 - (a) Add to `LEAVES_SELF_SERVICE` (line 263-267). This is the simplest, but it grants self-approval to every template using that bundle (likely too broad — `LEAVES_SELF_SERVICE` is typically given to all employees).
 - (b) Create a new dedicated bundle `LEAVES_SELF_APPROVE` and add it only to ADMIN_DELEGATED + RESPONSABLE explicitly.
 - (c) Add the literal `"leaves:self_approve"` directly to RESPONSABLE's `compose(...)` array.
@@ -570,6 +594,7 @@ Expected: clean (or no build script — at minimum, run the test in next task to
 ## Task 7: Wire `leaves:self_approve` into RESPONSABLE template + update catalog tests
 
 **Files:**
+
 - Modify: `packages/rbac/templates.ts` (locate RESPONSABLE template, add bundle or permission)
 - Modify: `packages/rbac/__tests__/templates.spec.ts` (update catalog and EXPECTED_COUNTS)
 - Modify: `apps/api/src/rbac/__tests__/permissions.service.spec.ts` (catalog count 116 → 117)
@@ -637,6 +662,7 @@ pnpm --filter=@orchestra/rbac test -- templates 2>&1 | tail -40
 Expected: each template that gained the permission reports an off-by-one (`expected X, received X+1`). Increment those entries in `EXPECTED_COUNTS` by 1 (the failing tests are authoritative).
 
 Expected templates to bump (predicted, verify with the test output):
+
 - `ADMIN` (catalog grows by 1)
 - `ADMIN_DELEGATED` (catalog minus exclusions grows by 1, unless `leaves:self_approve` ends up in the exclusion list — it shouldn't)
 - `RESPONSABLE` (explicit add)
@@ -688,6 +714,7 @@ If it says `116`, change to `117`.
 ## Task 8: Implement self-approval in `LeavesService.create()` + tests
 
 **Files:**
+
 - Modify: `apps/api/src/leaves/leaves.service.ts` (around line 388-403, the validator + initialStatus block)
 - Modify: `apps/api/src/leaves/leaves.service.spec.ts` (add 4 tests)
 
@@ -696,43 +723,43 @@ If it says `116`, change to `117`.
 Locate this block (around line 388-403):
 
 ```typescript
-    // Trouver le validateur approprié (manager du département ou délégué actif)
-    const validatorId = leaveTypeConfig.requiresApproval
-      ? await this.findValidatorForUser(userId)
-      : null;
+// Trouver le validateur approprié (manager du département ou délégué actif)
+const validatorId = leaveTypeConfig.requiresApproval
+  ? await this.findValidatorForUser(userId)
+  : null;
 
-    // Statut initial selon si validation requise
-    // Un congé déclaré par un manager/responsable pour un collaborateur → APPROVED directement
-    const initialStatus =
-      declaredByManager || !leaveTypeConfig.requiresApproval
-        ? LeaveStatus.APPROVED
-        : LeaveStatus.PENDING;
+// Statut initial selon si validation requise
+// Un congé déclaré par un manager/responsable pour un collaborateur → APPROVED directement
+const initialStatus =
+  declaredByManager || !leaveTypeConfig.requiresApproval
+    ? LeaveStatus.APPROVED
+    : LeaveStatus.PENDING;
 ```
 
 Replace with:
 
 ```typescript
-    // Auto-validation : un utilisateur ayant `leaves:self_approve` qui crée
-    // un congé pour lui-même obtient directement APPROVED. La voie
-    // "déclaration pour autrui" (declaredByManager) garde sa logique propre.
-    const isForSelf = !declaredByManager;
-    const canSelfApprove =
-      isForSelf &&
-      (await this.roleHasPermission(requestingUserRole, 'leaves:self_approve'));
+// Auto-validation : un utilisateur ayant `leaves:self_approve` qui crée
+// un congé pour lui-même obtient directement APPROVED. La voie
+// "déclaration pour autrui" (declaredByManager) garde sa logique propre.
+const isForSelf = !declaredByManager;
+const canSelfApprove =
+  isForSelf &&
+  (await this.roleHasPermission(requestingUserRole, "leaves:self_approve"));
 
-    // Trouver le validateur approprié (sauf cas d'auto-approbation)
-    const requiresValidator =
-      leaveTypeConfig.requiresApproval && !declaredByManager && !canSelfApprove;
-    const validatorId = requiresValidator
-      ? await this.findValidatorForUser(userId)
-      : null;
+// Trouver le validateur approprié (sauf cas d'auto-approbation)
+const requiresValidator =
+  leaveTypeConfig.requiresApproval && !declaredByManager && !canSelfApprove;
+const validatorId = requiresValidator
+  ? await this.findValidatorForUser(userId)
+  : null;
 
-    // Statut initial : APPROVED si déclaré pour autrui par manager, si type
-    // sans approbation requise, ou si auto-validation autorisée.
-    const initialStatus =
-      declaredByManager || !leaveTypeConfig.requiresApproval || canSelfApprove
-        ? LeaveStatus.APPROVED
-        : LeaveStatus.PENDING;
+// Statut initial : APPROVED si déclaré pour autrui par manager, si type
+// sans approbation requise, ou si auto-validation autorisée.
+const initialStatus =
+  declaredByManager || !leaveTypeConfig.requiresApproval || canSelfApprove
+    ? LeaveStatus.APPROVED
+    : LeaveStatus.PENDING;
 ```
 
 - [ ] **Step 2: Verify backend still builds**
@@ -748,8 +775,8 @@ Expected: clean.
 Add a new `describe('self-approval', ...)` block near the create tests. Use this structure:
 
 ```typescript
-describe('self-approval (leaves:self_approve)', () => {
-  it('grants APPROVED status when requesting user has leaves:self_approve and creates for self', async () => {
+describe("self-approval (leaves:self_approve)", () => {
+  it("grants APPROVED status when requesting user has leaves:self_approve and creates for self", async () => {
     mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
     mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue({
       ...mockLeaveTypeConfig,
@@ -769,7 +796,7 @@ describe('self-approval (leaves:self_approve)', () => {
     // table it queries (`role.findUnique` with permissions include, or
     // role_permissions.findFirst — depends on implementation).
     mockPrismaService.role.findUnique.mockResolvedValue({
-      code: 'ADMIN',
+      code: "ADMIN",
       // template-based check: mock whatever roleHasPermission reads
     });
 
@@ -779,7 +806,7 @@ describe('self-approval (leaves:self_approve)', () => {
       validatorId: null,
     });
 
-    const result = await service.create('user-1', createLeaveDto, 'ADMIN');
+    const result = await service.create("user-1", createLeaveDto, "ADMIN");
     expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -790,7 +817,7 @@ describe('self-approval (leaves:self_approve)', () => {
     );
   });
 
-  it('keeps PENDING status when user does not have leaves:self_approve', async () => {
+  it("keeps PENDING status when user does not have leaves:self_approve", async () => {
     mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
     mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue({
       ...mockLeaveTypeConfig,
@@ -802,7 +829,7 @@ describe('self-approval (leaves:self_approve)', () => {
 
     // roleHasPermission returns false
     mockPrismaService.role.findUnique.mockResolvedValue({
-      code: 'CONTRIBUTEUR',
+      code: "CONTRIBUTEUR",
       // mock the permissions to NOT include leaves:self_approve
     });
 
@@ -811,7 +838,7 @@ describe('self-approval (leaves:self_approve)', () => {
       status: LeaveStatus.PENDING,
     });
 
-    await service.create('user-1', createLeaveDto, 'CONTRIBUTEUR');
+    await service.create("user-1", createLeaveDto, "CONTRIBUTEUR");
     expect(mockPrismaService.leave.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -821,7 +848,7 @@ describe('self-approval (leaves:self_approve)', () => {
     );
   });
 
-  it('does not self-approve when leave is for another user (targetUserId)', async () => {
+  it("does not self-approve when leave is for another user (targetUserId)", async () => {
     // declaredByManager path — separate test confirming that having
     // leaves:self_approve does NOT bypass the manager-for-other workflow
     // (which has its own auto-approval logic).
@@ -831,17 +858,23 @@ describe('self-approval (leaves:self_approve)', () => {
     // ... See existing 'declared for collaborator' tests for the full mock shape.
   });
 
-  it('still respects balance check before self-approving', async () => {
+  it("still respects balance check before self-approving", async () => {
     // Even with self_approve, if balance is configured AND insufficient,
     // the request is rejected with BadRequestException BEFORE the status is set.
     mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-    mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(mockLeaveTypeConfig);
+    mockPrismaService.leaveTypeConfig.findUnique.mockResolvedValue(
+      mockLeaveTypeConfig,
+    );
 
     // Balance configured globally
     mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
-    mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ id: 'g1' });
+    mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+      id: "g1",
+    });
     mockPrismaService.leaveBalance.findUnique.mockResolvedValueOnce(null);
-    mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({ totalDays: 1 });
+    mockPrismaService.leaveBalance.findFirst.mockResolvedValueOnce({
+      totalDays: 1,
+    });
 
     mockPrismaService.leave.findMany
       .mockResolvedValueOnce([]) // overlap
@@ -849,7 +882,7 @@ describe('self-approval (leaves:self_approve)', () => {
       .mockResolvedValueOnce([]); // pending
 
     await expect(
-      service.create('user-1', createLeaveDto, 'ADMIN'),
+      service.create("user-1", createLeaveDto, "ADMIN"),
     ).rejects.toThrow(BadRequestException);
   });
 });
@@ -881,6 +914,7 @@ git commit -m "Add leaves:self_approve permission and auto-approve own leaves fo
 ## Task 9: Drop `maxDaysPerYear` from frontend types and services
 
 **Files:**
+
 - Modify: `apps/web/src/types/index.ts:666`
 - Modify: `apps/web/src/services/leave-types.service.ts:12, 31, 42`
 - Modify: `apps/web/src/services/__tests__/leave-types.service.test.ts:23, 93`
@@ -929,6 +963,7 @@ Expected: clean. Any remaining TS error about `maxDaysPerYear` not existing on a
 ## Task 10: Drop `maxDaysPerYear` from frontend UI
 
 **Files:**
+
 - Modify: `apps/web/src/components/LeaveTypesManager.tsx` (5 sites)
 - Modify: `apps/web/app/[locale]/leaves/page.tsx` (2 sites)
 
@@ -945,7 +980,7 @@ Delete the line `maxDaysPerYear: undefined,` from the `resetForm` function.
 Delete the line:
 
 ```typescript
-      updateData.maxDaysPerYear = formData.maxDaysPerYear;
+updateData.maxDaysPerYear = formData.maxDaysPerYear;
 ```
 
 - [ ] **Step 4: `LeaveTypesManager.tsx` — edit form reset (line 171)**
@@ -957,11 +992,9 @@ Delete the line `maxDaysPerYear: type.maxDaysPerYear || undefined,`.
 Delete this entire `<td>...</td>` block:
 
 ```tsx
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {type.maxDaysPerYear
-                    ? `${type.maxDaysPerYear} jours`
-                    : t("unlimited")}
-                </td>
+<td className="px-4 py-3 text-sm text-gray-600">
+  {type.maxDaysPerYear ? `${type.maxDaysPerYear} jours` : t("unlimited")}
+</td>
 ```
 
 Also find the `<th>` corresponding to this column in the table header and delete it. Search for `Limite/an` or the equivalent header in the file:
@@ -977,26 +1010,24 @@ Delete the `<th>` whose text is the "Limite/an" column header (likely earlier in
 Delete this entire `<div>` block (the input for "Limite annuelle"):
 
 ```tsx
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Limite annuelle
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.maxDaysPerYear || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        maxDaysPerYear: e.target.value
-                          ? parseInt(e.target.value)
-                          : undefined,
-                      })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder={t("unlimited")}
-                    min={0}
-                  />
-                </div>
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Limite annuelle
+  </label>
+  <input
+    type="number"
+    value={formData.maxDaysPerYear || ""}
+    onChange={(e) =>
+      setFormData({
+        ...formData,
+        maxDaysPerYear: e.target.value ? parseInt(e.target.value) : undefined,
+      })
+    }
+    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+    placeholder={t("unlimited")}
+    min={0}
+  />
+</div>
 ```
 
 The parent `<div className="grid grid-cols-3 gap-4">` will then have one fewer column — verify the grid still looks balanced; if it becomes `grid-cols-2`, update the class accordingly.
@@ -1010,16 +1041,32 @@ Same deletion as above but inside the edit-form section (around lines 725-746). 
 Delete the suffix from both `<option>` renderings. The current code:
 
 ```tsx
-                      {type.icon} {type.name}
-                      {type.maxDaysPerYear && ` (${type.maxDaysPerYear}j/an)`}
-                      {!type.isPaid && " - Non rémunéré"}
+{
+  type.icon;
+}
+{
+  type.name;
+}
+{
+  type.maxDaysPerYear && ` (${type.maxDaysPerYear}j/an)`;
+}
+{
+  !type.isPaid && " - Non rémunéré";
+}
 ```
 
 Becomes:
 
 ```tsx
-                      {type.icon} {type.name}
-                      {!type.isPaid && " - Non rémunéré"}
+{
+  type.icon;
+}
+{
+  type.name;
+}
+{
+  !type.isPaid && " - Non rémunéré";
+}
 ```
 
 - [ ] **Step 9: Verify all maxDaysPerYear references are gone from the frontend**
@@ -1051,6 +1098,7 @@ git commit -m "Drop maxDaysPerYear from frontend types, services, admin UI, and 
 ## Task 11: Add Playwright E2E for the new gating + self-approval
 
 **Files:**
+
 - Create: `e2e/tests/workflows/leave-balance-gating.spec.ts`
 
 This task assumes the standard E2E fixtures exist (`asRole`, `playwright/.auth/`, etc.) — read `e2e/fixtures/` to confirm shape.
@@ -1068,61 +1116,63 @@ Note the API endpoints, the leave type lookup pattern, and the asRole/storageSta
 Create `e2e/tests/workflows/leave-balance-gating.spec.ts` with these scenarios (use the project's existing test fixture style; the snippet below is a structural template — adapt to the real fixture API):
 
 ```typescript
-import { test, expect } from '../../fixtures/auth.fixture';
+import { test, expect } from "../../fixtures/auth.fixture";
 
-test.describe('Leave balance gating', () => {
-  test('@smoke type without configured balance allows arbitrary leave', async ({
+test.describe("Leave balance gating", () => {
+  test("@smoke type without configured balance allows arbitrary leave", async ({
     asRole,
   }) => {
-    const page = await asRole('CONTRIBUTEUR');
+    const page = await asRole("CONTRIBUTEUR");
     // 1) GET /api/leave-types → pick a type with code = 'OTHER' (no LeaveBalance configured)
     // 2) POST /api/leaves with that type, 5 days
     // 3) Expect 201 Created, status = PENDING
-    const types = (await page.request.get('/api/leave-types')).json();
-    const otherType = (await types).find((t: any) => t.code === 'OTHER');
-    const res = await page.request.post('/api/leaves', {
+    const types = (await page.request.get("/api/leave-types")).json();
+    const otherType = (await types).find((t: any) => t.code === "OTHER");
+    const res = await page.request.post("/api/leaves", {
       data: {
         leaveTypeId: otherType.id,
-        startDate: '2026-09-01',
-        endDate: '2026-09-05',
+        startDate: "2026-09-01",
+        endDate: "2026-09-05",
       },
     });
     expect(res.status()).toBe(201);
   });
 
-  test('@smoke ADMIN auto-approves own leave (self_approve)', async ({
+  test("@smoke ADMIN auto-approves own leave (self_approve)", async ({
     asRole,
   }) => {
-    const adminPage = await asRole('ADMIN');
-    const types = await (await adminPage.request.get('/api/leave-types')).json();
-    const cp = types.find((t: any) => t.code === 'CP');
-    const res = await adminPage.request.post('/api/leaves', {
+    const adminPage = await asRole("ADMIN");
+    const types = await (
+      await adminPage.request.get("/api/leave-types")
+    ).json();
+    const cp = types.find((t: any) => t.code === "CP");
+    const res = await adminPage.request.post("/api/leaves", {
       data: {
         leaveTypeId: cp.id,
-        startDate: '2026-10-12',
-        endDate: '2026-10-14',
+        startDate: "2026-10-12",
+        endDate: "2026-10-14",
       },
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
-    expect(body.status).toBe('APPROVED');
+    expect(body.status).toBe("APPROVED");
     expect(body.validatorId).toBeNull();
   });
 
-  test('CONTRIBUTEUR own leave stays PENDING', async ({ asRole }) => {
-    const page = await asRole('CONTRIBUTEUR');
-    const types = await (await page.request.get('/api/leave-types')).json();
-    const cp = types.find((t: any) => t.code === 'CP');
-    const res = await page.request.post('/api/leaves', {
+  test("CONTRIBUTEUR own leave stays PENDING", async ({ asRole }) => {
+    const page = await asRole("CONTRIBUTEUR");
+    const types = await (await page.request.get("/api/leave-types")).json();
+    const cp = types.find((t: any) => t.code === "CP");
+    const res = await page.request.post("/api/leaves", {
       data: {
         leaveTypeId: cp.id,
-        startDate: '2026-11-09',
-        endDate: '2026-11-13',
+        startDate: "2026-11-09",
+        endDate: "2026-11-13",
       },
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
-    expect(body.status).toBe('PENDING');
+    expect(body.status).toBe("PENDING");
   });
 });
 ```

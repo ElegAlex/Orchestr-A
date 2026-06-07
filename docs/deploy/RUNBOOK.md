@@ -100,11 +100,12 @@ boot records the correct SHA — no recreate-dance:
 # upsert RELEASE_SHA / DEPLOYED_BY / DEPLOY_ENVIRONMENT in .env.production
 sed -i "s|^RELEASE_SHA=.*|RELEASE_SHA=$(git rev-parse HEAD)|" .env.production   # or append if absent
 ```
+
 `scripts/deploy-prod.sh` does exactly this in step [2/5] (`upsert_env`) and is the safest way
 to get it right.
 
 **Why this matters (the drift incident).** On the **SEC-006 + SEC-013** grouped deploy
-(2026-05-31) the operator repinned `.env.production` *after* `up`. The first boot (11:31) still
+(2026-05-31) the operator repinned `.env.production` _after_ `up`. The first boot (11:31) still
 injected the **previous** SHA (`5d530b3`), so the boot-time `RELEASE_DEPLOYED` audit recorded
 the wrong release for the new code. It had to be corrected with a no-rebuild
 `up -d --no-deps api` recreate (a fresh 11:46 row then read the correct `9b528d9`); the stale
@@ -203,8 +204,8 @@ git checkout --detach <previous-sha>                                     # if th
 curl -ks https://orchestr-a.com/api/health                              # expect {"status":"ok"}
 ```
 
-Recorded form at every SEC deploy: "rollback = repin RELEASE_SHA + `up -d` that tag (no
-migration to undo)". The Gate-1 `pg_dump` is the belt-and-suspenders copy if a migration *was*
+Recorded form at every SEC deploy: "rollback = repin RELEASE*SHA + `up -d` that tag (no
+migration to undo)". The Gate-1 `pg_dump` is the belt-and-suspenders copy if a migration \_was*
 applied. **UNVERIFIED:** rollback was never exercised in the recorded deploys (all succeeded);
 the path is documented from the HANDOVER rollback notes, not from an observed rollback.
 

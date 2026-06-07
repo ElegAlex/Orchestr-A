@@ -393,7 +393,10 @@ test.describe("Ownership IDOR — time-tracking (SEC-06)", () => {
     "PATCH /time-tracking/:id as non-owner referent → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      expect(timeEntryId, "Time entry creation failed in beforeAll").toBeTruthy();
+      expect(
+        timeEntryId,
+        "Time entry creation failed in beforeAll",
+      ).toBeTruthy();
       const res = await request.patch(
         `${baseUrl()}/api/time-tracking/${timeEntryId}`,
         {
@@ -409,7 +412,10 @@ test.describe("Ownership IDOR — time-tracking (SEC-06)", () => {
     "DELETE /time-tracking/:id as non-owner referent → 403",
     { tag: "@smoke" },
     async ({ request }) => {
-      expect(timeEntryId, "Time entry creation failed in beforeAll").toBeTruthy();
+      expect(
+        timeEntryId,
+        "Time entry creation failed in beforeAll",
+      ).toBeTruthy();
       const res = await request.delete(
         `${baseUrl()}/api/time-tracking/${timeEntryId}`,
         { headers: auth("referent") },

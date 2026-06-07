@@ -12,22 +12,23 @@
 
 ## File Structure
 
-| Fichier | Action | Responsabilité |
-|---|---|---|
-| `apps/web/messages/fr/planning.json` | MODIFY | Clés i18n FR pour modal + bouton |
-| `apps/web/messages/en/planning.json` | MODIFY | Clés i18n EN pour modal + bouton |
-| `apps/web/src/components/planning/AddUsersToTaskModal.tsx` | CREATE | Modale multi-sélection agents |
-| `apps/web/src/components/planning/__tests__/AddUsersToTaskModal.test.tsx` | CREATE | Tests Jest unitaires modale |
-| `apps/web/src/components/planning/ActivityGrid.tsx` | MODIFY | Bouton `+ Ajouter`, props `canAssign`/`leaves`/`onAddUsers` |
-| `apps/web/src/components/planning/__tests__/ActivityGrid.test.tsx` | MODIFY | Cas tests pour bouton `+` |
-| `apps/web/src/components/planning/PlanningView.tsx` | MODIFY | State `addUsersTarget`, handler, gating perm, render modale |
-| `e2e/tests/activity-grid-add-users.spec.ts` | CREATE | E2E Playwright multi-rôles |
+| Fichier                                                                   | Action | Responsabilité                                              |
+| ------------------------------------------------------------------------- | ------ | ----------------------------------------------------------- |
+| `apps/web/messages/fr/planning.json`                                      | MODIFY | Clés i18n FR pour modal + bouton                            |
+| `apps/web/messages/en/planning.json`                                      | MODIFY | Clés i18n EN pour modal + bouton                            |
+| `apps/web/src/components/planning/AddUsersToTaskModal.tsx`                | CREATE | Modale multi-sélection agents                               |
+| `apps/web/src/components/planning/__tests__/AddUsersToTaskModal.test.tsx` | CREATE | Tests Jest unitaires modale                                 |
+| `apps/web/src/components/planning/ActivityGrid.tsx`                       | MODIFY | Bouton `+ Ajouter`, props `canAssign`/`leaves`/`onAddUsers` |
+| `apps/web/src/components/planning/__tests__/ActivityGrid.test.tsx`        | MODIFY | Cas tests pour bouton `+`                                   |
+| `apps/web/src/components/planning/PlanningView.tsx`                       | MODIFY | State `addUsersTarget`, handler, gating perm, render modale |
+| `e2e/tests/activity-grid-add-users.spec.ts`                               | CREATE | E2E Playwright multi-rôles                                  |
 
 ---
 
 ## Task 1 : i18n keys (fr + en)
 
 **Files:**
+
 - Modify: `apps/web/messages/fr/planning.json`
 - Modify: `apps/web/messages/en/planning.json`
 
@@ -108,6 +109,7 @@ git commit -m "i18n(planning): clés addUsers + addUsersModal pour Vue activité
 ## Task 2 : AddUsersToTaskModal — composant + tests
 
 **Files:**
+
 - Create: `apps/web/src/components/planning/AddUsersToTaskModal.tsx`
 - Create: `apps/web/src/components/planning/__tests__/AddUsersToTaskModal.test.tsx`
 
@@ -122,41 +124,49 @@ Créer `apps/web/src/components/planning/__tests__/AddUsersToTaskModal.test.tsx`
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddUsersToTaskModal } from "../AddUsersToTaskModal";
 import { predefinedTasksService } from "@/services/predefined-tasks.service";
-import type { PredefinedTask, PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
+import type {
+  PredefinedTask,
+  PredefinedTaskAssignment,
+} from "@/services/predefined-tasks.service";
 import type { UserSummary, Leave } from "@/types";
 
 jest.mock("next-intl", () => ({
-  useTranslations: () => (key: string, params?: Record<string, string | number>) => {
-    const dict: Record<string, string> = {
-      "activityGrid.addUsersModal.title": "Ajouter des agents",
-      "activityGrid.addUsersModal.alreadyAssigned": "déjà assigné",
-      "activityGrid.addUsersModal.noEligibleUsers": "Tous les agents sont déjà assignés ou en congé ce jour.",
-      "activityGrid.addUsersModal.cancel": "Annuler",
-      "activityGrid.addUsersModal.submitting": "Ajout en cours…",
-      "activityGrid.addUsersModal.errorToast": "Erreur lors de l'ajout",
-    };
-    if (key === "activityGrid.addUsersModal.subtitle" && params) {
-      return `${params.taskName} · ${params.date}`;
-    }
-    if (key === "activityGrid.addUsersModal.onLeave" && params) {
-      return `en congé · ${params.type}`;
-    }
-    if (key === "activityGrid.addUsersModal.selectedCount" && params) {
-      return `${params.count} agent(s) sélectionné(s)`;
-    }
-    if (key === "activityGrid.addUsersModal.submit" && params) {
-      return `Ajouter (${params.count})`;
-    }
-    if (key === "activityGrid.addUsersModal.successToast" && params) {
-      return `${params.count} assignation(s) créée(s)`;
-    }
-    return dict[key] ?? key;
-  },
+  useTranslations:
+    () => (key: string, params?: Record<string, string | number>) => {
+      const dict: Record<string, string> = {
+        "activityGrid.addUsersModal.title": "Ajouter des agents",
+        "activityGrid.addUsersModal.alreadyAssigned": "déjà assigné",
+        "activityGrid.addUsersModal.noEligibleUsers":
+          "Tous les agents sont déjà assignés ou en congé ce jour.",
+        "activityGrid.addUsersModal.cancel": "Annuler",
+        "activityGrid.addUsersModal.submitting": "Ajout en cours…",
+        "activityGrid.addUsersModal.errorToast": "Erreur lors de l'ajout",
+      };
+      if (key === "activityGrid.addUsersModal.subtitle" && params) {
+        return `${params.taskName} · ${params.date}`;
+      }
+      if (key === "activityGrid.addUsersModal.onLeave" && params) {
+        return `en congé · ${params.type}`;
+      }
+      if (key === "activityGrid.addUsersModal.selectedCount" && params) {
+        return `${params.count} agent(s) sélectionné(s)`;
+      }
+      if (key === "activityGrid.addUsersModal.submit" && params) {
+        return `Ajouter (${params.count})`;
+      }
+      if (key === "activityGrid.addUsersModal.successToast" && params) {
+        return `${params.count} assignation(s) créée(s)`;
+      }
+      return dict[key] ?? key;
+    },
 }));
 
 jest.mock("@/components/UserAvatar", () => ({
   UserAvatar: ({ user }: { user: UserSummary }) => (
-    <span data-testid="avatar">{user.firstName?.[0]}{user.lastName?.[0]}</span>
+    <span data-testid="avatar">
+      {user.firstName?.[0]}
+      {user.lastName?.[0]}
+    </span>
   ),
 }));
 
@@ -171,8 +181,11 @@ jest.mock("@/services/predefined-tasks.service", () => ({
   },
 }));
 
-const buildUser = (id: string, firstName: string, lastName: string): UserSummary =>
-  ({ id, firstName, lastName, isActive: true }) as UserSummary;
+const buildUser = (
+  id: string,
+  firstName: string,
+  lastName: string,
+): UserSummary => ({ id, firstName, lastName, isActive: true }) as UserSummary;
 
 const buildTask = (overrides: Partial<PredefinedTask> = {}): PredefinedTask =>
   ({
@@ -190,7 +203,10 @@ const buildTask = (overrides: Partial<PredefinedTask> = {}): PredefinedTask =>
     ...overrides,
   }) as PredefinedTask;
 
-const buildAssignment = (id: string, userId: string): PredefinedTaskAssignment =>
+const buildAssignment = (
+  id: string,
+  userId: string,
+): PredefinedTaskAssignment =>
   ({
     id,
     predefinedTaskId: "t1",
@@ -362,9 +378,8 @@ export function AddUsersToTaskModal({
 
   const eligibleCount = useMemo(
     () =>
-      sortedUsers.filter(
-        (u) => eligibility.get(u.id)?.status === "eligible",
-      ).length,
+      sortedUsers.filter((u) => eligibility.get(u.id)?.status === "eligible")
+        .length,
     [sortedUsers, eligibility],
   );
 
@@ -449,10 +464,7 @@ export function AddUsersToTaskModal({
             {t("activityGrid.addUsersModal.noEligibleUsers")}
           </p>
         ) : (
-          <ul
-            className="space-y-1 max-h-80 overflow-y-auto"
-            role="list"
-          >
+          <ul className="space-y-1 max-h-80 overflow-y-auto" role="list">
             {sortedUsers.map((user) => {
               const info = eligibility.get(user.id)!;
               const isAlreadyAssigned = info.status === "already_assigned";
@@ -546,24 +558,24 @@ Expected: 1 test PASS (« liste les agents triés par lastName »).
 Ajouter dans `__tests__/AddUsersToTaskModal.test.tsx` à l'intérieur du `describe` :
 
 ```tsx
-  it("coche + désactive les agents déjà assignés", () => {
-    const users = [buildUser("u1", "Paul", "Lemoine")];
-    render(
-      <AddUsersToTaskModal
-        task={buildTask()}
-        date={new Date("2026-05-12")}
-        allUsers={users}
-        existingAssignments={[buildAssignment("a1", "u1")]}
-        leaves={[]}
-        onClose={jest.fn()}
-        onSuccess={jest.fn()}
-      />,
-    );
-    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
-    expect(checkbox.checked).toBe(true);
-    expect(checkbox.disabled).toBe(true);
-    expect(screen.getByText("déjà assigné")).toBeInTheDocument();
-  });
+it("coche + désactive les agents déjà assignés", () => {
+  const users = [buildUser("u1", "Paul", "Lemoine")];
+  render(
+    <AddUsersToTaskModal
+      task={buildTask()}
+      date={new Date("2026-05-12")}
+      allUsers={users}
+      existingAssignments={[buildAssignment("a1", "u1")]}
+      leaves={[]}
+      onClose={jest.fn()}
+      onSuccess={jest.fn()}
+    />,
+  );
+  const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+  expect(checkbox.checked).toBe(true);
+  expect(checkbox.disabled).toBe(true);
+  expect(screen.getByText("déjà assigné")).toBeInTheDocument();
+});
 ```
 
 - [ ] **Step 2.6: Run le test (pass attendu)**
@@ -576,41 +588,41 @@ Expected: 2 tests PASS.
 Ajouter :
 
 ```tsx
-  it("désactive les agents en congé validé avec le type", () => {
-    const users = [buildUser("u1", "Marie", "Dupont")];
-    render(
-      <AddUsersToTaskModal
-        task={buildTask()}
-        date={new Date("2026-05-12")}
-        allUsers={users}
-        existingAssignments={[]}
-        leaves={[buildLeave("u1", "2026-05-10", "2026-05-15")]}
-        onClose={jest.fn()}
-        onSuccess={jest.fn()}
-      />,
-    );
-    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
-    expect(checkbox.checked).toBe(false);
-    expect(checkbox.disabled).toBe(true);
-    expect(screen.getByText("en congé · CA")).toBeInTheDocument();
-  });
+it("désactive les agents en congé validé avec le type", () => {
+  const users = [buildUser("u1", "Marie", "Dupont")];
+  render(
+    <AddUsersToTaskModal
+      task={buildTask()}
+      date={new Date("2026-05-12")}
+      allUsers={users}
+      existingAssignments={[]}
+      leaves={[buildLeave("u1", "2026-05-10", "2026-05-15")]}
+      onClose={jest.fn()}
+      onSuccess={jest.fn()}
+    />,
+  );
+  const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+  expect(checkbox.checked).toBe(false);
+  expect(checkbox.disabled).toBe(true);
+  expect(screen.getByText("en congé · CA")).toBeInTheDocument();
+});
 
-  it("ignore les congés PENDING (non bloquants)", () => {
-    const users = [buildUser("u1", "Marie", "Dupont")];
-    render(
-      <AddUsersToTaskModal
-        task={buildTask()}
-        date={new Date("2026-05-12")}
-        allUsers={users}
-        existingAssignments={[]}
-        leaves={[buildLeave("u1", "2026-05-10", "2026-05-15", "PENDING")]}
-        onClose={jest.fn()}
-        onSuccess={jest.fn()}
-      />,
-    );
-    const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
-    expect(checkbox.disabled).toBe(false);
-  });
+it("ignore les congés PENDING (non bloquants)", () => {
+  const users = [buildUser("u1", "Marie", "Dupont")];
+  render(
+    <AddUsersToTaskModal
+      task={buildTask()}
+      date={new Date("2026-05-12")}
+      allUsers={users}
+      existingAssignments={[]}
+      leaves={[buildLeave("u1", "2026-05-10", "2026-05-15", "PENDING")]}
+      onClose={jest.fn()}
+      onSuccess={jest.fn()}
+    />,
+  );
+  const checkbox = screen.getByRole("checkbox") as HTMLInputElement;
+  expect(checkbox.disabled).toBe(false);
+});
 ```
 
 - [ ] **Step 2.8: Run les tests (pass attendu)**
@@ -623,105 +635,103 @@ Expected: 4 tests PASS.
 Ajouter :
 
 ```tsx
-  it("bouton Ajouter reflète la taille de sélection et est désactivé si N=0", () => {
-    const users = [
-      buildUser("u1", "Marie", "Dupont"),
-      buildUser("u2", "Paul", "Lemoine"),
-    ];
-    render(
-      <AddUsersToTaskModal
-        task={buildTask()}
-        date={new Date("2026-05-12")}
-        allUsers={users}
-        existingAssignments={[]}
-        leaves={[]}
-        onClose={jest.fn()}
-        onSuccess={jest.fn()}
-      />,
-    );
-    const submitBtn = screen.getByRole("button", { name: /Ajouter \(0\)/ });
-    expect(submitBtn).toBeDisabled();
-    fireEvent.click(screen.getAllByRole("checkbox")[0]);
-    expect(
-      screen.getByRole("button", { name: /Ajouter \(1\)/ }),
-    ).not.toBeDisabled();
-  });
+it("bouton Ajouter reflète la taille de sélection et est désactivé si N=0", () => {
+  const users = [
+    buildUser("u1", "Marie", "Dupont"),
+    buildUser("u2", "Paul", "Lemoine"),
+  ];
+  render(
+    <AddUsersToTaskModal
+      task={buildTask()}
+      date={new Date("2026-05-12")}
+      allUsers={users}
+      existingAssignments={[]}
+      leaves={[]}
+      onClose={jest.fn()}
+      onSuccess={jest.fn()}
+    />,
+  );
+  const submitBtn = screen.getByRole("button", { name: /Ajouter \(0\)/ });
+  expect(submitBtn).toBeDisabled();
+  fireEvent.click(screen.getAllByRole("checkbox")[0]);
+  expect(
+    screen.getByRole("button", { name: /Ajouter \(1\)/ }),
+  ).not.toBeDisabled();
+});
 
-  it("submit appelle bulkAssign avec la bonne forme et FULL_DAY par défaut", async () => {
-    const onSuccess = jest.fn();
-    const onClose = jest.fn();
-    (predefinedTasksService.bulkAssign as jest.Mock).mockResolvedValue({});
-    const users = [buildUser("u1", "Marie", "Dupont")];
-    render(
-      <AddUsersToTaskModal
-        task={buildTask({ defaultDuration: "FULL_DAY" })}
-        date={new Date("2026-05-12")}
-        allUsers={users}
-        existingAssignments={[]}
-        leaves={[]}
-        onClose={onClose}
-        onSuccess={onSuccess}
-      />,
-    );
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: /Ajouter \(1\)/ }));
-    await waitFor(() =>
-      expect(predefinedTasksService.bulkAssign).toHaveBeenCalledWith({
-        predefinedTaskId: "t1",
-        userIds: ["u1"],
-        dates: ["2026-05-12"],
-        period: "FULL_DAY",
-      }),
-    );
-    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
-  });
+it("submit appelle bulkAssign avec la bonne forme et FULL_DAY par défaut", async () => {
+  const onSuccess = jest.fn();
+  const onClose = jest.fn();
+  (predefinedTasksService.bulkAssign as jest.Mock).mockResolvedValue({});
+  const users = [buildUser("u1", "Marie", "Dupont")];
+  render(
+    <AddUsersToTaskModal
+      task={buildTask({ defaultDuration: "FULL_DAY" })}
+      date={new Date("2026-05-12")}
+      allUsers={users}
+      existingAssignments={[]}
+      leaves={[]}
+      onClose={onClose}
+      onSuccess={onSuccess}
+    />,
+  );
+  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(screen.getByRole("button", { name: /Ajouter \(1\)/ }));
+  await waitFor(() =>
+    expect(predefinedTasksService.bulkAssign).toHaveBeenCalledWith({
+      predefinedTaskId: "t1",
+      userIds: ["u1"],
+      dates: ["2026-05-12"],
+      period: "FULL_DAY",
+    }),
+  );
+  await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+  await waitFor(() => expect(onClose).toHaveBeenCalled());
+});
 
-  it("submit envoie period=MORNING pour HALF_DAY", async () => {
-    (predefinedTasksService.bulkAssign as jest.Mock).mockResolvedValue({});
-    const users = [buildUser("u1", "Marie", "Dupont")];
-    render(
-      <AddUsersToTaskModal
-        task={buildTask({ defaultDuration: "HALF_DAY" })}
-        date={new Date("2026-05-12")}
-        allUsers={users}
-        existingAssignments={[]}
-        leaves={[]}
-        onClose={jest.fn()}
-        onSuccess={jest.fn()}
-      />,
-    );
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(screen.getByRole("button", { name: /Ajouter \(1\)/ }));
-    await waitFor(() =>
-      expect(predefinedTasksService.bulkAssign).toHaveBeenCalledWith(
-        expect.objectContaining({ period: "MORNING" }),
-      ),
-    );
-  });
+it("submit envoie period=MORNING pour HALF_DAY", async () => {
+  (predefinedTasksService.bulkAssign as jest.Mock).mockResolvedValue({});
+  const users = [buildUser("u1", "Marie", "Dupont")];
+  render(
+    <AddUsersToTaskModal
+      task={buildTask({ defaultDuration: "HALF_DAY" })}
+      date={new Date("2026-05-12")}
+      allUsers={users}
+      existingAssignments={[]}
+      leaves={[]}
+      onClose={jest.fn()}
+      onSuccess={jest.fn()}
+    />,
+  );
+  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(screen.getByRole("button", { name: /Ajouter \(1\)/ }));
+  await waitFor(() =>
+    expect(predefinedTasksService.bulkAssign).toHaveBeenCalledWith(
+      expect.objectContaining({ period: "MORNING" }),
+    ),
+  );
+});
 
-  it("affiche état vide si tous les agents sont assignés ou en congé", () => {
-    const users = [
-      buildUser("u1", "Marie", "Dupont"),
-      buildUser("u2", "Paul", "Lemoine"),
-    ];
-    render(
-      <AddUsersToTaskModal
-        task={buildTask()}
-        date={new Date("2026-05-12")}
-        allUsers={users}
-        existingAssignments={[buildAssignment("a1", "u1")]}
-        leaves={[buildLeave("u2", "2026-05-10", "2026-05-15")]}
-        onClose={jest.fn()}
-        onSuccess={jest.fn()}
-      />,
-    );
-    expect(
-      screen.getByText(
-        "Tous les agents sont déjà assignés ou en congé ce jour.",
-      ),
-    ).toBeInTheDocument();
-  });
+it("affiche état vide si tous les agents sont assignés ou en congé", () => {
+  const users = [
+    buildUser("u1", "Marie", "Dupont"),
+    buildUser("u2", "Paul", "Lemoine"),
+  ];
+  render(
+    <AddUsersToTaskModal
+      task={buildTask()}
+      date={new Date("2026-05-12")}
+      allUsers={users}
+      existingAssignments={[buildAssignment("a1", "u1")]}
+      leaves={[buildLeave("u2", "2026-05-10", "2026-05-15")]}
+      onClose={jest.fn()}
+      onSuccess={jest.fn()}
+    />,
+  );
+  expect(
+    screen.getByText("Tous les agents sont déjà assignés ou en congé ce jour."),
+  ).toBeInTheDocument();
+});
 ```
 
 - [ ] **Step 2.10: Run la suite complète AddUsersToTaskModal (pass attendu)**
@@ -742,6 +752,7 @@ git commit -m "feat(planning): AddUsersToTaskModal — modale multi-sélection a
 ## Task 3 : ActivityGrid — bouton `+ Ajouter`
 
 **Files:**
+
 - Modify: `apps/web/src/components/planning/ActivityGrid.tsx`
 - Modify: `apps/web/src/components/planning/__tests__/ActivityGrid.test.tsx`
 
@@ -752,90 +763,88 @@ Dans `__tests__/ActivityGrid.test.tsx`, étendre le mock de `useTranslations` po
 Remplacer dans le mock `useTranslations` la const `dict` par :
 
 ```tsx
-      const dict: Record<string, string> = {
-        "activityGrid.caption": "Grille d'activité",
-        "activityGrid.dateCol": "Jour",
-        "activityGrid.emptyCell": "—",
-        "activityGrid.print": "Imprimer",
-        "activityGrid.emptyState": "Aucune tâche prédéfinie active",
-        "activityGrid.addUsers": "Ajouter",
-      };
+const dict: Record<string, string> = {
+  "activityGrid.caption": "Grille d'activité",
+  "activityGrid.dateCol": "Jour",
+  "activityGrid.emptyCell": "—",
+  "activityGrid.print": "Imprimer",
+  "activityGrid.emptyState": "Aucune tâche prédéfinie active",
+  "activityGrid.addUsers": "Ajouter",
+};
 ```
 
 Puis ajouter à l'intérieur du `describe("ActivityGrid", ...)` :
 
 ```tsx
-  it("+ Ajouter rendu dans cellule vide si canAssign et jour ouvré", () => {
-    const onAddUsers = jest.fn();
-    render(
-      <ActivityGrid
-        days={[day("2026-04-22")]} // mercredi
-        tasks={[buildTask("t1", "Permanence")]}
-        assignments={[]}
-        users={[]}
-        leaves={[]}
-        canAssign
-        onAddUsers={onAddUsers}
-      />,
-    );
-    const btn = screen.getByRole("button", { name: /ajouter/i });
-    fireEvent.click(btn);
-    expect(onAddUsers).toHaveBeenCalledWith("t1", "2026-04-22");
-  });
+it("+ Ajouter rendu dans cellule vide si canAssign et jour ouvré", () => {
+  const onAddUsers = jest.fn();
+  render(
+    <ActivityGrid
+      days={[day("2026-04-22")]} // mercredi
+      tasks={[buildTask("t1", "Permanence")]}
+      assignments={[]}
+      users={[]}
+      leaves={[]}
+      canAssign
+      onAddUsers={onAddUsers}
+    />,
+  );
+  const btn = screen.getByRole("button", { name: /ajouter/i });
+  fireEvent.click(btn);
+  expect(onAddUsers).toHaveBeenCalledWith("t1", "2026-04-22");
+});
 
-  it("+ Ajouter rendu dans cellule pleine après la liste agents", () => {
-    const u1 = buildUser("u1", "Marie", "Dupont");
-    render(
-      <ActivityGrid
-        days={[day("2026-04-22")]}
-        tasks={[buildTask("t1", "Permanence")]}
-        assignments={[buildAssignment("a1", "t1", "u1", "2026-04-22")]}
-        users={[u1]}
-        leaves={[]}
-        canAssign
-        onAddUsers={jest.fn()}
-      />,
-    );
-    expect(screen.getByText("DUPONT")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /ajouter/i }),
-    ).toBeInTheDocument();
-  });
+it("+ Ajouter rendu dans cellule pleine après la liste agents", () => {
+  const u1 = buildUser("u1", "Marie", "Dupont");
+  render(
+    <ActivityGrid
+      days={[day("2026-04-22")]}
+      tasks={[buildTask("t1", "Permanence")]}
+      assignments={[buildAssignment("a1", "t1", "u1", "2026-04-22")]}
+      users={[u1]}
+      leaves={[]}
+      canAssign
+      onAddUsers={jest.fn()}
+    />,
+  );
+  expect(screen.getByText("DUPONT")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /ajouter/i })).toBeInTheDocument();
+});
 
-  it("+ Ajouter NON rendu si canAssign=false", () => {
-    render(
-      <ActivityGrid
-        days={[day("2026-04-22")]}
-        tasks={[buildTask("t1", "Permanence")]}
-        assignments={[]}
-        users={[]}
-        leaves={[]}
-        canAssign={false}
-        onAddUsers={jest.fn()}
-      />,
-    );
-    expect(
-      screen.queryByRole("button", { name: /ajouter/i }),
-    ).not.toBeInTheDocument();
-  });
+it("+ Ajouter NON rendu si canAssign=false", () => {
+  render(
+    <ActivityGrid
+      days={[day("2026-04-22")]}
+      tasks={[buildTask("t1", "Permanence")]}
+      assignments={[]}
+      users={[]}
+      leaves={[]}
+      canAssign={false}
+      onAddUsers={jest.fn()}
+    />,
+  );
+  expect(
+    screen.queryByRole("button", { name: /ajouter/i }),
+  ).not.toBeInTheDocument();
+});
 
-  it("+ Ajouter NON rendu sur weekend ou férié", () => {
-    render(
-      <ActivityGrid
-        days={[day("2026-04-25")]} // samedi
-        tasks={[buildTask("t1", "Permanence")]}
-        assignments={[]}
-        users={[]}
-        leaves={[]}
-        canAssign
-        onAddUsers={jest.fn()}
-        isWeekend={(d) => [0, 6].includes(d.getDay())}
-      />,
-    );
-    expect(
-      screen.queryByRole("button", { name: /ajouter/i }),
-    ).not.toBeInTheDocument();
-  });
+it("+ Ajouter NON rendu sur weekend ou férié", () => {
+  render(
+    <ActivityGrid
+      days={[day("2026-04-25")]} // samedi
+      tasks={[buildTask("t1", "Permanence")]}
+      assignments={[]}
+      users={[]}
+      leaves={[]}
+      canAssign
+      onAddUsers={jest.fn()}
+      isWeekend={(d) => [0, 6].includes(d.getDay())}
+    />,
+  );
+  expect(
+    screen.queryByRole("button", { name: /ajouter/i }),
+  ).not.toBeInTheDocument();
+});
 ```
 
 - [ ] **Step 3.2: Run les tests (fail attendu — props et bouton manquants)**
@@ -886,69 +895,65 @@ export function ActivityGrid({
 Dans la cellule **vide** (où l'on retourne `<td>...emptyCell...</td>`), remplacer le contenu par :
 
 ```tsx
-                    if (cellAssignments.length === 0) {
-                      return (
-                        <td
-                          key={task.id}
-                          className={`px-3 py-3 text-zinc-300 text-center bg-zinc-50${
-                            colIdx < tasks.length - 1
-                              ? " border-r border-zinc-100"
-                              : ""
-                          }`}
-                        >
-                          {canAssign && onAddUsers ? (
-                            <button
-                              type="button"
-                              onClick={() => onAddUsers(task.id, dateIso)}
-                              className="no-print text-xs text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded px-2 py-0.5 transition"
-                            >
-                              + {t("activityGrid.addUsers" as Parameters<typeof t>[0])}
-                            </button>
-                          ) : (
-                            t("activityGrid.emptyCell" as Parameters<typeof t>[0])
-                          )}
-                        </td>
-                      );
-                    }
+if (cellAssignments.length === 0) {
+  return (
+    <td
+      key={task.id}
+      className={`px-3 py-3 text-zinc-300 text-center bg-zinc-50${
+        colIdx < tasks.length - 1 ? " border-r border-zinc-100" : ""
+      }`}
+    >
+      {canAssign && onAddUsers ? (
+        <button
+          type="button"
+          onClick={() => onAddUsers(task.id, dateIso)}
+          className="no-print text-xs text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded px-2 py-0.5 transition"
+        >
+          + {t("activityGrid.addUsers" as Parameters<typeof t>[0])}
+        </button>
+      ) : (
+        t("activityGrid.emptyCell" as Parameters<typeof t>[0])
+      )}
+    </td>
+  );
+}
 ```
 
 Et dans la cellule **pleine** (le `<td>` qui contient la `<ul>`), ajouter à la fin de la liste un `<li>` bouton :
 
 ```tsx
-                    return (
-                      <td
-                        key={task.id}
-                        className={`px-3 py-2 align-top${
-                          colIdx < tasks.length - 1
-                            ? " border-r border-zinc-100"
-                            : ""
-                        }`}
-                      >
-                        <ul className="space-y-0.5">
-                          {visible.map((u) => (
-                            <UserRowItem key={u.id} user={u} />
-                          ))}
-                          {overflow > 0 && (
-                            <li className="pl-7 text-[10px] text-zinc-500 italic">
-                              {t("activityGrid.moreUsers" as Parameters<typeof t>[0], {
-                                count: overflow,
-                              })}
-                            </li>
-                          )}
-                          {canAssign && onAddUsers && (
-                            <li className="no-print pt-1">
-                              <button
-                                type="button"
-                                onClick={() => onAddUsers(task.id, dateIso)}
-                                className="text-xs text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded px-2 py-0.5 transition"
-                              >
-                                + {t("activityGrid.addUsers" as Parameters<typeof t>[0])}
-                              </button>
-                            </li>
-                          )}
-                        </ul>
-                      </td>
-                    );
+return (
+  <td
+    key={task.id}
+    className={`px-3 py-2 align-top${
+      colIdx < tasks.length - 1 ? " border-r border-zinc-100" : ""
+    }`}
+  >
+    <ul className="space-y-0.5">
+      {visible.map((u) => (
+        <UserRowItem key={u.id} user={u} />
+      ))}
+      {overflow > 0 && (
+        <li className="pl-7 text-[10px] text-zinc-500 italic">
+          {t("activityGrid.moreUsers" as Parameters<typeof t>[0], {
+            count: overflow,
+          })}
+        </li>
+      )}
+      {canAssign && onAddUsers && (
+        <li className="no-print pt-1">
+          <button
+            type="button"
+            onClick={() => onAddUsers(task.id, dateIso)}
+            className="text-xs text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded px-2 py-0.5 transition"
+          >
+            + {t("activityGrid.addUsers" as Parameters<typeof t>[0])}
+          </button>
+        </li>
+      )}
+    </ul>
+  </td>
+);
 ```
 
 - [ ] **Step 3.4: Run les tests (pass attendu)**
@@ -969,6 +974,7 @@ git commit -m "feat(planning): bouton + Ajouter dans ActivityGrid (Vue activité
 ## Task 4 : PlanningView — wiring modale
 
 **Files:**
+
 - Modify: `apps/web/src/components/planning/PlanningView.tsx`
 
 - [ ] **Step 4.1: Ajouter import et state pour la modale**
@@ -982,10 +988,10 @@ import { AddUsersToTaskModal } from "./AddUsersToTaskModal";
 Dans le corps du composant (après les autres `useState`), ajouter :
 
 ```tsx
-  const [addUsersTarget, setAddUsersTarget] = useState<{
-    task: PredefinedTask;
-    date: Date;
-  } | null>(null);
+const [addUsersTarget, setAddUsersTarget] = useState<{
+  task: PredefinedTask;
+  date: Date;
+} | null>(null);
 ```
 
 S'assurer que `PredefinedTask` est importé (sinon ajouter dans l'import existant `@/services/predefined-tasks.service`).
@@ -995,27 +1001,27 @@ S'assurer que `PredefinedTask` est importé (sinon ajouter dans l'import existan
 Dans la zone où `canBalance` ou autres permissions sont calculées, ajouter :
 
 ```tsx
-  const canAssignPredefinedTask = hasPermission("predefined_tasks:assign");
+const canAssignPredefinedTask = hasPermission("predefined_tasks:assign");
 ```
 
 Modifier le rendu `<ActivityGrid ... />` pour ajouter les nouvelles props :
 
 ```tsx
-        <ActivityGrid
-          days={displayDays}
-          tasks={predefinedTasks}
-          assignments={predefinedAssignments}
-          users={users}
-          leaves={leaves}
-          canAssign={canAssignPredefinedTask}
-          onAddUsers={(taskId, dateIso) => {
-            const task = predefinedTasks.find((t) => t.id === taskId);
-            if (!task) return;
-            setAddUsersTarget({ task, date: new Date(dateIso) });
-          }}
-          isHoliday={(d) => !!getHolidayForDate(d)}
-          isWeekend={(d) => [0, 6].includes(d.getDay())}
-        />
+<ActivityGrid
+  days={displayDays}
+  tasks={predefinedTasks}
+  assignments={predefinedAssignments}
+  users={users}
+  leaves={leaves}
+  canAssign={canAssignPredefinedTask}
+  onAddUsers={(taskId, dateIso) => {
+    const task = predefinedTasks.find((t) => t.id === taskId);
+    if (!task) return;
+    setAddUsersTarget({ task, date: new Date(dateIso) });
+  }}
+  isHoliday={(d) => !!getHolidayForDate(d)}
+  isWeekend={(d) => [0, 6].includes(d.getDay())}
+/>
 ```
 
 > Note : `leaves` doit être disponible dans le scope de `PlanningView`. Vérifier l'import depuis `usePlanningData` (déjà présent ligne 110 / 203). Si non, déstructurer `leaves` du hook.
@@ -1025,27 +1031,29 @@ Modifier le rendu `<ActivityGrid ... />` pour ajouter les nouvelles props :
 Juste avant la fermeture `</div>` finale du JSX retourné, ajouter :
 
 ```tsx
-      {addUsersTarget && (
-        <AddUsersToTaskModal
-          task={addUsersTarget.task}
-          date={addUsersTarget.date}
-          allUsers={users}
-          existingAssignments={predefinedAssignments.filter(
-            (a) =>
-              a.predefinedTaskId === addUsersTarget.task.id &&
-              (typeof a.date === "string"
-                ? a.date.slice(0, 10)
-                : format(a.date as unknown as Date, "yyyy-MM-dd")) ===
-                format(addUsersTarget.date, "yyyy-MM-dd"),
-          )}
-          leaves={leaves}
-          onClose={() => setAddUsersTarget(null)}
-          onSuccess={() => {
-            refetch();
-            setRefreshTrigger((prev) => prev + 1);
-          }}
-        />
+{
+  addUsersTarget && (
+    <AddUsersToTaskModal
+      task={addUsersTarget.task}
+      date={addUsersTarget.date}
+      allUsers={users}
+      existingAssignments={predefinedAssignments.filter(
+        (a) =>
+          a.predefinedTaskId === addUsersTarget.task.id &&
+          (typeof a.date === "string"
+            ? a.date.slice(0, 10)
+            : format(a.date as unknown as Date, "yyyy-MM-dd")) ===
+            format(addUsersTarget.date, "yyyy-MM-dd"),
       )}
+      leaves={leaves}
+      onClose={() => setAddUsersTarget(null)}
+      onSuccess={() => {
+        refetch();
+        setRefreshTrigger((prev) => prev + 1);
+      }}
+    />
+  );
+}
 ```
 
 > Note : si `format` n'est pas déjà importé, ajouter `import { format } from "date-fns";`
@@ -1069,6 +1077,7 @@ git commit -m "feat(planning): câblage AddUsersToTaskModal dans PlanningView"
 ## Task 5 : E2E Playwright multi-rôles
 
 **Files:**
+
 - Create: `e2e/tests/activity-grid-add-users.spec.ts`
 
 - [ ] **Step 5.1: Vérifier les helpers disponibles**
@@ -1203,6 +1212,7 @@ Expected: tous les tests planning PASS (régression check sur ActivityGrid + Add
 Run en background : `pnpm run dev`
 
 Naviguer dans le browser :
+
 1. Login admin → `/fr/planning` → switch Vue activité
 2. Cliquer `+ Ajouter` sur une cellule pleine ET sur une cellule vide
 3. Cocher 2-3 agents → vérifier compteur « X agent(s) sélectionné(s) »
@@ -1249,13 +1259,14 @@ Sur la Vue activité, chaque cellule (tâche × jour) propose un bouton **+ Ajou
 - **Cellule pleine** : `+ Ajouter` discret en bas de la liste d'agents.
 
 Au clic, une modale s'ouvre avec la liste de tous les agents :
+
 - Les agents **déjà assignés** apparaissent cochés et grisés.
 - Les agents **en congé validé** sur ce jour apparaissent grisés avec mention du type de congé.
 - Les autres agents sont sélectionnables.
 
 Cochez un ou plusieurs agents puis cliquez **Ajouter (N)**. Les assignations sont créées immédiatement et apparaissent à la fois dans la Vue activité et dans les vues Semaine/Mois des agents concernés.
 
-Cette action requiert le droit *« assignation tâches prédéfinies »* (rôles ADMIN, RESPONSABLE, MANAGER).
+Cette action requiert le droit _« assignation tâches prédéfinies »_ (rôles ADMIN, RESPONSABLE, MANAGER).
 ```
 
 - [ ] **Step 6.8: Commit doc + push**

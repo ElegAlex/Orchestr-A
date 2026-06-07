@@ -51,11 +51,7 @@ const mockUsers = [
 
 function makeWrapper(client: QueryClient) {
   return function Wrapper({ children }: { children: React.ReactNode }) {
-    return React.createElement(
-      QueryClientProvider,
-      { client },
-      children,
-    );
+    return React.createElement(QueryClientProvider, { client }, children);
   };
 }
 
@@ -69,7 +65,9 @@ describe("useUsers", () => {
   });
 
   it("returns users after successful fetch", async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     const wrapper = makeWrapper(client);
 
     const { result } = renderHook(() => useUsers(), { wrapper });
@@ -81,7 +79,9 @@ describe("useUsers", () => {
   });
 
   it("is loading initially", () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     const wrapper = makeWrapper(client);
 
     const { result } = renderHook(() => useUsers(), { wrapper });
@@ -92,7 +92,9 @@ describe("useUsers", () => {
   it("deduplicates concurrent fetches across two renders sharing the same QueryClient", async () => {
     // PER-019 core: two simultaneous mounts → only ONE network call.
     // With raw useEffect+useState each mount calls the service independently.
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     const wrapper = makeWrapper(client);
 
     // Mount two hook instances at the same time
@@ -109,7 +111,9 @@ describe("useUsers", () => {
   });
 
   it("respects staleTime — does not refetch within 30s", async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     const wrapper = makeWrapper(client);
 
     const { result, rerender } = renderHook(() => useUsers(), { wrapper });
@@ -124,9 +128,13 @@ describe("useUsers", () => {
   });
 
   it("handles service errors gracefully", async () => {
-    (usersService.getAll as jest.Mock).mockRejectedValue(new Error("Network error"));
+    (usersService.getAll as jest.Mock).mockRejectedValue(
+      new Error("Network error"),
+    );
 
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     const wrapper = makeWrapper(client);
 
     const { result } = renderHook(() => useUsers(), { wrapper });

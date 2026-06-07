@@ -39,7 +39,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 // ─── Types publics ───────────────────────────────────────────────────────────
 
@@ -569,7 +569,10 @@ export function TaskForm({
     <form onSubmit={handleSubmit} className="p-6 space-y-6">
       {/* Title */}
       <div>
-        <label htmlFor="task-title" className="block text-sm font-medium text-gray-900 mb-2">
+        <label
+          htmlFor="task-title"
+          className="block text-sm font-medium text-gray-900 mb-2"
+        >
           {t("modal.create.titleLabel")} <span className="text-red-500">*</span>
         </label>
         <input

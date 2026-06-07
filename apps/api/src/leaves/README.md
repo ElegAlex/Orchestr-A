@@ -105,12 +105,12 @@ audit-readability gap the equivalent for self-approval (#6) opened.
 
 ## Where to look
 
-| Concern | File |
-|---|---|
-| Gates (create/update) | `leaves.service.ts:create`, `leaves.service.ts:update` |
-| Year-window math | `leave-year-window.ts` |
-| Balance helpers | `leaves.service.ts:hasConfiguredBalance`, `resolveAllocatedDays`, `getAvailableDays` |
-| Permission resolution | `apps/api/src/rbac/permissions.service.ts` + `packages/rbac/` |
-| Schema | `packages/database/prisma/schema.prisma` (models `Leave`, `LeaveBalance`, `LeaveTypeConfig`) |
-| Migration history | `packages/database/prisma/migrations/` (`drop_max_days_per_year`, `self_approved_and_global_balance_unique`) |
-| E2E coverage | `e2e/tests/workflows/leave-balance-gating.spec.ts` |
+| Concern               | File                                                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Gates (create/update) | `leaves.service.ts:create`, `leaves.service.ts:update`                                                       |
+| Year-window math      | `leave-year-window.ts`                                                                                       |
+| Balance helpers       | `leaves.service.ts:hasConfiguredBalance`, `resolveAllocatedDays`, `getAvailableDays`                         |
+| Permission resolution | `apps/api/src/rbac/permissions.service.ts` + `packages/rbac/`                                                |
+| Schema                | `packages/database/prisma/schema.prisma` (models `Leave`, `LeaveBalance`, `LeaveTypeConfig`)                 |
+| Migration history     | `packages/database/prisma/migrations/` (`drop_max_days_per_year`, `self_approved_and_global_balance_unique`) |
+| E2E coverage          | `e2e/tests/workflows/leave-balance-gating.spec.ts`                                                           |

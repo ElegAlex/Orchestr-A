@@ -29,11 +29,11 @@ des tâches, où le `select` omettait le champ).
 
 ### 1. Overlay du congé selon `halfDay`
 
-| `halfDay` | Overlay | Mention sous le nom du type |
-|---|---|---|
-| `null` (journée) | Toute la cellule — **inchangé** | — |
-| `MORNING` | Moitié **haute** (`top:0; height:50%`) | « Matin » |
-| `AFTERNOON` | Moitié **basse** (`bottom:0; height:50%`) | « Après-midi » |
+| `halfDay`        | Overlay                                   | Mention sous le nom du type |
+| ---------------- | ----------------------------------------- | --------------------------- |
+| `null` (journée) | Toute la cellule — **inchangé**           | —                           |
+| `MORNING`        | Moitié **haute** (`top:0; height:50%`)    | « Matin »                   |
+| `AFTERNOON`      | Moitié **basse** (`bottom:0; height:50%`) | « Après-midi »              |
 
 - Couleur, icône, et style de statut (en attente = bordure pointillée + opacité
   réduite ; validé = plein) restent gérés comme aujourd'hui. On ne modifie que la

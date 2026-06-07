@@ -13,7 +13,12 @@ interface WeightInputProps {
 const WEIGHT_LEVELS = [1, 2, 3, 4, 5] as const;
 type WeightLevel = (typeof WEIGHT_LEVELS)[number];
 
-export function WeightInput({ value, onChange, disabled, id }: WeightInputProps) {
+export function WeightInput({
+  value,
+  onChange,
+  disabled,
+  id,
+}: WeightInputProps) {
   const t = useTranslations("predefinedTasks");
 
   const legendId = id ? `${id}-legend` : "weight-input-legend";
@@ -29,7 +34,10 @@ export function WeightInput({ value, onChange, disabled, id }: WeightInputProps)
     buttonsRef.current[idx]?.focus();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, current: WeightLevel) => {
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    current: WeightLevel,
+  ) => {
     if (disabled) return;
     const idx = WEIGHT_LEVELS.indexOf(current);
     let nextIdx: number | null = null;
@@ -51,7 +59,11 @@ export function WeightInput({ value, onChange, disabled, id }: WeightInputProps)
   };
 
   return (
-    <fieldset role="radiogroup" aria-labelledby={legendId} className="border-0 p-0 m-0">
+    <fieldset
+      role="radiogroup"
+      aria-labelledby={legendId}
+      className="border-0 p-0 m-0"
+    >
       <legend id={legendId} className="text-sm font-medium text-gray-700 mb-1">
         {t("weight.label")}
       </legend>

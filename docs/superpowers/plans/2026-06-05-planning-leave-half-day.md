@@ -34,6 +34,7 @@
 ## Task 1: i18n keys for the morning/afternoon mention
 
 **Files:**
+
 - Modify: `apps/web/messages/fr/planning.json` (the `dayCell` object, ~line 85)
 - Modify: `apps/web/messages/en/planning.json` (the `dayCell` object, ~line 85)
 
@@ -96,6 +97,7 @@ git commit -m "i18n(planning): add half-day morning/afternoon labels"
 ## Task 2: Compute half-day flags in DayCell
 
 **Files:**
+
 - Modify: `apps/web/src/components/planning/DayCell.tsx` (import + just after `leaveVisible`, ~line 158)
 
 - [ ] **Step 1: Import HalfDay**
@@ -111,13 +113,13 @@ import { Task, TaskStatus, HalfDay } from "@/types";
 Immediately after the `leaveVisible` declaration (line ~158), insert:
 
 ```tsx
-  // Demi-journée : MORNING = overlay en haut, AFTERNOON = en bas, null = journée entière.
-  const leaveHalfDay = leaveVisible ? (leave?.halfDay ?? null) : null;
-  const isHalfDayLeave =
-    leaveHalfDay === HalfDay.MORNING || leaveHalfDay === HalfDay.AFTERNOON;
-  // Un congé journée entière masque tout ; un congé demi-journée laisse l'autre
-  // moitié libre pour les tâches/événements.
-  const fullDayLeaveVisible = leaveVisible && !isHalfDayLeave;
+// Demi-journée : MORNING = overlay en haut, AFTERNOON = en bas, null = journée entière.
+const leaveHalfDay = leaveVisible ? (leave?.halfDay ?? null) : null;
+const isHalfDayLeave =
+  leaveHalfDay === HalfDay.MORNING || leaveHalfDay === HalfDay.AFTERNOON;
+// Un congé journée entière masque tout ; un congé demi-journée laisse l'autre
+// moitié libre pour les tâches/événements.
+const fullDayLeaveVisible = leaveVisible && !isHalfDayLeave;
 ```
 
 - [ ] **Step 3: Verify it compiles**
@@ -137,6 +139,7 @@ git commit -m "feat(planning): compute half-day leave flags in DayCell"
 ## Task 3: Half-height leave overlay + morning/afternoon mention
 
 **Files:**
+
 - Modify: `apps/web/src/components/planning/DayCell.tsx` (the leave overlay block, lines ~200-238, and the cell wrapper, line ~177)
 
 - [ ] **Step 1: Give the cell a min-height when it shows a half-day leave**
@@ -184,44 +187,48 @@ Leave the rest of that block (icon, name, pending text) unchanged. It now only r
 Immediately AFTER the closing `)}` of the full-day overlay block (after line ~238), insert this new block:
 
 ```tsx
-      {/* Leave Overlay (demi-journée) - moitié haute (matin) ou basse (après-midi) */}
-      {isHalfDayLeave && (
-        <div
-          className={`absolute inset-x-0 ${leaveHalfDay === HalfDay.MORNING ? "top-0" : "bottom-0"} h-1/2 flex flex-col items-center justify-center z-20 border-2`}
-          style={{
-            backgroundColor: isPending ? `${leaveColor}26` : `${leaveColor}4D`,
-            borderColor: leaveColor,
-            borderStyle: isPending ? "dashed" : "solid",
-          }}
-          title={`${leaveName} — ${
-            leaveHalfDay === HalfDay.MORNING
-              ? t("dayCell.halfDayMorning")
-              : t("dayCell.halfDayAfternoon")
-          }${isPending ? ` (${t("dayCell.pendingValidation")})` : ` (${t("dayCell.validated")})`}`}
-        >
-          <span className={`${viewMode === "month" ? "text-base" : "text-xl"}`}>
-            {leaveIcon}
+{
+  /* Leave Overlay (demi-journée) - moitié haute (matin) ou basse (après-midi) */
+}
+{
+  isHalfDayLeave && (
+    <div
+      className={`absolute inset-x-0 ${leaveHalfDay === HalfDay.MORNING ? "top-0" : "bottom-0"} h-1/2 flex flex-col items-center justify-center z-20 border-2`}
+      style={{
+        backgroundColor: isPending ? `${leaveColor}26` : `${leaveColor}4D`,
+        borderColor: leaveColor,
+        borderStyle: isPending ? "dashed" : "solid",
+      }}
+      title={`${leaveName} — ${
+        leaveHalfDay === HalfDay.MORNING
+          ? t("dayCell.halfDayMorning")
+          : t("dayCell.halfDayAfternoon")
+      }${isPending ? ` (${t("dayCell.pendingValidation")})` : ` (${t("dayCell.validated")})`}`}
+    >
+      <span className={`${viewMode === "month" ? "text-base" : "text-xl"}`}>
+        {leaveIcon}
+      </span>
+      {viewMode === "week" && (
+        <>
+          <span
+            className="font-medium text-[11px] leading-tight"
+            style={{ color: leaveColor }}
+          >
+            {leaveName}
           </span>
-          {viewMode === "week" && (
-            <>
-              <span
-                className="font-medium text-[11px] leading-tight"
-                style={{ color: leaveColor }}
-              >
-                {leaveName}
-              </span>
-              <span
-                className="text-[9px] italic leading-tight"
-                style={{ color: leaveColor }}
-              >
-                {leaveHalfDay === HalfDay.MORNING
-                  ? t("dayCell.halfDayMorning")
-                  : t("dayCell.halfDayAfternoon")}
-              </span>
-            </>
-          )}
-        </div>
+          <span
+            className="text-[9px] italic leading-tight"
+            style={{ color: leaveColor }}
+          >
+            {leaveHalfDay === HalfDay.MORNING
+              ? t("dayCell.halfDayMorning")
+              : t("dayCell.halfDayAfternoon")}
+          </span>
+        </>
       )}
+    </div>
+  );
+}
 ```
 
 - [ ] **Step 4: Verify it compiles**
@@ -243,6 +250,7 @@ git commit -m "feat(planning): render half-day leave as half-cell overlay with A
 The telework/tasks/predefined/events blocks are inside the content wrapper `<div className="relative z-10 space-y-1 ...">` (line ~264) and each is gated by `!leaveVisible`. We flip the gate to `!fullDayLeaveVisible` (so they render under a half-day leave too) and, when half-day, position the whole content wrapper as an absolute zone filling the free half.
 
 **Files:**
+
 - Modify: `apps/web/src/components/planning/DayCell.tsx` (content wrapper line ~264; the four `!leaveVisible` gates at lines ~269, ~296, ~319, ~400; events use `!leaveVisible` at ~489)
 
 - [ ] **Step 1: Replace `!leaveVisible` with `!fullDayLeaveVisible` in the content gates**
@@ -310,6 +318,7 @@ git commit -m "feat(planning): show day tasks/events in the free half of a half-
 Today only `cell.leaves[0]` renders. If a user has e.g. a morning CP and an afternoon RTT, render both halves. Keep it minimal: detect a second, opposite half-day leave and render it as a second half overlay.
 
 **Files:**
+
 - Modify: `apps/web/src/components/planning/DayCell.tsx` (after the `leave` declaration ~line 150, and the half-day overlay from Task 3)
 
 - [ ] **Step 1: Derive the opposite half-day leave**
@@ -317,18 +326,18 @@ Today only `cell.leaves[0]` renders. If a user has e.g. a morning CP and an afte
 After the half-day flags from Task 2, add:
 
 ```tsx
-  // Cas rare : deux congés demi-journée le même jour (ex. CP matin + RTT après-midi).
-  // On rend chacun dans sa moitié. `leave` (cell.leaves[0]) couvre la 1re moitié ;
-  // on cherche un second congé visible de la demi-journée opposée.
-  const otherHalfLeave = isHalfDayLeave
-    ? cell.leaves.find(
-        (l) =>
-          l !== leave &&
-          l.halfDay &&
-          l.halfDay !== leaveHalfDay &&
-          (l.status === "PENDING" ? showLeavePending : true),
-      )
-    : undefined;
+// Cas rare : deux congés demi-journée le même jour (ex. CP matin + RTT après-midi).
+// On rend chacun dans sa moitié. `leave` (cell.leaves[0]) couvre la 1re moitié ;
+// on cherche un second congé visible de la demi-journée opposée.
+const otherHalfLeave = isHalfDayLeave
+  ? cell.leaves.find(
+      (l) =>
+        l !== leave &&
+        l.halfDay &&
+        l.halfDay !== leaveHalfDay &&
+        (l.status === "PENDING" ? showLeavePending : true),
+    )
+  : undefined;
 ```
 
 - [ ] **Step 2: Render the opposite half overlay**
@@ -336,42 +345,44 @@ After the half-day flags from Task 2, add:
 Immediately after the half-day overlay block added in Task 3, insert a second block that renders `otherHalfLeave` in the opposite half. Repeat the same markup but driven by `otherHalfLeave` (do not factor into a helper yet — keep it readable):
 
 ```tsx
-      {otherHalfLeave && (
-        <div
-          className={`absolute inset-x-0 ${otherHalfLeave.halfDay === HalfDay.MORNING ? "top-0" : "bottom-0"} h-1/2 flex flex-col items-center justify-center z-20 border-2`}
-          style={{
-            backgroundColor:
-              otherHalfLeave.status === "PENDING"
-                ? `${otherHalfLeave.leaveType?.color ?? "#10B981"}26`
-                : `${otherHalfLeave.leaveType?.color ?? "#10B981"}4D`,
-            borderColor: otherHalfLeave.leaveType?.color ?? "#10B981",
-            borderStyle: otherHalfLeave.status === "PENDING" ? "dashed" : "solid",
-          }}
-        >
-          <span className={`${viewMode === "month" ? "text-base" : "text-xl"}`}>
-            {otherHalfLeave.leaveType?.icon ?? "🌴"}
+{
+  otherHalfLeave && (
+    <div
+      className={`absolute inset-x-0 ${otherHalfLeave.halfDay === HalfDay.MORNING ? "top-0" : "bottom-0"} h-1/2 flex flex-col items-center justify-center z-20 border-2`}
+      style={{
+        backgroundColor:
+          otherHalfLeave.status === "PENDING"
+            ? `${otherHalfLeave.leaveType?.color ?? "#10B981"}26`
+            : `${otherHalfLeave.leaveType?.color ?? "#10B981"}4D`,
+        borderColor: otherHalfLeave.leaveType?.color ?? "#10B981",
+        borderStyle: otherHalfLeave.status === "PENDING" ? "dashed" : "solid",
+      }}
+    >
+      <span className={`${viewMode === "month" ? "text-base" : "text-xl"}`}>
+        {otherHalfLeave.leaveType?.icon ?? "🌴"}
+      </span>
+      {viewMode === "week" && (
+        <>
+          <span
+            className="font-medium text-[11px] leading-tight"
+            style={{ color: otherHalfLeave.leaveType?.color ?? "#10B981" }}
+          >
+            {otherHalfLeave.leaveType?.name ??
+              t(`leaveTypes.${otherHalfLeave.type ?? "OTHER"}`)}
           </span>
-          {viewMode === "week" && (
-            <>
-              <span
-                className="font-medium text-[11px] leading-tight"
-                style={{ color: otherHalfLeave.leaveType?.color ?? "#10B981" }}
-              >
-                {otherHalfLeave.leaveType?.name ??
-                  t(`leaveTypes.${otherHalfLeave.type ?? "OTHER"}`)}
-              </span>
-              <span
-                className="text-[9px] italic leading-tight"
-                style={{ color: otherHalfLeave.leaveType?.color ?? "#10B981" }}
-              >
-                {otherHalfLeave.halfDay === HalfDay.MORNING
-                  ? t("dayCell.halfDayMorning")
-                  : t("dayCell.halfDayAfternoon")}
-              </span>
-            </>
-          )}
-        </div>
+          <span
+            className="text-[9px] italic leading-tight"
+            style={{ color: otherHalfLeave.leaveType?.color ?? "#10B981" }}
+          >
+            {otherHalfLeave.halfDay === HalfDay.MORNING
+              ? t("dayCell.halfDayMorning")
+              : t("dayCell.halfDayAfternoon")}
+          </span>
+        </>
       )}
+    </div>
+  );
+}
 ```
 
 - [ ] **Step 3: Hide the free-half content when both halves are leaves**
@@ -403,11 +414,13 @@ git commit -m "feat(planning): render two opposite half-day leaves on the same d
 ## Task 6: E2E test — morning leave renders top half, task stays visible
 
 **Files:**
+
 - Create: `e2e/tests/workflows/planning-half-day-leave.spec.ts`
 
 This mirrors `e2e/tests/workflows/planning-external-task.spec.ts` (admin project, API auth via localStorage token, current-Monday date, cleanup in `afterEach`) plus the leave-creation pattern from `e2e/tests/workflows/leaves.spec.ts`.
 
 Key API facts (verified — do NOT change without re-checking):
+
 - `POST /api/leaves` requires `leaveTypeId` (a LeaveTypeConfig id), NOT the `type` enum. Get it from `GET /api/leave-types` and pick the one with `code === "OTHER"` (no balance gate → unconditional 201). `halfDay: "MORNING"` makes it a half-day.
 - A leave can be declared for another user via `targetUserId` (admin has `leaves:declare_for_others`). It is created `PENDING`; approve it via `POST /api/leaves/{id}/approve` so it becomes `APPROVED` → a **validated** leave is always visible regardless of the "pending" legend filter.
 - The user must be planning-visible (active + in a service). Find one from `GET /api/planning/overview` exactly like the external-task test (mirrors the server filter).
@@ -530,10 +543,7 @@ test.describe("Planning — congé demi-journée", () => {
       `/api/leaves/${createdLeaveId}/approve`,
       { headers: authHeaders },
     );
-    expect(
-      approveRes.ok(),
-      `approve OK (${approveRes.status()})`,
-    ).toBeTruthy();
+    expect(approveRes.ok(), `approve OK (${approveRes.status()})`).toBeTruthy();
 
     // 4. Une tâche le même jour, assignée au même utilisateur.
     const title = `E2E-HALF-${Date.now()}`;
@@ -549,10 +559,7 @@ test.describe("Planning — congé demi-journée", () => {
         endDate: mondayISO,
       },
     });
-    expect(
-      taskRes.ok(),
-      `POST /tasks OK (${taskRes.status()})`,
-    ).toBeTruthy();
+    expect(taskRes.ok(), `POST /tasks OK (${taskRes.status()})`).toBeTruthy();
     createdTaskId = (await taskRes.json()).id as string;
 
     // 5. Charger le planning et vérifier.
@@ -603,6 +610,7 @@ Create, for a user visible in the planning (active + in a service): a `MORNING` 
 - [ ] **Step 3: Visually confirm against the spec**
 
 Check, in week view:
+
 - Morning leave → green block in the **top half**, "Matin" under the type name; the task visible in the **bottom half**.
 - Afternoon leave → block in the **bottom half**, "Après-midi"; task visible in the **top half**.
 - Full-day leave (no `halfDay`) → unchanged, covers the whole cell, hides tasks.

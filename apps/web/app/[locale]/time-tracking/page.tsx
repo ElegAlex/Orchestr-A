@@ -11,7 +11,7 @@ import { TimeEntry, ActivityType, Project } from "@/types";
 import { ProjectIcon } from "@/components/ProjectIcon";
 import { TimeEntryModal } from "@/components/time-tracking/TimeEntryModal";
 import toast from "react-hot-toast";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 export default function TimeTrackingPage() {
   const t = useTranslations("hr.timeTracking");

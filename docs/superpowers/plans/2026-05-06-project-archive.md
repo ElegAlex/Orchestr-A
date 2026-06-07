@@ -15,19 +15,23 @@
 ## File Structure
 
 **Created:**
+
 - `packages/database/prisma/migrations/<timestamp>_project_archive/migration.sql` — schema migration
 - `apps/api/src/projects/dto/archived-filter.dto.ts` — shared `ArchivedFilter` enum + helper builder
 - `e2e/tests/projects/archive.spec.ts` — Playwright E2E covering archive/unarchive + Reports exclusion across roles
 
 **Modified — packages/database:**
+
 - `packages/database/prisma/schema.prisma` — add `archivedAt`, `archivedById` to `Project`; add inverse relation on `User`
 
 **Modified — packages/rbac:**
+
 - `packages/rbac/permissions.ts` (or wherever the permission-code list lives — discover via `grep -n '"projects:update"' packages/rbac`) — register `projects:archive`
 - `packages/rbac/templates.ts` — add `projects:archive` to the same bundle that holds `projects:update`; add it to the `without(...)` exclusion lists where `projects:update` is excluded (`PROJECT_CONTRIBUTOR_LIGHT`, `FUNCTIONAL_REFERENT`)
 - `packages/rbac/__tests__/templates.spec.ts` — keep entry-count assertion green (no count change), add a focused assertion that templates holding `projects:update` also hold `projects:archive`
 
 **Modified — apps/api:**
+
 - `apps/api/src/projects/dto/query-projects.dto.ts` — add `archived` field
 - `apps/api/src/projects/projects.controller.ts` — wire `archived` query param into `findAll`; add `POST /projects/:id/archive` + `POST /projects/:id/unarchive`
 - `apps/api/src/projects/projects.service.ts` — accept `archived` filter in `findAll`; implement `archive` + `unarchive`; populate `canArchive`/`canUnarchive` in response
@@ -46,6 +50,7 @@
 - (corresponding `*.spec.ts` files for each advanced service — assert default excludes archived)
 
 **Modified — apps/web:**
+
 - `apps/web/app/[locale]/projects/page.tsx` — toggle, archive/unarchive menu item, badge & dimming
 - `apps/web/app/[locale]/projects/[id]/page.tsx` (or wherever detail lives — confirm path) — archived banner + Désarchiver button
 - `apps/web/src/services/projects.service.ts` (or equivalent — confirm) — add `archive(id)`, `unarchive(id)`, accept `archived` query param in list call
@@ -58,6 +63,7 @@
 ## Task 1: Schema migration
 
 **Files:**
+
 - Modify: `packages/database/prisma/schema.prisma`
 - Create: `packages/database/prisma/migrations/<timestamp>_project_archive/migration.sql` (generated)
 
@@ -93,6 +99,7 @@ In the `model User { ... }` block, find the existing project relations (e.g. `ma
 - [ ] **Step 2: Generate migration**
 
 Run from repo root:
+
 ```bash
 pnpm exec prisma migrate dev --schema=packages/database/prisma/schema.prisma --name project_archive
 ```
@@ -102,10 +109,12 @@ Expected: a new folder `packages/database/prisma/migrations/<timestamp>_project_
 - [ ] **Step 3: Verify Prisma client compiles**
 
 Run:
+
 ```bash
 pnpm --filter database exec prisma generate
 pnpm --filter api exec tsc --noEmit
 ```
+
 Expected: 0 errors.
 
 - [ ] **Step 4: Commit**
@@ -120,6 +129,7 @@ git commit -m "Add archivedAt/archivedById to Project"
 ## Task 2: New `projects:archive` permission in RBAC templates
 
 **Files:**
+
 - Modify: `packages/rbac/permissions.ts` (or the file that exports the master permission list — discover with `grep -rn '"projects:update"' packages/rbac --include='*.ts' | head -5`)
 - Modify: `packages/rbac/templates.ts`
 - Modify: `packages/rbac/__tests__/templates.spec.ts`
@@ -157,6 +167,7 @@ describe("projects:archive coupling with projects:update", () => {
 ```bash
 pnpm --filter rbac exec vitest run __tests__/templates.spec.ts
 ```
+
 Expected: FAIL — both new assertions report missing `projects:archive`.
 
 - [ ] **Step 4: Add `projects:archive` to the bundle holding `projects:update`**
@@ -170,6 +181,7 @@ Then locate the two `without(DRAFT_PROJECT_CONTRIB(), [...])` calls for `PROJECT
 ```bash
 pnpm --filter rbac exec vitest run __tests__/templates.spec.ts
 ```
+
 Expected: PASS — full test file green.
 
 - [ ] **Step 6: Commit**
@@ -184,6 +196,7 @@ git commit -m "Add projects:archive permission to templates"
 ## Task 3: Backend — shared `ArchivedFilter` DTO helper
 
 **Files:**
+
 - Create: `apps/api/src/projects/dto/archived-filter.dto.ts`
 
 - [ ] **Step 1: Write the DTO + helper**
@@ -191,13 +204,13 @@ git commit -m "Add projects:archive permission to templates"
 Create `apps/api/src/projects/dto/archived-filter.dto.ts`:
 
 ```typescript
-import { Prisma } from 'database';
-import { IsEnum, IsOptional } from 'class-validator';
+import { Prisma } from "database";
+import { IsEnum, IsOptional } from "class-validator";
 
 export enum ArchivedFilter {
-  ACTIVE = 'active',
-  ARCHIVED = 'archived',
-  ALL = 'all',
+  ACTIVE = "active",
+  ARCHIVED = "archived",
+  ALL = "all",
 }
 
 export class ArchivedFilterDto {
@@ -226,6 +239,7 @@ export function archivedWhere(
 ```bash
 pnpm --filter api exec tsc --noEmit
 ```
+
 Expected: 0 errors.
 
 - [ ] **Step 3: Commit**
@@ -240,6 +254,7 @@ git commit -m "Add ArchivedFilter DTO and archivedWhere helper"
 ## Task 4: Backend — extend `findAll` with archived filter
 
 **Files:**
+
 - Modify: `apps/api/src/projects/dto/query-projects.dto.ts`
 - Modify: `apps/api/src/projects/projects.controller.ts`
 - Modify: `apps/api/src/projects/projects.service.ts`
@@ -250,9 +265,9 @@ git commit -m "Add ArchivedFilter DTO and archivedWhere helper"
 Add to `apps/api/src/projects/projects.service.spec.ts` inside the `findAll` describe block:
 
 ```typescript
-import { ArchivedFilter } from './dto/archived-filter.dto';
+import { ArchivedFilter } from "./dto/archived-filter.dto";
 
-it('default findAll excludes archived projects (archivedAt: null)', async () => {
+it("default findAll excludes archived projects (archivedAt: null)", async () => {
   await service.findAll(1, 10);
   const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
     where: Record<string, unknown>;
@@ -261,20 +276,36 @@ it('default findAll excludes archived projects (archivedAt: null)', async () => 
   expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":null');
 });
 
-it('archived=archived returns only archived projects', async () => {
-  await service.findAll(1, 10, undefined, undefined, undefined, undefined, ArchivedFilter.ARCHIVED);
+it("archived=archived returns only archived projects", async () => {
+  await service.findAll(
+    1,
+    10,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    ArchivedFilter.ARCHIVED,
+  );
   const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
     where: Record<string, unknown>;
   };
   expect(JSON.stringify(callArgs.where)).toContain('"archivedAt":{"not":null}');
 });
 
-it('archived=all does not filter on archivedAt', async () => {
-  await service.findAll(1, 10, undefined, undefined, undefined, undefined, ArchivedFilter.ALL);
+it("archived=all does not filter on archivedAt", async () => {
+  await service.findAll(
+    1,
+    10,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    ArchivedFilter.ALL,
+  );
   const callArgs = mockPrismaService.project.findMany.mock.calls[0][0] as {
     where: Record<string, unknown>;
   };
-  expect(JSON.stringify(callArgs.where)).not.toContain('archivedAt');
+  expect(JSON.stringify(callArgs.where)).not.toContain("archivedAt");
 });
 ```
 
@@ -285,6 +316,7 @@ it('archived=all does not filter on archivedAt', async () => {
 ```bash
 cd apps/api && pnpm exec vitest run src/projects/projects.service.spec.ts -t "findAll"
 ```
+
 Expected: FAIL — `archived` argument unknown / `archivedAt` not present.
 
 - [ ] **Step 3: Add `archived` to `query-projects.dto.ts`**
@@ -335,8 +367,9 @@ findAll(
 In `apps/api/src/projects/projects.service.ts`, locate `findAll` and:
 
 1. Import the helper at the top of the file:
+
 ```typescript
-import { ArchivedFilter, archivedWhere } from './dto/archived-filter.dto';
+import { ArchivedFilter, archivedWhere } from "./dto/archived-filter.dto";
 ```
 
 2. Add `archived` as the last parameter and AND-merge `archivedWhere(archived)` into the existing `where` clause. Example shape:
@@ -366,6 +399,7 @@ async findAll(
 ```bash
 cd apps/api && pnpm exec vitest run src/projects/projects.service.spec.ts
 ```
+
 Expected: PASS — all `findAll` tests green, including the three new ones.
 
 - [ ] **Step 7: Commit**
@@ -380,6 +414,7 @@ git commit -m "Filter /projects list by archived state"
 ## Task 5: Backend — `archive` and `unarchive` endpoints
 
 **Files:**
+
 - Modify: `apps/api/src/projects/projects.service.ts`
 - Modify: `apps/api/src/projects/projects.controller.ts`
 - Modify: `apps/api/src/projects/projects.module.ts`
@@ -391,8 +426,8 @@ git commit -m "Filter /projects list by archived state"
 Add to `apps/api/src/projects/projects.service.spec.ts`:
 
 ```typescript
-describe('archive / unarchive', () => {
-  const userCtx = { id: 'user-1', role: 'ADMIN' };
+describe("archive / unarchive", () => {
+  const userCtx = { id: "user-1", role: "ADMIN" };
 
   beforeEach(() => {
     mockPrismaService.project.findUnique.mockResolvedValue({
@@ -406,50 +441,50 @@ describe('archive / unarchive', () => {
     mockPrismaService.auditLog = { create: vi.fn() };
   });
 
-  it('archives a project: sets archivedAt + archivedById and writes audit log', async () => {
-    const result = await service.archive('project-1', userCtx);
+  it("archives a project: sets archivedAt + archivedById and writes audit log", async () => {
+    const result = await service.archive("project-1", userCtx);
     expect(mockPrismaService.project.update).toHaveBeenCalledWith({
-      where: { id: 'project-1' },
+      where: { id: "project-1" },
       data: expect.objectContaining({
         archivedAt: expect.any(Date),
-        archivedById: 'user-1',
+        archivedById: "user-1",
       }),
     });
     expect(result.archivedAt).toBeDefined();
   });
 
-  it('refuses to archive an already-archived project (409)', async () => {
+  it("refuses to archive an already-archived project (409)", async () => {
     mockPrismaService.project.findUnique.mockResolvedValue({
       ...mockProject,
       archivedAt: new Date(),
     });
-    await expect(service.archive('project-1', userCtx)).rejects.toThrow(
+    await expect(service.archive("project-1", userCtx)).rejects.toThrow(
       /déjà archivé|already archived/i,
     );
   });
 
-  it('unarchives a project: clears both fields', async () => {
+  it("unarchives a project: clears both fields", async () => {
     mockPrismaService.project.findUnique.mockResolvedValue({
       ...mockProject,
       archivedAt: new Date(),
-      archivedById: 'user-1',
+      archivedById: "user-1",
     });
-    await service.unarchive('project-1', userCtx);
+    await service.unarchive("project-1", userCtx);
     expect(mockPrismaService.project.update).toHaveBeenCalledWith({
-      where: { id: 'project-1' },
+      where: { id: "project-1" },
       data: { archivedAt: null, archivedById: null },
     });
   });
 
-  it('refuses to unarchive a non-archived project (409)', async () => {
-    await expect(service.unarchive('project-1', userCtx)).rejects.toThrow(
+  it("refuses to unarchive a non-archived project (409)", async () => {
+    await expect(service.unarchive("project-1", userCtx)).rejects.toThrow(
       /n'est pas archivé|not archived/i,
     );
   });
 
-  it('refuses archive when project not found (404)', async () => {
+  it("refuses archive when project not found (404)", async () => {
     mockPrismaService.project.findUnique.mockResolvedValue(null);
-    await expect(service.archive('missing', userCtx)).rejects.toThrow(
+    await expect(service.archive("missing", userCtx)).rejects.toThrow(
       /introuvable|not found/i,
     );
   });
@@ -461,6 +496,7 @@ describe('archive / unarchive', () => {
 ```bash
 cd apps/api && pnpm exec vitest run src/projects/projects.service.spec.ts -t "archive"
 ```
+
 Expected: FAIL — `service.archive`/`service.unarchive` not defined.
 
 - [ ] **Step 3: Implement `archive` and `unarchive` in the service**
@@ -592,6 +628,7 @@ unarchive(
 ```bash
 cd apps/api && pnpm exec vitest run src/projects
 ```
+
 Expected: PASS — all green.
 
 - [ ] **Step 7: Commit**
@@ -606,40 +643,50 @@ git commit -m "Add /projects/:id/archive and unarchive endpoints"
 ## Task 6: Backend — `canArchive` / `canUnarchive` computed flags
 
 **Files:**
+
 - Modify: `apps/api/src/projects/projects.service.ts`
 - Modify: `apps/api/src/projects/projects.service.spec.ts`
 
 - [ ] **Step 1: Write a failing test in `projects.service.spec.ts`**
 
 ```typescript
-describe('computed canArchive / canUnarchive', () => {
-  it('returns canArchive=true and canUnarchive=false on an active project for a manager', async () => {
+describe("computed canArchive / canUnarchive", () => {
+  it("returns canArchive=true and canUnarchive=false on an active project for a manager", async () => {
     mockPrismaService.project.findUnique.mockResolvedValue({
       ...mockProject,
       archivedAt: null,
     });
     // assume mockPermissionsService grants projects:archive
-    const result = await service.findOne('project-1', { id: 'user-1', role: 'MANAGER' });
+    const result = await service.findOne("project-1", {
+      id: "user-1",
+      role: "MANAGER",
+    });
     expect(result.canArchive).toBe(true);
     expect(result.canUnarchive).toBe(false);
   });
 
-  it('returns canArchive=false and canUnarchive=true on an archived project', async () => {
+  it("returns canArchive=false and canUnarchive=true on an archived project", async () => {
     mockPrismaService.project.findUnique.mockResolvedValue({
       ...mockProject,
       archivedAt: new Date(),
     });
-    const result = await service.findOne('project-1', { id: 'user-1', role: 'MANAGER' });
+    const result = await service.findOne("project-1", {
+      id: "user-1",
+      role: "MANAGER",
+    });
     expect(result.canArchive).toBe(false);
     expect(result.canUnarchive).toBe(true);
   });
 
-  it('returns both flags false when user lacks projects:archive', async () => {
+  it("returns both flags false when user lacks projects:archive", async () => {
     mockPrismaService.project.findUnique.mockResolvedValue({
       ...mockProject,
       archivedAt: null,
     });
-    const result = await service.findOne('project-1', { id: 'user-1', role: 'OBSERVER' });
+    const result = await service.findOne("project-1", {
+      id: "user-1",
+      role: "OBSERVER",
+    });
     expect(result.canArchive).toBe(false);
     expect(result.canUnarchive).toBe(false);
   });
@@ -653,6 +700,7 @@ describe('computed canArchive / canUnarchive', () => {
 ```bash
 cd apps/api && pnpm exec vitest run src/projects/projects.service.spec.ts -t "computed canArchive"
 ```
+
 Expected: FAIL — properties absent on result.
 
 - [ ] **Step 3: Compute the flags in `findOne` (and `findAll`)**
@@ -662,7 +710,7 @@ In `apps/api/src/projects/projects.service.ts`, in `findOne`, before returning, 
 ```typescript
 const hasArchivePerm = await this.permissionsService
   .getPermissionsForRole(user?.role ?? null)
-  .then((perms) => perms.includes('projects:archive'));
+  .then((perms) => perms.includes("projects:archive"));
 
 const canArchive = hasArchivePerm && project.archivedAt == null;
 const canUnarchive = hasArchivePerm && project.archivedAt != null;
@@ -677,6 +725,7 @@ Apply the same enrichment in `findAll` for each row in the response page (resolv
 ```bash
 cd apps/api && pnpm exec vitest run src/projects/projects.service.spec.ts
 ```
+
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
@@ -691,6 +740,7 @@ git commit -m "Return canArchive/canUnarchive computed flags"
 ## Task 7: Analytics — exclude archived from `/analytics`
 
 **Files:**
+
 - Modify: `apps/api/src/analytics/dto/analytics-query.dto.ts`
 - Modify: `apps/api/src/analytics/analytics.service.ts`
 - Modify: `apps/api/src/analytics/analytics.service.spec.ts`
@@ -700,9 +750,9 @@ git commit -m "Return canArchive/canUnarchive computed flags"
 Add to `apps/api/src/analytics/analytics.service.spec.ts`:
 
 ```typescript
-import { ArchivedFilter } from '../projects/dto/archived-filter.dto';
+import { ArchivedFilter } from "../projects/dto/archived-filter.dto";
 
-it('default analytics excludes archived projects (archivedAt: null on project where)', async () => {
+it("default analytics excludes archived projects (archivedAt: null on project where)", async () => {
   mockPrismaService.project.findMany.mockResolvedValue([]);
   mockPrismaService.task.findMany.mockResolvedValue([]);
   mockPrismaService.user.findMany.mockResolvedValue([]);
@@ -710,13 +760,15 @@ it('default analytics excludes archived projects (archivedAt: null on project wh
 
   await service.getAnalytics({});
 
-  const projectWhere = (mockPrismaService.project.findMany.mock.calls[0][0] as {
-    where: Record<string, unknown>;
-  }).where;
+  const projectWhere = (
+    mockPrismaService.project.findMany.mock.calls[0][0] as {
+      where: Record<string, unknown>;
+    }
+  ).where;
   expect(JSON.stringify(projectWhere)).toContain('"archivedAt":null');
 });
 
-it('archived=all does NOT filter on archivedAt', async () => {
+it("archived=all does NOT filter on archivedAt", async () => {
   mockPrismaService.project.findMany.mockResolvedValue([]);
   mockPrismaService.task.findMany.mockResolvedValue([]);
   mockPrismaService.user.findMany.mockResolvedValue([]);
@@ -724,10 +776,12 @@ it('archived=all does NOT filter on archivedAt', async () => {
 
   await service.getAnalytics({ archived: ArchivedFilter.ALL });
 
-  const projectWhere = (mockPrismaService.project.findMany.mock.calls[0][0] as {
-    where: Record<string, unknown>;
-  }).where;
-  expect(JSON.stringify(projectWhere)).not.toContain('archivedAt');
+  const projectWhere = (
+    mockPrismaService.project.findMany.mock.calls[0][0] as {
+      where: Record<string, unknown>;
+    }
+  ).where;
+  expect(JSON.stringify(projectWhere)).not.toContain("archivedAt");
 });
 ```
 
@@ -736,6 +790,7 @@ it('archived=all does NOT filter on archivedAt', async () => {
 ```bash
 cd apps/api && pnpm exec vitest run src/analytics/analytics.service.spec.ts
 ```
+
 Expected: FAIL.
 
 - [ ] **Step 3: Add `archived` to the DTO**
@@ -757,7 +812,10 @@ import { IsEnum, IsOptional } from 'class-validator';
 In `apps/api/src/analytics/analytics.service.ts`:
 
 ```typescript
-import { ArchivedFilter, archivedWhere } from '../projects/dto/archived-filter.dto';
+import {
+  ArchivedFilter,
+  archivedWhere,
+} from "../projects/dto/archived-filter.dto";
 ```
 
 In `getAnalytics`, after computing `projectScope`, build the merged where:
@@ -776,6 +834,7 @@ Pass `projectWhere` (not `projectScope`) into `getProjects`, `getTasks`, and `ge
 ```bash
 cd apps/api && pnpm exec vitest run src/analytics
 ```
+
 Expected: PASS — all 108+ analytics tests green, including the two new ones.
 
 - [ ] **Step 6: Commit**
@@ -790,6 +849,7 @@ git commit -m "Exclude archived projects from /analytics by default"
 ## Task 8: Analytics advanced — exclude archived everywhere else
 
 **Files (one per service):**
+
 - Modify each `apps/api/src/analytics/advanced/services/<name>.service.ts` and its spec
 
 For **each** of: `project-health`, `milestones-completion`, `recent-activity`, `tasks-breakdown`, `workload`, `snapshots-query`:
@@ -815,6 +875,7 @@ it('default excludes archived projects', async () => {
 ```bash
 cd apps/api && pnpm exec vitest run src/analytics/advanced/services/<name>.service.spec.ts
 ```
+
 Expected: FAIL.
 
 - [ ] **Step 3: Apply the filter**
@@ -828,6 +889,7 @@ If the controller endpoint has no DTO accepting `archived`, add it the same way 
 ```bash
 cd apps/api && pnpm exec vitest run src/analytics/advanced/services/<name>.service.spec.ts
 ```
+
 Expected: PASS.
 
 - [ ] **Step 5: Commit (one commit per service or one bundled — pick one)**
@@ -842,6 +904,7 @@ git commit -m "Exclude archived projects from advanced analytics"
 ## Task 9: Frontend — type + service updates
 
 **Files:**
+
 - Modify: `apps/web/src/types/project.ts` (or wherever `Project` type lives — discover with `grep -rn "interface Project\b\|type Project = " apps/web/src/types apps/web/src 2>/dev/null | head -5`)
 - Modify: `apps/web/src/services/projects.service.ts` (or equivalent)
 
@@ -862,12 +925,12 @@ export interface Project {
 In the projects axios service, add:
 
 ```typescript
-export type ArchivedFilter = 'active' | 'archived' | 'all';
+export type ArchivedFilter = "active" | "archived" | "all";
 
 export const projectsService = {
   // ... existing methods
-  list(params: { archived?: ArchivedFilter; /* other filters */ } = {}) {
-    return api.get('/projects', { params });
+  list(params: { archived?: ArchivedFilter /* other filters */ } = {}) {
+    return api.get("/projects", { params });
   },
   archive(id: string) {
     return api.post(`/projects/${id}/archive`).then((r) => r.data);
@@ -885,6 +948,7 @@ export const projectsService = {
 ```bash
 pnpm --filter web exec tsc --noEmit
 ```
+
 Expected: 0 errors.
 
 - [ ] **Step 4: Commit**
@@ -899,6 +963,7 @@ git commit -m "Add archive/unarchive client methods and Project flags"
 ## Task 10: Frontend — toggle + action menu on `/projects`
 
 **Files:**
+
 - Modify: `apps/web/app/[locale]/projects/page.tsx`
 
 - [ ] **Step 1: Add the toggle state + query**
@@ -931,11 +996,13 @@ In the JSX toolbar (next to the existing status filter):
 In the project row JSX, conditionally:
 
 ```tsx
-{project.archivedAt && (
-  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-200 text-gray-700">
-    Archivée
-  </span>
-)}
+{
+  project.archivedAt && (
+    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-200 text-gray-700">
+      Archivée
+    </span>
+  );
+}
 ```
 
 Apply `opacity-60` to the row container when `project.archivedAt` is set.
@@ -945,19 +1012,28 @@ Apply `opacity-60` to the row container when `project.archivedAt` is set.
 Wherever the existing per-row menu (Edit / Delete) is rendered:
 
 ```tsx
-{project.canArchive && (
-  <button onClick={() => onArchive(project.id)}>Archiver</button>
-)}
-{project.canUnarchive && (
-  <button onClick={() => onUnarchive(project.id)}>Désarchiver</button>
-)}
+{
+  project.canArchive && (
+    <button onClick={() => onArchive(project.id)}>Archiver</button>
+  );
+}
+{
+  project.canUnarchive && (
+    <button onClick={() => onUnarchive(project.id)}>Désarchiver</button>
+  );
+}
 ```
 
 Implement the handlers:
 
 ```typescript
 const onArchive = async (id: string) => {
-  if (!confirm("Archiver ce projet ? Il n'apparaîtra plus dans le suivi général mais restera accessible.")) return;
+  if (
+    !confirm(
+      "Archiver ce projet ? Il n'apparaîtra plus dans le suivi général mais restera accessible.",
+    )
+  )
+    return;
   await projectsService.archive(id);
   await loadProjects();
 };
@@ -975,6 +1051,7 @@ pnpm run dev
 ```
 
 Open https://localhost:3000/fr/projects:
+
 - Toggle off → only active projects.
 - Toggle on → archived rows visible, dimmed, with "Archivée" badge.
 - Archiver action on an active project → row disappears (toggle off) or dims (toggle on).
@@ -992,6 +1069,7 @@ git commit -m "Add archive toggle + actions to project list"
 ## Task 11: Frontend — archived banner on detail page
 
 **Files:**
+
 - Modify: `apps/web/app/[locale]/projects/[id]/page.tsx`
 
 - [ ] **Step 1: Render the banner**
@@ -999,25 +1077,30 @@ git commit -m "Add archive toggle + actions to project list"
 At the top of the page content, before the existing project detail panels:
 
 ```tsx
-{project.archivedAt && (
-  <div className="border-l-4 border-amber-500 bg-amber-50 p-4 mb-6 flex items-center justify-between">
-    <div>
-      <h3 className="font-semibold text-amber-800">Projet archivé</h3>
-      <p className="text-sm text-amber-700">
-        Archivé le {format(new Date(project.archivedAt), 'dd/MM/yyyy')}
-        {project.archivedBy ? ` par ${project.archivedBy.firstName} ${project.archivedBy.lastName}` : ''}.
-      </p>
+{
+  project.archivedAt && (
+    <div className="border-l-4 border-amber-500 bg-amber-50 p-4 mb-6 flex items-center justify-between">
+      <div>
+        <h3 className="font-semibold text-amber-800">Projet archivé</h3>
+        <p className="text-sm text-amber-700">
+          Archivé le {format(new Date(project.archivedAt), "dd/MM/yyyy")}
+          {project.archivedBy
+            ? ` par ${project.archivedBy.firstName} ${project.archivedBy.lastName}`
+            : ""}
+          .
+        </p>
+      </div>
+      {project.canUnarchive && (
+        <button
+          onClick={onUnarchive}
+          className="px-3 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700"
+        >
+          Désarchiver
+        </button>
+      )}
     </div>
-    {project.canUnarchive && (
-      <button
-        onClick={onUnarchive}
-        className="px-3 py-1.5 bg-amber-600 text-white rounded text-sm hover:bg-amber-700"
-      >
-        Désarchiver
-      </button>
-    )}
-  </div>
-)}
+  );
+}
 ```
 
 > If `project.archivedBy` (the relation) isn't included in the GET /:id response, decide between (a) extending the API response to include it (preferred — small, justifies one extra include), or (b) showing only the date.
@@ -1048,6 +1131,7 @@ git commit -m "Show archived banner with Désarchiver on project detail"
 ## Task 12: E2E — Playwright archive flow + Reports exclusion
 
 **Files:**
+
 - Create: `e2e/tests/projects/archive.spec.ts`
 
 - [ ] **Step 1: Write the spec**
@@ -1074,7 +1158,9 @@ test.describe("Project archive", () => {
 
       // 3. /projects (default) no longer lists it
       await page.goto("/fr/projects");
-      await expect(page.getByText(projectName)).not.toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(projectName)).not.toBeVisible({
+        timeout: 5000,
+      });
 
       // 4. Toggle on → reappears with "Archivée" badge
       await page.getByLabel(/projets archivés/i).check();
@@ -1092,7 +1178,9 @@ test.describe("Project archive", () => {
       expect(ids).not.toContain(projectId);
 
       // 7. Unarchive → restored to default list
-      const unarchived = await request.post(`/api/projects/${projectId}/unarchive`);
+      const unarchived = await request.post(
+        `/api/projects/${projectId}/unarchive`,
+      );
       expect(unarchived.ok()).toBeTruthy();
       await page.goto("/fr/projects");
       await expect(page.getByText(projectName)).toBeVisible();
@@ -1115,6 +1203,7 @@ test.describe("Project archive", () => {
 ```bash
 pnpm run test:e2e --grep="Project archive"
 ```
+
 Expected: PASS for both tests across `--project=admin` (and `--project=observateur` for the 403 case).
 
 - [ ] **Step 3: Commit**
@@ -1133,6 +1222,7 @@ git commit -m "E2E: project archive across admin + 403 on observateur"
 ```bash
 pnpm run build
 ```
+
 Expected: 3/3 turbo tasks successful.
 
 - [ ] **Step 2: Push**
@@ -1160,6 +1250,7 @@ ssh debian@92.222.35.25 'cd /opt/orchestra && git pull origin master \
 ssh debian@92.222.35.25 'docker ps --format "{{.Names}}\t{{.Status}}" | grep orchestr-a'
 curl -fsS -o /dev/null -w "API %{http_code} (401 expected)\n" https://orchestr-a.com/api/projects
 ```
+
 Expected: api + web containers `Up (healthy)`; API returns 401.
 
 ---
@@ -1167,6 +1258,7 @@ Expected: api + web containers `Up (healthy)`; API returns 401.
 ## Self-Review
 
 **Spec coverage:**
+
 - Data model (`archivedAt`, `archivedById`, index, relation): Task 1 ✓
 - Single `archived=active|archived|all` filter on list endpoints: Tasks 4, 7, 8 ✓
 - Direct routes ignore the flag: not a code change — covered by NOT applying the filter to `findOne`, task list, etc. (no task needed because we only add the filter where called out) ✓

@@ -15,7 +15,10 @@ describe("chunkArray", () => {
 
   it("returns chunks of exactly size when array divides evenly", () => {
     const result = chunkArray([1, 2, 3, 4, 5, 6], 3);
-    expect(result).toEqual([[1, 2, 3], [4, 5, 6]]);
+    expect(result).toEqual([
+      [1, 2, 3],
+      [4, 5, 6],
+    ]);
   });
 
   it("preserves element order across chunks", () => {
@@ -57,7 +60,11 @@ describe("chunkArray concurrency gate for PER-031", () => {
       });
     });
 
-    const results: Array<{ clientId: string; clientName: string; res: { projects: [] } | null }> = [];
+    const results: Array<{
+      clientId: string;
+      clientName: string;
+      res: { projects: [] } | null;
+    }> = [];
     for (const chunk of chunkArray(clients, CHUNK_SIZE)) {
       const chunkResults = await Promise.all(
         chunk.map((c) =>

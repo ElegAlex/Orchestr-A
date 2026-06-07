@@ -45,7 +45,7 @@ import { TaskListView } from "@/components/tasks/TaskListView";
 import api from "@/lib/api";
 import { ProjectIcon } from "@/components/ProjectIcon";
 import { UserAvatar } from "@/components/UserAvatar";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 const GanttChart = dynamic(() => import("@/components/GanttChart"), {
   ssr: false,
@@ -522,8 +522,7 @@ export default function ProjectDetailPage() {
       }
 
       // Refresh milestones (server-side filtered by project)
-      const projectMilestones =
-        await milestonesService.getByProject(projectId);
+      const projectMilestones = await milestonesService.getByProject(projectId);
       setMilestones(projectMilestones);
       setShowMilestoneModal(false);
       setEditingMilestone(null);
@@ -775,8 +774,7 @@ export default function ProjectDetailPage() {
       }
 
       // Refresh milestones (server-side filtered by project)
-      const projectMilestones =
-        await milestonesService.getByProject(projectId);
+      const projectMilestones = await milestonesService.getByProject(projectId);
       setMilestones(projectMilestones);
 
       setShowMilestonesPreview(false);
@@ -996,7 +994,9 @@ export default function ProjectDetailPage() {
       toast.success("Projet désarchivé");
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || "Erreur lors du désarchivage");
+      toast.error(
+        axiosError.response?.data?.message || "Erreur lors du désarchivage",
+      );
     }
   };
 
@@ -1101,7 +1101,8 @@ export default function ProjectDetailPage() {
                 Archivé le {format(new Date(project.archivedAt), "dd/MM/yyyy")}
                 {project.archivedBy
                   ? ` par ${project.archivedBy.firstName} ${project.archivedBy.lastName}`
-                  : ""}.
+                  : ""}
+                .
               </p>
             </div>
             {project.canUnarchive && (

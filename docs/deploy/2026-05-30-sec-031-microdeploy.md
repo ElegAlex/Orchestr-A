@@ -27,7 +27,7 @@ Continuity: next link after
 - **Prod HEAD baseline:** `ce0c729` (the 2026-05-29 micro-deploy point) — confirmed by SSH
   `git rev-parse HEAD` at Gate 0, no out-of-band deploy.
 - **Prod HEAD after deploy:** `aae2768` (detached HEAD = the deployed runtime SHA). **Note for audit:**
-  `origin/master` advances *past* `aae2768` with this session's two **docs-only** commits (this deploy
+  `origin/master` advances _past_ `aae2768` with this session's two **docs-only** commits (this deploy
   doc + the HANDOVER/PROGRESS_LOG refresh). Prod intentionally sits at `aae2768`; those later commits
   carry zero runtime change and are deliberately not redeployed. `prod git SHA ≠ origin/master HEAD` is
   expected, not drift.
@@ -43,8 +43,8 @@ Continuity: next link after
 
 ### The single runtime delta
 
-| Task | Fix SHA | Nature | Smoke posture |
-|------|---------|--------|---------------|
+| Task    | Fix SHA   | Nature                                                                                                                                                                                                                      | Smoke posture                                                                                          |
+| ------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | SEC-031 | `198160f` | `users.service.ts` `findAll` payload-restriction (rows preserved) + `getUsersByService`/`getUsersByRole` full `AccessScopeService.userReadWhere` where-scope; `users.controller.ts` threads `@CurrentUser()` into `findAll` | **behavioral** (`findAll` payload) + **code-presence** (`getUsersBy*` where-scope, not HTTP-reachable) |
 
 > **AMENDED AC (audit-relevant).** SEC-031's AC#2 was **HALTED and amended mid-execution** by the
@@ -62,12 +62,12 @@ Continuity: next link after
 `git rev-list --count ce0c729..aae2768` = **23**. But the **runtime image delta** is SEC-031 alone:
 
 - **Verified ✅** `git diff ce0c729..aae2768 --name-only` → only `apps/api/src/users/users.controller.ts`
-  + `apps/api/src/users/users.service.ts` are runtime app sources. The remainder:
-  `users.{controller,service}.spec.ts` (`*.spec.ts` excluded from `nest build`), `e2e/**` (Playwright,
-  not in the image), `.github/workflows/**` + `scripts/**` (CI, not in the image), and `backlog/**` +
-  `docs/**` (documentation).
+  - `apps/api/src/users/users.service.ts` are runtime app sources. The remainder:
+    `users.{controller,service}.spec.ts` (`*.spec.ts` excluded from `nest build`), `e2e/**` (Playwright,
+    not in the image), `.github/workflows/**` + `scripts/**` (CI, not in the image), and `backlog/**` +
+    `docs/**` (documentation).
 - **Verified ✅** `git diff ce0c729..aae2768 --stat -- packages/ apps/api/package.json package.json
-  pnpm-lock.yaml apps/api/tsconfig* apps/api/Dockerfile docker-compose.prod.yml` → **blank**. No image
+pnpm-lock.yaml apps/api/tsconfig* apps/api/Dockerfile docker-compose.prod.yml` → **blank**. No image
   build-input (shared packages, manifests, lockfile, tsconfig, Dockerfile, compose) changed besides the
   two users source files.
 
@@ -96,19 +96,19 @@ Identities (no secrets recorded here): ADMIN = `alexandre.berge@cpam92.fr`; non-
 
 ## Gate 0 — Sanity + baseline (read-only on prod)
 
-| Check | Result | Provenance |
-|-------|--------|-----------|
-| No IN_PROGRESS task in BACKLOG | `grep -c IN_PROGRESS` = 0 | Verified ✅ |
-| Master HEAD | `aae2768` (`git rev-parse HEAD`) | Verified ✅ |
-| `origin/master` | `aae2768` (push no-op) | Verified ✅ |
-| Prod current HEAD (SSH) | `ce0c729` — matches expected baseline, no out-of-band deploy | Verified ✅ |
-| Prod `_prisma_migrations` count | **56** — unchanged; SEC-031 has zero migration | Verified ✅ |
-| Local `packages/database/prisma/migrations` count | **56** — matches prod | Verified ✅ |
-| Running api image (anchor source) | `orchestra-api:latest = 603f07331516`, `Up ~18h (healthy)` | Verified ✅ |
-| Pre-deploy users row count | **41** | Verified ✅ |
-| Health baseline | `HTTP 200 {"status":"ok"}` | Verified ✅ |
-| Local build (`pnpm build`) | `3 successful, 3 total` (turbo), no TS error | Verified ✅ |
-| Deployed delta shape vs AC#2-amended | `findAll` payload-only (rows preserved); `getUsersBy*` `userReadWhere` scope | Verified ✅ (read of `users.service.ts`) |
+| Check                                             | Result                                                                       | Provenance                               |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------- |
+| No IN_PROGRESS task in BACKLOG                    | `grep -c IN_PROGRESS` = 0                                                    | Verified ✅                              |
+| Master HEAD                                       | `aae2768` (`git rev-parse HEAD`)                                             | Verified ✅                              |
+| `origin/master`                                   | `aae2768` (push no-op)                                                       | Verified ✅                              |
+| Prod current HEAD (SSH)                           | `ce0c729` — matches expected baseline, no out-of-band deploy                 | Verified ✅                              |
+| Prod `_prisma_migrations` count                   | **56** — unchanged; SEC-031 has zero migration                               | Verified ✅                              |
+| Local `packages/database/prisma/migrations` count | **56** — matches prod                                                        | Verified ✅                              |
+| Running api image (anchor source)                 | `orchestra-api:latest = 603f07331516`, `Up ~18h (healthy)`                   | Verified ✅                              |
+| Pre-deploy users row count                        | **41**                                                                       | Verified ✅                              |
+| Health baseline                                   | `HTTP 200 {"status":"ok"}`                                                   | Verified ✅                              |
+| Local build (`pnpm build`)                        | `3 successful, 3 total` (turbo), no TS error                                 | Verified ✅                              |
+| Deployed delta shape vs AC#2-amended              | `findAll` payload-only (rows preserved); `getUsersBy*` `userReadWhere` scope | Verified ✅ (read of `users.service.ts`) |
 
 ---
 
@@ -137,24 +137,24 @@ Identities (no secrets recorded here): ADMIN = `alexandre.berge@cpam92.fr`; non-
 
 ## Gate 3 — Smokes
 
-| Smoke | Method | Result | Provenance |
-|-------|--------|--------|-----------|
-| Running image ≠ anchor | artifact | running `d20fd28761d6`, anchor `603f07331516` | Verified ✅ |
-| `userReadWhere` in deployed `users.service.js` | grep on compiled image (`/app/apps/api/dist/users/users.service.js`) | **4 hits** | Verified ✅ |
-| `getUsersByService` / `getUsersByRole` present | grep | 2 / 2 hits | Verified ✅ |
-| Controller threads `currentUser` | grep on `users.controller.js` | **7 hits** | Verified ✅ |
-| `/api/health` | curl | **HTTP 200** `{"status":"ok"}` | Verified ✅ |
-| `GET /api/users` unauthenticated | curl | **HTTP 401** (guard intact) | Verified ✅ |
-| **SEC-031 BEHAVIORAL — `findAll` payload shaping** | authenticated GET (operator creds) | see below | **Verified ✅** |
-| **SEC-031 — `getUsersBy*` where-scope** | n/a | helpers have **no controller route and no caller** (not HTTP-reachable) → code-presence only | **Inferred 🟡** |
+| Smoke                                              | Method                                                               | Result                                                                                       | Provenance      |
+| -------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------- |
+| Running image ≠ anchor                             | artifact                                                             | running `d20fd28761d6`, anchor `603f07331516`                                                | Verified ✅     |
+| `userReadWhere` in deployed `users.service.js`     | grep on compiled image (`/app/apps/api/dist/users/users.service.js`) | **4 hits**                                                                                   | Verified ✅     |
+| `getUsersByService` / `getUsersByRole` present     | grep                                                                 | 2 / 2 hits                                                                                   | Verified ✅     |
+| Controller threads `currentUser`                   | grep on `users.controller.js`                                        | **7 hits**                                                                                   | Verified ✅     |
+| `/api/health`                                      | curl                                                                 | **HTTP 200** `{"status":"ok"}`                                                               | Verified ✅     |
+| `GET /api/users` unauthenticated                   | curl                                                                 | **HTTP 401** (guard intact)                                                                  | Verified ✅     |
+| **SEC-031 BEHAVIORAL — `findAll` payload shaping** | authenticated GET (operator creds)                                   | see below                                                                                    | **Verified ✅** |
+| **SEC-031 — `getUsersBy*` where-scope**            | n/a                                                                  | helpers have **no controller route and no caller** (not HTTP-reachable) → code-presence only | **Inferred 🟡** |
 
 ### Behavioral witness — `GET /api/users?limit=100` (the AC#2-amended delta)
 
 Logged in via `POST /api/auth/login` with operator-provided credentials, then:
 
-| Caller | rows returned | `email` in payload | `skills` in payload |
-|--------|---------------|--------------------|---------------------|
-| **ADMIN** (`alexandre.berge`, `users:manage`) | all (full directory) | **present** ✅ | **present** ✅ |
+| Caller                                           | rows returned             | `email` in payload       | `skills` in payload      |
+| ------------------------------------------------ | ------------------------- | ------------------------ | ------------------------ |
+| **ADMIN** (`alexandre.berge`, `users:manage`)    | all (full directory)      | **present** ✅           | **present** ✅           |
 | **non-privileged** (`rayan.sifi`, `CONTRIB_CFA`) | **all rows preserved** ✅ | **absent (stripped)** ✅ | **absent (stripped)** ✅ |
 
 This is exactly SEC-031 AC#2-amended: the non-privileged caller still sees the **full row set**
@@ -172,13 +172,13 @@ not exercised at runtime. (Same controller-unreachable pattern as COR-038 in the
 
 ## Gate 4 — Health + closure — ✅ COMPLETE
 
-| Check | Result | Provenance |
-|-------|--------|-----------|
-| Public health | `{"status":"ok"}` HTTP 200, uptime fresh post-restart | Verified ✅ |
-| Container state | `Up (healthy)` on new image `d20fd28761d6` | Verified ✅ |
-| Log scan (`--tail 200`, `error\|exception\|500\|unhandled\|stacktrace`) | **0** matches | Verified ✅ |
-| Post-deploy users count | **41** — IDENTICAL to Gate-0 | Verified ✅ |
-| `_prisma_migrations` count | **56** — unchanged | Verified ✅ |
+| Check                                                                   | Result                                                | Provenance  |
+| ----------------------------------------------------------------------- | ----------------------------------------------------- | ----------- |
+| Public health                                                           | `{"status":"ok"}` HTTP 200, uptime fresh post-restart | Verified ✅ |
+| Container state                                                         | `Up (healthy)` on new image `d20fd28761d6`            | Verified ✅ |
+| Log scan (`--tail 200`, `error\|exception\|500\|unhandled\|stacktrace`) | **0** matches                                         | Verified ✅ |
+| Post-deploy users count                                                 | **41** — IDENTICAL to Gate-0                          | Verified ✅ |
+| `_prisma_migrations` count                                              | **56** — unchanged                                    | Verified ✅ |
 
 ---
 

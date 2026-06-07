@@ -246,7 +246,9 @@ test.describe("Security — auth hardening (SEC-03/04/05)", () => {
       .headersArray()
       .filter((h) => h.name.toLowerCase() === "set-cookie")
       .map((h) => h.value)) {
-      const match = header.match(/(?:__Host-)?orchestr_a_refresh_token=([^;]+)/);
+      const match = header.match(
+        /(?:__Host-)?orchestr_a_refresh_token=([^;]+)/,
+      );
       if (match) {
         rotatedRefreshToken = decodeURIComponent(match[1]);
         break;

@@ -9,7 +9,7 @@ import {
 } from "@/services/users.service";
 import { usePermissions } from "@/hooks/usePermissions";
 import { UserAvatar } from "@/components/UserAvatar";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 function PresenceList({
   users,

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { Client, CreateClientDto, UpdateClientDto } from "@/types";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface ClientModalProps {
   isOpen: boolean;

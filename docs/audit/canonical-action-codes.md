@@ -13,11 +13,11 @@ free-string by adding a constraint and inadvertently break the audit trail.
 
 ## Source of truth (write side)
 
-| Concern | Source of truth | Mechanism |
-| --- | --- | --- |
-| `action` value set | `apps/api/src/audit/audit-action.enum.ts` — `enum AuditAction` | Both writers (`AuditService`, `AuditPersistenceService`) type their `action` parameter as `AuditAction`; a typo'd code is a **compile error**. The string value of each member IS the persisted code. |
-| `entityType` value set | `ENTITY_TYPE_BY_ACTION` in `apps/api/src/audit/audit.service.ts` | A `Record<AuditAction, …>` exhaustive map: every action must declare its subject type or the file does not compile. `entityType` is derived from the action, never free-typed. |
-| `payload` shape per action | `apps/api/src/audit/payload-schemas.ts` (DAT-021) | Zod registry keyed by `AuditAction`; `audit-payload-registry.compile-witness.ts` makes a missing action/entityType/payload a compile error (the OBS-024 triple-intersection witness). |
+| Concern                    | Source of truth                                                  | Mechanism                                                                                                                                                                                             |
+| -------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `action` value set         | `apps/api/src/audit/audit-action.enum.ts` — `enum AuditAction`   | Both writers (`AuditService`, `AuditPersistenceService`) type their `action` parameter as `AuditAction`; a typo'd code is a **compile error**. The string value of each member IS the persisted code. |
+| `entityType` value set     | `ENTITY_TYPE_BY_ACTION` in `apps/api/src/audit/audit.service.ts` | A `Record<AuditAction, …>` exhaustive map: every action must declare its subject type or the file does not compile. `entityType` is derived from the action, never free-typed.                        |
+| `payload` shape per action | `apps/api/src/audit/payload-schemas.ts` (DAT-021)                | Zod registry keyed by `AuditAction`; `audit-payload-registry.compile-witness.ts` makes a missing action/entityType/payload a compile error (the OBS-024 triple-intersection witness).                 |
 
 There is **no untyped write path** into these columns:
 

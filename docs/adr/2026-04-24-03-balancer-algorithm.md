@@ -24,18 +24,18 @@ Heuristique gloutonne avec départage stable. Pas de programmation par contraint
 ```typescript
 // apps/api/src/predefined-tasks/planning-balancer.types.ts
 
-export type BalancerPeriod = 'MORNING' | 'AFTERNOON' | 'FULL_DAY';
+export type BalancerPeriod = "MORNING" | "AFTERNOON" | "FULL_DAY";
 
 export interface BalancerOccurrence {
   taskId: string;
-  weight: number;       // 1..5, pondération récupérée depuis PredefinedTask.weight
+  weight: number; // 1..5, pondération récupérée depuis PredefinedTask.weight
   date: Date;
   period: BalancerPeriod;
 }
 
 export interface BalancerAgent {
   userId: string;
-  skills?: string[];    // codes skills détenus
+  skills?: string[]; // codes skills détenus
 }
 
 export interface BalancerAbsence {
@@ -62,13 +62,13 @@ export interface BalancerUnassigned {
   taskId: string;
   date: Date;
   period: BalancerPeriod;
-  reason: 'NO_ELIGIBLE_AGENT';
+  reason: "NO_ELIGIBLE_AGENT";
 }
 
 export interface BalancerOutput {
   proposedAssignments: BalancerProposedAssignment[];
   workloadByAgent: Array<{ userId: string; weightedLoad: number }>;
-  equityRatio: number;                       // 1 - σ/µ, plus proche de 1 = meilleur équilibre
+  equityRatio: number; // 1 - σ/µ, plus proche de 1 = meilleur équilibre
   unassignedOccurrences: BalancerUnassigned[];
 }
 ```

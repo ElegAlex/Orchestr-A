@@ -14,7 +14,7 @@ import {
 import toast from "react-hot-toast";
 import { RecurringRulesModal } from "@/components/predefined-tasks/RecurringRulesModal";
 import { WeightInput } from "@/components/predefined-tasks/WeightInput";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 const DURATION_LABELS: Record<TaskDuration, string> = {
   HALF_DAY: "Demi-journée",

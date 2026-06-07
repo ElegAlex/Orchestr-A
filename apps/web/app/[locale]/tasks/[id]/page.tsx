@@ -31,7 +31,7 @@ import toast from "react-hot-toast";
 import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import { UserAvatar } from "@/components/UserAvatar";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface TaskMilestone {
   name: string;

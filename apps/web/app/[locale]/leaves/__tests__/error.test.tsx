@@ -27,7 +27,9 @@ describe("OBS-018 — LeavesError boundary component", () => {
 
   it("OBS-018 — renders a Réessayer retry button", () => {
     render(<LeavesError error={testError} reset={mockReset} />);
-    expect(screen.getByRole("button", { name: /Réessayer/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Réessayer/i }),
+    ).toBeInTheDocument();
   });
 
   it("OBS-018 — calls reset when the retry button is clicked", () => {

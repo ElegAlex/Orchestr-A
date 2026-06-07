@@ -78,10 +78,7 @@ export function ActivityGrid({
   const now = useMemo(() => new Date(), []);
 
   // Map userId → UserSummary pour résolution rapide
-  const userMap = useMemo(
-    () => new Map(users.map((u) => [u.id, u])),
-    [users],
-  );
+  const userMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
 
   // Map (predefinedTaskId + date-iso) → assignments[]
   const assignmentIndex = useMemo(() => {
@@ -255,10 +252,19 @@ export function ActivityGrid({
                               onClick={() => onAddUsers(task.id, dateIso)}
                               className="no-print text-xs text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded px-2 py-0.5 transition"
                             >
-                              + {t("activityGrid.addUsers" as Parameters<typeof t>[0])}
+                              +{" "}
+                              {t(
+                                "activityGrid.addUsers" as Parameters<
+                                  typeof t
+                                >[0],
+                              )}
                             </button>
                           ) : (
-                            t("activityGrid.emptyCell" as Parameters<typeof t>[0])
+                            t(
+                              "activityGrid.emptyCell" as Parameters<
+                                typeof t
+                              >[0],
+                            )
                           )}
                         </td>
                       );
@@ -287,9 +293,14 @@ export function ActivityGrid({
                           ))}
                           {overflow > 0 && (
                             <li className="pl-7 text-[10px] text-zinc-500 italic">
-                              {t("activityGrid.moreUsers" as Parameters<typeof t>[0], {
-                                count: overflow,
-                              })}
+                              {t(
+                                "activityGrid.moreUsers" as Parameters<
+                                  typeof t
+                                >[0],
+                                {
+                                  count: overflow,
+                                },
+                              )}
                             </li>
                           )}
                           {canAssign && onAddUsers && (
@@ -299,7 +310,12 @@ export function ActivityGrid({
                                 onClick={() => onAddUsers(task.id, dateIso)}
                                 className="text-xs text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded px-2 py-0.5 transition"
                               >
-                                + {t("activityGrid.addUsers" as Parameters<typeof t>[0])}
+                                +{" "}
+                                {t(
+                                  "activityGrid.addUsers" as Parameters<
+                                    typeof t
+                                  >[0],
+                                )}
                               </button>
                             </li>
                           )}

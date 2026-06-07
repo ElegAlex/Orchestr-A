@@ -1,9 +1,6 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
-import {
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // ─── Mock recharts ───────────────────────────────────────────────────────────
 // ResponsiveContainer returns zero dimensions in jsdom; wrapping with a

@@ -15,7 +15,7 @@ import {
   ThirdPartyType,
   UpdateThirdPartyDto,
 } from "@/types";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 const TYPE_LABELS: Record<ThirdPartyType, string> = {
   [ThirdPartyType.EXTERNAL_PROVIDER]: "Prestataire externe",

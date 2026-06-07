@@ -112,10 +112,7 @@ test.describe("Planning — congé demi-journée", () => {
       `/api/leaves/${createdLeaveId}/approve`,
       { headers: authHeaders },
     );
-    expect(
-      approveRes.ok(),
-      `approve OK (${approveRes.status()})`,
-    ).toBeTruthy();
+    expect(approveRes.ok(), `approve OK (${approveRes.status()})`).toBeTruthy();
 
     // 4. Une tâche le même jour, assignée au même utilisateur.
     const title = `E2E-HALF-${Date.now()}`;
@@ -131,10 +128,7 @@ test.describe("Planning — congé demi-journée", () => {
         endDate: mondayISO,
       },
     });
-    expect(
-      taskRes.ok(),
-      `POST /tasks OK (${taskRes.status()})`,
-    ).toBeTruthy();
+    expect(taskRes.ok(), `POST /tasks OK (${taskRes.status()})`).toBeTruthy();
     createdTaskId = (await taskRes.json()).id as string;
 
     // 5. Charger le planning et vérifier.

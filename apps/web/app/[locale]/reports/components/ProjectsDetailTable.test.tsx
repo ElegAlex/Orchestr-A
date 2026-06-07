@@ -19,10 +19,24 @@ jest.mock("next/navigation", () => ({
 }));
 
 // Mock next/link — renders as <a> with the href prop
-jest.mock("next/link", () =>
-  function MockLink({ href, children, ...rest }: { href: string; children: React.ReactNode; [key: string]: unknown }) {
-    return <a href={href} {...rest}>{children}</a>;
-  },
+jest.mock(
+  "next/link",
+  () =>
+    function MockLink({
+      href,
+      children,
+      ...rest
+    }: {
+      href: string;
+      children: React.ReactNode;
+      [key: string]: unknown;
+    }) {
+      return (
+        <a href={href} {...rest}>
+          {children}
+        </a>
+      );
+    },
 );
 
 // Mock @/lib/api — useEffect calls api.get but we don't need data for this test
@@ -61,10 +75,7 @@ describe("ProjectsDetailTable — COR-045 locale-prefixed navigation", () => {
   it("renders project Link href with /{locale}/projects/{id}", async () => {
     await act(async () => {
       render(
-        <ProjectsDetailTable
-          projects={[baseProject]}
-          dateRange="2026-01"
-        />,
+        <ProjectsDetailTable projects={[baseProject]} dateRange="2026-01" />,
       );
     });
 

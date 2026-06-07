@@ -7,7 +7,7 @@ import type {
   GanttDependency,
 } from "@/components/gantt";
 import { TaskStatus } from "@/types";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 const today = new Date();
 const d = (offset: number) => {

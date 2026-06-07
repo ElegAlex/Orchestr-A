@@ -1,45 +1,49 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { RecurringRulesModal } from "../RecurringRulesModal";
-import { PredefinedTask, PredefinedTaskRecurringRule } from "@/services/predefined-tasks.service";
+import {
+  PredefinedTask,
+  PredefinedTaskRecurringRule,
+} from "@/services/predefined-tasks.service";
 
 // Mock next-intl (same pattern as WeightInput.test.tsx)
 jest.mock("next-intl", () => ({
-  useTranslations: () =>
-    (key: string) => {
-      const translations: Record<string, string> = {
-        // weight (existing, keep)
-        "weight.label": "Poids / charge",
-        "weight.hint": "Pondération utilisée par l'équilibrage automatique",
-        // recurrence type
-        "recurrence.type.label": "Type de récurrence",
-        "recurrence.type.WEEKLY": "Hebdomadaire",
-        "recurrence.type.MONTHLY_DAY": "Mensuelle à date fixe",
-        "recurrence.type.MONTHLY_ORDINAL": "Mensuelle ordinale",
-        // monthlyDay
-        "recurrence.monthlyDay.label": "Jour du mois",
-        "recurrence.monthlyDay.hint": "Si le jour n'existe pas, l'assignation est clampée au dernier jour du mois",
-        // monthlyOrdinal
-        "recurrence.monthlyOrdinal.label": "Occurrence dans le mois",
-        "recurrence.monthlyOrdinal.options.1": "1er",
-        "recurrence.monthlyOrdinal.options.2": "2e",
-        "recurrence.monthlyOrdinal.options.3": "3e",
-        "recurrence.monthlyOrdinal.options.4": "4e",
-        "recurrence.monthlyOrdinal.options.5": "Dernier",
-        // dayOfWeek
-        "recurrence.dayOfWeek.label": "Jour de la semaine",
-        "recurrence.dayOfWeek.options.MONDAY": "Lundi",
-        "recurrence.dayOfWeek.options.TUESDAY": "Mardi",
-        "recurrence.dayOfWeek.options.WEDNESDAY": "Mercredi",
-        "recurrence.dayOfWeek.options.THURSDAY": "Jeudi",
-        "recurrence.dayOfWeek.options.FRIDAY": "Vendredi",
-        "recurrence.dayOfWeek.options.SATURDAY": "Samedi",
-        "recurrence.dayOfWeek.options.SUNDAY": "Dimanche",
-        // weekInterval
-        "recurrence.weekInterval.label": "Fréquence",
-        "recurrence.weekInterval.hint": "1 = chaque semaine, 2 = toutes les 2 semaines, etc.",
-      };
-      return translations[key] ?? key;
-    },
+  useTranslations: () => (key: string) => {
+    const translations: Record<string, string> = {
+      // weight (existing, keep)
+      "weight.label": "Poids / charge",
+      "weight.hint": "Pondération utilisée par l'équilibrage automatique",
+      // recurrence type
+      "recurrence.type.label": "Type de récurrence",
+      "recurrence.type.WEEKLY": "Hebdomadaire",
+      "recurrence.type.MONTHLY_DAY": "Mensuelle à date fixe",
+      "recurrence.type.MONTHLY_ORDINAL": "Mensuelle ordinale",
+      // monthlyDay
+      "recurrence.monthlyDay.label": "Jour du mois",
+      "recurrence.monthlyDay.hint":
+        "Si le jour n'existe pas, l'assignation est clampée au dernier jour du mois",
+      // monthlyOrdinal
+      "recurrence.monthlyOrdinal.label": "Occurrence dans le mois",
+      "recurrence.monthlyOrdinal.options.1": "1er",
+      "recurrence.monthlyOrdinal.options.2": "2e",
+      "recurrence.monthlyOrdinal.options.3": "3e",
+      "recurrence.monthlyOrdinal.options.4": "4e",
+      "recurrence.monthlyOrdinal.options.5": "Dernier",
+      // dayOfWeek
+      "recurrence.dayOfWeek.label": "Jour de la semaine",
+      "recurrence.dayOfWeek.options.MONDAY": "Lundi",
+      "recurrence.dayOfWeek.options.TUESDAY": "Mardi",
+      "recurrence.dayOfWeek.options.WEDNESDAY": "Mercredi",
+      "recurrence.dayOfWeek.options.THURSDAY": "Jeudi",
+      "recurrence.dayOfWeek.options.FRIDAY": "Vendredi",
+      "recurrence.dayOfWeek.options.SATURDAY": "Samedi",
+      "recurrence.dayOfWeek.options.SUNDAY": "Dimanche",
+      // weekInterval
+      "recurrence.weekInterval.label": "Fréquence",
+      "recurrence.weekInterval.hint":
+        "1 = chaque semaine, 2 = toutes les 2 semaines, etc.",
+    };
+    return translations[key] ?? key;
+  },
 }));
 
 // Mock usePermissions
@@ -67,9 +71,12 @@ jest.mock("@/services/predefined-tasks.service", () => ({
   ...jest.requireActual("@/services/predefined-tasks.service"),
   predefinedTasksService: {
     bulkCreateRecurringRules: (...args: unknown[]) => mockBulkCreate(...args),
-    createRecurringRule: (...args: unknown[]) => mockCreateRecurringRule(...args),
-    updateRecurringRule: (...args: unknown[]) => mockUpdateRecurringRule(...args),
-    deleteRecurringRule: (...args: unknown[]) => mockDeleteRecurringRule(...args),
+    createRecurringRule: (...args: unknown[]) =>
+      mockCreateRecurringRule(...args),
+    updateRecurringRule: (...args: unknown[]) =>
+      mockUpdateRecurringRule(...args),
+    deleteRecurringRule: (...args: unknown[]) =>
+      mockDeleteRecurringRule(...args),
   },
 }));
 
@@ -165,7 +172,9 @@ describe("RecurringRulesModal — recurrence type extension", () => {
     renderModal();
     await openCreateForm();
 
-    const monthlyDayRadio = screen.getByRole("radio", { name: /mensuelle à date fixe/i });
+    const monthlyDayRadio = screen.getByRole("radio", {
+      name: /mensuelle à date fixe/i,
+    });
     fireEvent.click(monthlyDayRadio);
 
     // monthlyDayOfMonth input appears
@@ -184,12 +193,18 @@ describe("RecurringRulesModal — recurrence type extension", () => {
     renderModal();
     await openCreateForm();
 
-    const ordinalRadio = screen.getByRole("radio", { name: /mensuelle ordinale/i });
+    const ordinalRadio = screen.getByRole("radio", {
+      name: /mensuelle ordinale/i,
+    });
     fireEvent.click(ordinalRadio);
 
     // monthlyOrdinal select
-    expect(screen.getByLabelText(/occurrence dans le mois/i)).toBeInTheDocument();
-    const ordinalSelect = screen.getByLabelText(/occurrence dans le mois/i) as HTMLSelectElement;
+    expect(
+      screen.getByLabelText(/occurrence dans le mois/i),
+    ).toBeInTheDocument();
+    const ordinalSelect = screen.getByLabelText(
+      /occurrence dans le mois/i,
+    ) as HTMLSelectElement;
     expect(ordinalSelect.tagName).toBe("SELECT");
     // Has ordinal options
     expect(screen.getByRole("option", { name: "1er" })).toBeInTheDocument();
@@ -211,7 +226,9 @@ describe("RecurringRulesModal — recurrence type extension", () => {
     await openCreateForm();
 
     // Switch to MONTHLY_DAY
-    fireEvent.click(screen.getByRole("radio", { name: /mensuelle à date fixe/i }));
+    fireEvent.click(
+      screen.getByRole("radio", { name: /mensuelle à date fixe/i }),
+    );
 
     // Select user (checkbox)
     const checkbox = screen.getByRole("checkbox", { name: /alice dupont/i });
@@ -235,7 +252,10 @@ describe("RecurringRulesModal — recurrence type extension", () => {
     });
 
     // Ensure dayOfWeek and weekInterval are absent (or null)
-    const call = mockCreateRecurringRule.mock.calls[0][0] as Record<string, unknown>;
+    const call = mockCreateRecurringRule.mock.calls[0][0] as Record<
+      string,
+      unknown
+    >;
     expect(call.dayOfWeek == null).toBe(true);
     expect(call.weekInterval == null).toBe(true);
   });
@@ -288,7 +308,9 @@ describe("RecurringRulesModal — recurrence type extension", () => {
     });
 
     // MONTHLY_DAY radio is checked
-    const monthlyDayRadio = screen.getByRole("radio", { name: /mensuelle à date fixe/i });
+    const monthlyDayRadio = screen.getByRole("radio", {
+      name: /mensuelle à date fixe/i,
+    });
     expect(monthlyDayRadio).toBeChecked();
 
     // monthlyDayOfMonth is pre-filled with 15

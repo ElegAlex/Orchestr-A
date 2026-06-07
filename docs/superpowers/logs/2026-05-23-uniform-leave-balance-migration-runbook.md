@@ -63,9 +63,9 @@ Expected output:
   types, grouped by status × year. Use this to estimate operational
   impact if the cap is silently lost.
 - **§4 Uniform-balance coverage cross-check:** for each affected `(type,
-  year)` and current/next year, the count of global and per-user
+year)` and current/next year, the count of global and per-user
   LeaveBalance rows. **Any row with `global_balances=0 AND
-  user_balances=0` is a blocker**: dropping the cap leaves users
+user_balances=0` is a blocker**: dropping the cap leaves users
   unbounded for that slice until an allocation is seeded. If this
   appears, seed the missing global before continuing (see step 2a).
 - **§5 Backup table created and matches source.** The script will
@@ -189,6 +189,7 @@ SELECT COUNT(*) FROM leave_type_configs_max_days_backup_20260523
 ```
 
 For 5.1 and 5.2, if the count is non-zero, decide:
+
 - Backfill (UPDATE the rows to match the new invariant), or
 - Accept the historical drift (document it in the closeout).
 

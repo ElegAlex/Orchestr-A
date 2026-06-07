@@ -6,7 +6,7 @@ import { MainLayout } from "@/components/MainLayout";
 const PlanningView = dynamic(
   () =>
     import("@/components/planning/PlanningView").then((m) => m.PlanningView),
-  { ssr: false }
+  { ssr: false },
 );
 
 export default function PlanningPage() {

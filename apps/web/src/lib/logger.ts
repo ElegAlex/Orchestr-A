@@ -14,7 +14,13 @@
  * so that Jest spies can intercept them in tests.
  */
 
-const PII_KEYS = new Set(["token", "password", "email", "accessToken", "refreshToken"]);
+const PII_KEYS = new Set([
+  "token",
+  "password",
+  "email",
+  "accessToken",
+  "refreshToken",
+]);
 
 /**
  * Recursively scrub PII keys from a plain object.

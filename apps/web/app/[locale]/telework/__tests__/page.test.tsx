@@ -169,9 +169,7 @@ describe("TST-023 — TeleworkPage: RBAC gated affordances", () => {
           expect(
             screen.getByText(/navigation\.previousMonth/),
           ).toBeInTheDocument();
-          expect(
-            screen.getByText(/navigation\.nextMonth/),
-          ).toBeInTheDocument();
+          expect(screen.getByText(/navigation\.nextMonth/)).toBeInTheDocument();
         },
         { timeout: 10000 },
       );

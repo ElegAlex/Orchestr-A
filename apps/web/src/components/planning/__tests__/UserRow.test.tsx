@@ -11,7 +11,10 @@ import React from "react";
 import { render } from "@testing-library/react";
 import { UserRow } from "../UserRow";
 import type { User } from "@/types";
-import type { ServiceGroup, DayCell as DayCellData } from "@/hooks/usePlanningData";
+import type {
+  ServiceGroup,
+  DayCell as DayCellData,
+} from "@/hooks/usePlanningData";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -50,7 +53,12 @@ const user: User = {
   lastName: "Dupont",
   email: "alice@example.com",
   isActive: true,
-  role: { id: "r1", name: "CONTRIBUTEUR", label: "Contributeur", description: null },
+  role: {
+    id: "r1",
+    name: "CONTRIBUTEUR",
+    label: "Contributeur",
+    description: null,
+  },
 } as User;
 
 const group: ServiceGroup = {

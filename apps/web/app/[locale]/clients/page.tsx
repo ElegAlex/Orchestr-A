@@ -11,8 +11,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { clientsService } from "@/services/clients.service";
 import { ExportService } from "@/services/export.service";
 import { Client, CreateClientDto, UpdateClientDto } from "@/types";
-import { logger } from '@/lib/logger';
-import { chunkArray } from '@/lib/chunk';
+import { logger } from "@/lib/logger";
+import { chunkArray } from "@/lib/chunk";
 
 export default function ClientsPage() {
   const tc = useTranslations("common");
@@ -148,7 +148,9 @@ export default function ClientsPage() {
       const results: Array<{
         clientId: string;
         clientName: string;
-        res: Awaited<ReturnType<typeof clientsService.getProjectsWithSummary>> | null;
+        res: Awaited<
+          ReturnType<typeof clientsService.getProjectsWithSummary>
+        > | null;
       }> = [];
       for (const chunk of chunkArray(cap, 10)) {
         const chunkResults = await Promise.all(

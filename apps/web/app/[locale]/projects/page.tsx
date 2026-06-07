@@ -23,7 +23,7 @@ import toast from "react-hot-toast";
 import { clientsService } from "@/services/clients.service";
 import { Client } from "@/types";
 import { ClientSelector } from "@/components/clients/ClientSelector";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -127,7 +127,7 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  // COR-044: hasPermission added — prevents stale closure when permissions change
+    // COR-044: hasPermission added — prevents stale closure when permissions change
   }, [user, memberMeFilter, showArchived, hasPermission]);
 
   // Single mount + dependency effect: load projects and clients in parallel.
@@ -335,7 +335,9 @@ export default function ProjectsPage() {
       await fetchProjects();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || "Erreur lors de l'archivage");
+      toast.error(
+        axiosError.response?.data?.message || "Erreur lors de l'archivage",
+      );
     }
   };
 
@@ -347,7 +349,9 @@ export default function ProjectsPage() {
       await fetchProjects();
     } catch (err) {
       const axiosError = err as { response?: { data?: { message?: string } } };
-      toast.error(axiosError.response?.data?.message || "Erreur lors du désarchivage");
+      toast.error(
+        axiosError.response?.data?.message || "Erreur lors du désarchivage",
+      );
     }
   };
 

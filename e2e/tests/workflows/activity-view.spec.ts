@@ -45,9 +45,7 @@ test.describe("E5 — Vue Activité (bascule + rendu)", () => {
     ).toBeVisible();
 
     // Bouton Imprimer présent
-    await expect(
-      page.getByRole("button", { name: /imprimer/i }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /imprimer/i })).toBeVisible();
 
     // Bascule retour vers Semaine
     const weekBtn = page.getByRole("button", { name: /^semaine$/i });

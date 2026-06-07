@@ -15,7 +15,7 @@ import {
   CreateClientDto,
   UpdateClientDto,
 } from "@/types";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 type Tab = "infos" | "projets";
 

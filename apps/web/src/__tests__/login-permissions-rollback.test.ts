@@ -7,7 +7,11 @@
  *   2. useAuthStore reflects a logged-out state.
  */
 
-import { authService, AUTH_TOKEN_KEY, AUTH_USER_DISPLAY_KEY } from "../services/auth.service";
+import {
+  authService,
+  AUTH_TOKEN_KEY,
+  AUTH_USER_DISPLAY_KEY,
+} from "../services/auth.service";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 
@@ -155,7 +159,10 @@ describe("COR-041 — login page: permissions-fetch failure rolls back the persi
 
     expect(localStorageStore[AUTH_TOKEN_KEY]).toBe("test-token-from-login");
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
-    expect(useAuthStore.getState().permissions).toEqual(["projects:read", "tasks:read"]);
+    expect(useAuthStore.getState().permissions).toEqual([
+      "projects:read",
+      "tasks:read",
+    ]);
     expect(successSpy).toHaveBeenCalled();
     expect(errorSpy).not.toHaveBeenCalled();
   });

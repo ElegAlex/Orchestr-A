@@ -25,7 +25,9 @@ const DB_USER = process.env.ORCHESTRA_DB_USER ?? "orchestr_a";
 const DB_NAME = process.env.ORCHESTRA_DB_NAME ?? "orchestr_a_v2";
 
 function tokenFor(role: Role): string {
-  const storage = JSON.parse(fs.readFileSync(ROLE_STORAGE_PATHS[role], "utf-8"));
+  const storage = JSON.parse(
+    fs.readFileSync(ROLE_STORAGE_PATHS[role], "utf-8"),
+  );
   const tokenEntry = storage.origins?.[0]?.localStorage?.find(
     (item: { name: string; value: string }) => item.name === "access_token",
   );
@@ -153,7 +155,9 @@ test.describe(
       }
       if (roleId) {
         await request
-          .delete(`${baseUrl()}/api/roles/${roleId}`, { headers: auth("admin") })
+          .delete(`${baseUrl()}/api/roles/${roleId}`, {
+            headers: auth("admin"),
+          })
           .catch(() => undefined);
       }
     });

@@ -17,7 +17,7 @@ import {
   TimeEntry,
 } from "@/types";
 import { ThirdPartySelector } from "@/components/third-parties/ThirdPartySelector";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 type Props = {
   open: boolean;

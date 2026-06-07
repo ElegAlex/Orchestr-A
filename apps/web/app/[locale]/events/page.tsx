@@ -20,7 +20,7 @@ import { UserMultiSelect } from "@/components/UserMultiSelect";
 import { ServiceMultiSelect } from "@/components/ServiceMultiSelect";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 export default function EventsPage() {
   const t = useTranslations("events");

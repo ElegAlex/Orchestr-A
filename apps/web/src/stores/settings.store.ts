@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { settingsService } from "@/services/settings.service";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface SettingsState {
   settings: Record<string, unknown>;

@@ -69,10 +69,10 @@ Exporté depuis `audit.module.ts`. À injecter dans les modules consommateurs.
 
 Seules 2 actions écrivent dans `audit_logs` en V1. Extension future hors lot.
 
-| Déclencheur | `action` | `entityType` | `entityId` | `payload` |
-|---|---|---|---|---|
-| `PATCH /predefined-tasks/assignments/:id/completion` (E3.1) | `ASSIGNMENT_STATUS_CHANGED` | `PredefinedTaskAssignment` | `assignment.id` | `{ before: string, after: string, reason?: string }` |
-| `POST /predefined-tasks/recurring-rules/generate-balanced` mode `apply` (E4.2) | `BALANCER_APPLIED` | `PredefinedTaskRange` | `${startDate}_${endDate}` | `{ range, taskIds, userIds, assignmentsProposed, assignmentsCreated, equityRatio }` |
+| Déclencheur                                                                    | `action`                    | `entityType`               | `entityId`                | `payload`                                                                           |
+| ------------------------------------------------------------------------------ | --------------------------- | -------------------------- | ------------------------- | ----------------------------------------------------------------------------------- |
+| `PATCH /predefined-tasks/assignments/:id/completion` (E3.1)                    | `ASSIGNMENT_STATUS_CHANGED` | `PredefinedTaskAssignment` | `assignment.id`           | `{ before: string, after: string, reason?: string }`                                |
+| `POST /predefined-tasks/recurring-rules/generate-balanced` mode `apply` (E4.2) | `BALANCER_APPLIED`          | `PredefinedTaskRange`      | `${startDate}_${endDate}` | `{ range, taskIds, userIds, assignmentsProposed, assignmentsCreated, equityRatio }` |
 
 ### Règles d'écriture
 

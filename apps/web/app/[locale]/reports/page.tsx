@@ -13,7 +13,7 @@ const PortfolioGantt = dynamic(() => import("./components/PortfolioGantt"), {
 });
 const AdvancedAnalyticsTab = dynamic(
   () => import("./components/advanced/AdvancedAnalyticsTab"),
-  { ssr: false }
+  { ssr: false },
 );
 import { AnalyticsData, DateRange } from "./types";
 import { format } from "date-fns";
@@ -23,7 +23,7 @@ import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/usePermissions";
 import { api } from "@/lib/api";
 import { ClientSelector } from "@/components/clients/ClientSelector";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 export default function ReportsPage() {
   const t = useTranslations("admin.reports");

@@ -10,8 +10,8 @@ import type {
 import type { UserSummary } from "@/types";
 
 jest.mock("next-intl", () => ({
-  useTranslations: () =>
-    (key: string, params?: Record<string, string | number>) => {
+  useTranslations:
+    () => (key: string, params?: Record<string, string | number>) => {
       const dict: Record<string, string> = {
         "activityGrid.caption": "Grille d'activité",
         "activityGrid.dateCol": "Jour",
@@ -42,8 +42,7 @@ const buildUser = (
   id: string,
   firstName: string,
   lastName: string,
-): UserSummary =>
-  ({ id, firstName, lastName, isActive: true }) as UserSummary;
+): UserSummary => ({ id, firstName, lastName, isActive: true }) as UserSummary;
 
 const buildTask = (id: string, name: string): PredefinedTask =>
   ({

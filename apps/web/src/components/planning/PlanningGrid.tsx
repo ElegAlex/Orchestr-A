@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { Task } from "@/types";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
@@ -236,29 +242,32 @@ export const PlanningGrid = ({
     silentRefetch();
   }, [refreshTrigger]);
 
-  const handleTeleworkToggle = useCallback(async (userId: string, date: Date) => {
-    try {
-      const cell = getDayCell(userId, date);
-      const existing = cell.teleworkSchedule;
-      const dateStr = format(date, "yyyy-MM-dd");
+  const handleTeleworkToggle = useCallback(
+    async (userId: string, date: Date) => {
+      try {
+        const cell = getDayCell(userId, date);
+        const existing = cell.teleworkSchedule;
+        const dateStr = format(date, "yyyy-MM-dd");
 
-      if (existing) {
-        await teleworkService.update(existing.id, {
-          isTelework: !existing.isTelework,
-        });
-      } else {
-        await teleworkService.create({
-          date: dateStr,
-          isTelework: true,
-          isException: false,
-          userId,
-        });
+        if (existing) {
+          await teleworkService.update(existing.id, {
+            isTelework: !existing.isTelework,
+          });
+        } else {
+          await teleworkService.create({
+            date: dateStr,
+            isTelework: true,
+            isException: false,
+            userId,
+          });
+        }
+        silentRefetch();
+      } catch {
+        toast.error(t("telework.updateError"));
       }
-      silentRefetch();
-    } catch {
-      toast.error(t("telework.updateError"));
-    }
-  }, [getDayCell, silentRefetch, t]);
+    },
+    [getDayCell, silentRefetch, t],
+  );
 
   const handleDragStart = useCallback((task: Task, sourceUserId: string) => {
     setDraggedTask(task);
@@ -270,73 +279,76 @@ export const PlanningGrid = ({
     setDragSourceUserId(null);
   }, []);
 
-  const handleDrop = useCallback(async (targetUserId: string, date: Date) => {
-    if (!draggedTask || !dragSourceUserId) return;
+  const handleDrop = useCallback(
+    async (targetUserId: string, date: Date) => {
+      if (!draggedTask || !dragSourceUserId) return;
 
-    const currentAssigneeIds =
-      draggedTask.assignees?.map((a) => a.userId) || [];
-    const isSameUser = dragSourceUserId === targetUserId;
-    const targetAlreadyAssigned = currentAssigneeIds.includes(targetUserId);
-    const isSingleAssignee = currentAssigneeIds.length <= 1;
+      const currentAssigneeIds =
+        draggedTask.assignees?.map((a) => a.userId) || [];
+      const isSameUser = dragSourceUserId === targetUserId;
+      const targetAlreadyAssigned = currentAssigneeIds.includes(targetUserId);
+      const isSingleAssignee = currentAssigneeIds.length <= 1;
 
-    // Reset immédiatement pour UX fluide
-    setDraggedTask(null);
-    setDragSourceUserId(null);
+      // Reset immédiatement pour UX fluide
+      setDraggedTask(null);
+      setDragSourceUserId(null);
 
-    try {
-      if (isSingleAssignee) {
-        // Tâche mono-assigné: on peut changer date ET assigné
-        const updateData: {
-          startDate: string;
-          endDate: string;
-          assigneeIds?: string[];
-        } = {
-          startDate: date.toISOString(),
-          endDate: date.toISOString(),
-        };
-        if (!isSameUser) {
-          updateData.assigneeIds = [targetUserId];
-        }
-        await tasksService.update(draggedTask.id, updateData);
-      } else {
-        // Tâche multi-assignés: on change seulement l'assignation (pas les dates)
-        if (isSameUser) {
-          toast(t("taskMove.multiAssignDateError"), {
+      try {
+        if (isSingleAssignee) {
+          // Tâche mono-assigné: on peut changer date ET assigné
+          const updateData: {
+            startDate: string;
+            endDate: string;
+            assigneeIds?: string[];
+          } = {
+            startDate: date.toISOString(),
+            endDate: date.toISOString(),
+          };
+          if (!isSameUser) {
+            updateData.assigneeIds = [targetUserId];
+          }
+          await tasksService.update(draggedTask.id, updateData);
+        } else {
+          // Tâche multi-assignés: on change seulement l'assignation (pas les dates)
+          if (isSameUser) {
+            toast(t("taskMove.multiAssignDateError"), {
+              icon: "\u2139\uFE0F",
+              duration: 3000,
+              id: `multi-assignee-${Date.now()}`,
+            });
+            return;
+          }
+          if (targetAlreadyAssigned) {
+            toast(t("taskMove.alreadyAssigned"), {
+              icon: "\u2139\uFE0F",
+              duration: 2000,
+              id: `already-assigned-${Date.now()}`,
+            });
+            return;
+          }
+          // Remplacer source par cible
+          const newAssigneeIds = currentAssigneeIds.map((id) =>
+            id === dragSourceUserId ? targetUserId : id,
+          );
+          await tasksService.update(draggedTask.id, {
+            assigneeIds: newAssigneeIds,
+          });
+
+          // Informer que seul l'assigné a changé (pas la date)
+          toast(t("taskMove.reassignOnly"), {
             icon: "\u2139\uFE0F",
             duration: 3000,
-            id: `multi-assignee-${Date.now()}`,
+            id: `reassign-only-${Date.now()}`,
           });
-          return;
         }
-        if (targetAlreadyAssigned) {
-          toast(t("taskMove.alreadyAssigned"), {
-            icon: "\u2139\uFE0F",
-            duration: 2000,
-            id: `already-assigned-${Date.now()}`,
-          });
-          return;
-        }
-        // Remplacer source par cible
-        const newAssigneeIds = currentAssigneeIds.map((id) =>
-          id === dragSourceUserId ? targetUserId : id,
-        );
-        await tasksService.update(draggedTask.id, {
-          assigneeIds: newAssigneeIds,
-        });
 
-        // Informer que seul l'assigné a changé (pas la date)
-        toast(t("taskMove.reassignOnly"), {
-          icon: "\u2139\uFE0F",
-          duration: 3000,
-          id: `reassign-only-${Date.now()}`,
-        });
+        silentRefetch();
+      } catch {
+        toast.error(t("taskMove.moveError"));
       }
-
-      silentRefetch();
-    } catch {
-      toast.error(t("taskMove.moveError"));
-    }
-  }, [draggedTask, dragSourceUserId, silentRefetch, t]);
+    },
+    [draggedTask, dragSourceUserId, silentRefetch, t],
+  );
 
   const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
@@ -360,11 +372,13 @@ export const PlanningGrid = ({
 
   const handlePredefinedTaskClick = useCallback(
     (assignment: PredefinedTaskAssignment, date: Date) => {
-    setExistingAssignment(assignment);
-    setAssignmentModalDates([date]);
-    setAssignmentModalUserIds([assignment.userId]);
-    setShowAssignmentModal(true);
-  }, []);
+      setExistingAssignment(assignment);
+      setAssignmentModalDates([date]);
+      setAssignmentModalUserIds([assignment.userId]);
+      setShowAssignmentModal(true);
+    },
+    [],
+  );
 
   const handleAddPredefinedTask = useCallback((userId: string, date: Date) => {
     setExistingAssignment(null);

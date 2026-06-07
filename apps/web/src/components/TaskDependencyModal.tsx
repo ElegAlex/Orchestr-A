@@ -12,7 +12,7 @@ import {
 import { tasksService } from "@/services/tasks.service";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface TaskDependencyModalProps {
   task: Task;

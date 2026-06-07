@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 // SEC-031 — hop-by-hop + host-spoofing headers must be stripped before
 // forwarding to the internal API. "host" et al. are not hop-by-hop per RFC

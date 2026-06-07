@@ -29,7 +29,8 @@ jest.mock("next-intl", () => ({
         "editModal.save": "Enregistrer",
         "editModal.newPassword": "Nouveau mot de passe (optionnel)",
         "editModal.passwordPlaceholder": "Laisser vide pour ne pas changer",
-        "editModal.passwordHint": "Laissez vide si vous ne souhaitez pas modifier le mot de passe",
+        "editModal.passwordHint":
+          "Laissez vide si vous ne souhaitez pas modifier le mot de passe",
         "edit.title": "Modifier l'utilisateur",
         cancel: "Annuler",
         importButton: "Importer",

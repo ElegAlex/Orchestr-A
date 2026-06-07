@@ -17,8 +17,8 @@ templates.ts
   └── ROLE_TEMPLATES[key].permissions = composed from bundles or catalog
 ```
 
-A *bundle* is a named subset of permissions reused across templates
-(`PROJECTS_CRUD`, `LEAVES_GLOBAL`, etc.). A *template* is the final
+A _bundle_ is a named subset of permissions reused across templates
+(`PROJECTS_CRUD`, `LEAVES_GLOBAL`, etc.). A _template_ is the final
 permission list a role inherits.
 
 ## When to add a bundle vs grant directly via `CATALOG_PERMISSIONS`

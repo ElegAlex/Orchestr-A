@@ -11,6 +11,7 @@
 > "Phase 2 deploy" event with its own runbook.
 >
 > The content below is **reconstructed from durable post-hoc evidence only**:
+>
 > - the four committed migration files (verbatim SQL — non-negotiable source of truth);
 > - the `_prisma_migrations` table on prod (`finished_at` timestamps, verified on 2026-05-28 12:43 UTC);
 > - the `PROGRESS_LOG.md` entries of 2026-05-26 (TOOL-DEPLOY-001, AUD-READ-001, DAT-021, OBS-012,
@@ -56,23 +57,23 @@
   - API image: `sha256:7cd9b14a…` (the Phase-1 build hotfix image — BUILD-001).
 - **Migrations applied (4 files, mapping to 5 source tasks — the first migration bundles two):**
 
-| #  | Migration folder                                                                      | Source task(s)             | Closing commit (master) | Nature                                                          |
-|----|---------------------------------------------------------------------------------------|----------------------------|-------------------------|-----------------------------------------------------------------|
-| 1  | `20260525190000_audit_logs_immutability_hash_chain_actor_snapshot`                    | **OBS-002 + DAT-009**      | `d6299cc`               | audit_logs hardening: immutability trigger + hash chain + actor snapshot |
-| 2  | `20260525200000_dat007_project_fk_restrict_preserve_history`                          | **DAT-007**                | `0eae219`               | Project FK Cascade/SetNull → RESTRICT on 4 edges (audit history preservation) |
-| 3  | `20260525210000_obs012_deployments_table`                                             | **OBS-012**                | `189344f`               | New `deployments` ledger table (release-version pinning at boot) |
-| 4  | `20260526120000_dat021_audit_payload_schema_version_gin_index`                        | **DAT-021**                | `33f7a9c`               | `audit_logs.schemaVersion INTEGER NOT NULL DEFAULT 1` + JSONB GIN index + btree on schemaVersion |
+| #   | Migration folder                                                   | Source task(s)        | Closing commit (master) | Nature                                                                                           |
+| --- | ------------------------------------------------------------------ | --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
+| 1   | `20260525190000_audit_logs_immutability_hash_chain_actor_snapshot` | **OBS-002 + DAT-009** | `d6299cc`               | audit_logs hardening: immutability trigger + hash chain + actor snapshot                         |
+| 2   | `20260525200000_dat007_project_fk_restrict_preserve_history`       | **DAT-007**           | `0eae219`               | Project FK Cascade/SetNull → RESTRICT on 4 edges (audit history preservation)                    |
+| 3   | `20260525210000_obs012_deployments_table`                          | **OBS-012**           | `189344f`               | New `deployments` ledger table (release-version pinning at boot)                                 |
+| 4   | `20260526120000_dat021_audit_payload_schema_version_gin_index`     | **DAT-021**           | `33f7a9c`               | `audit_logs.schemaVersion INTEGER NOT NULL DEFAULT 1` + JSONB GIN index + btree on schemaVersion |
 
-  > **Non-obvious mapping note.** Migration #1 is a *bundle* of two backlog tasks (OBS-002 +
-  > DAT-009) — its header comment names both. The DOC-001 finding's task list named four IDs
-  > (OBS-012 / DAT-009 / DAT-021 / DAT-007); OBS-002 was implicit (closed jointly with DAT-009
-  > in `d6299cc`). The verbatim count is therefore **5 source tasks across 4 migrations**.
+> **Non-obvious mapping note.** Migration #1 is a _bundle_ of two backlog tasks (OBS-002 +
+> DAT-009) — its header comment names both. The DOC-001 finding's task list named four IDs
+> (OBS-012 / DAT-009 / DAT-021 / DAT-007); OBS-002 was implicit (closed jointly with DAT-009
+> in `d6299cc`). The verbatim count is therefore **5 source tasks across 4 migrations**.
 
 - **Post-deploy prod state (delta — also reconstructed):**
   - `_prisma_migrations`: was 41 rows (Phase 1 terminus) → **45 rows** after Phase 2 batch
     (verified post-hoc: Phase 3's Gate-0 sweep on 2026-05-28 showed pre-Phase-3 prod count = 43,
     which had not yet incorporated the 2 Phase-3-precursor data-fix migrations DAT-003+DAT-004
-    + DAT-012 etc. — see Phase 3 deploy doc for the exact 43→56 evolution).
+    - DAT-012 etc. — see Phase 3 deploy doc for the exact 43→56 evolution).
   - Git HEAD on prod: **not separately captured** for this batch. Reconstructed inference:
     operator pulled at least up to `33f7a9c` (the terminal Phase-2 migration commit) and likely
     up to `8c37e1d` (TOOL-DEPLOY-001) since the role-split + init-roles.sql operational steps
@@ -84,7 +85,7 @@
     had tagged `orchestra-api:pre-phase1-remediation` (`5a9f56cc`); the next rollback anchor in
     the history is `orchestra-api:pre-phase3-defense-in-depth` (`10c69f6fbce8`), set on
     2026-05-28 ahead of Phase 3. The image that ran from 2026-05-26 deploy until Phase 3 was
-    therefore the *unanchored* hotfix image (a rebuild that picked up commits up to and
+    therefore the _unanchored_ hotfix image (a rebuild that picked up commits up to and
     including the Phase-2 migrations + the TOOL-DEPLOY-001 init-roles changes). **Gap:** the
     image SHA running between Phase 1 (`7cd9b14a…`) and Phase 3 (`10c69f6fbce8`) was not
     recorded. This is the single largest audit-trail gap in this batch — Phase 3's anchor
@@ -360,7 +361,7 @@ CREATE INDEX "audit_logs_schemaVersion_idx" ON "audit_logs"("schemaVersion");
 ## Post-deploy verification (sourced from PROGRESS_LOG.md, 2026-05-26)
 
 This section enumerates **only what is recorded in the PROGRESS_LOG** for the 2026-05-26 window
-and is verifiable post-hoc on prod. It is not a checklist of what *should* have been verified
+and is verifiable post-hoc on prod. It is not a checklist of what _should_ have been verified
 under a Phase-1/3-style runbook — it is the actual evidentiary trail.
 
 ### V1 — `init-roles.sql` applied (TOOL-DEPLOY-001 operator runbook, `8c37e1d`)
@@ -370,12 +371,12 @@ window as this deploy. Per PROGRESS_LOG (2026-05-26 — TOOL-DEPLOY-001 entry, l
 
 > "Operational scripts — fail-fast (option ii): normalize-action-codes + recompute-chain-on-
 > schema-bump `process.exit(1)` if `DATABASE_MIGRATION_URL` unset, and set `DATABASE_URL =
-> DATABASE_MIGRATION_URL` BEFORE NestFactory (PrismaService binds at construction → owner role).
+DATABASE_MIGRATION_URL` BEFORE NestFactory (PrismaService binds at construction → owner role).
 > No silent fallback to the restricted role."
 
 > "init-roles.sql: creates `app_user` (idempotent — `\gexec` guard + `ALTER ROLE` password
 > re-assert, also a rotation tool), GRANT full CRUD on all tables + sequences, `REVOKE UPDATE,
-> DELETE, TRUNCATE ON audit_logs` (INSERT+SELECT remain), `ALTER DEFAULT PRIVILEGES` so future
+DELETE, TRUNCATE ON audit_logs` (INSERT+SELECT remain), `ALTER DEFAULT PRIVILEGES` so future
 > migration tables stay accessible."
 
 Post-condition on prod (verifiable now):
@@ -413,7 +414,7 @@ Post-condition on prod (verifiable now):
   as a documented no-op trail.
 
 **Gap:** the exact `affectedCount` on prod was not recorded contemporaneously. The 2026-05-28
-Phase 3 Gate-5 smoke shows the *post-recompute* steady state ("0 SYSTEM_BACKFILL" appearing in
+Phase 3 Gate-5 smoke shows the _post-recompute_ steady state ("0 SYSTEM_BACKFILL" appearing in
 that gate refers to a different check — the absence of stale SYSTEM_BACKFILL pairs in flight,
 not the absence of completed ones).
 
@@ -468,9 +469,9 @@ degraded-mode value). Cur-rent prod state can disambiguate.
   log.
 
 **Gap:** no synchronous prod-write-then-read smoke was documented at the time. The defence-
-in-depth witness ("can the runtime role mutate audit_logs?" → 42501; "can it INSERT?" → ok)
+in-depth witness ("can the runtime role mutate audit*logs?" → 42501; "can it INSERT?" → ok)
 exists as integration tests (`audit-immutability.int.spec.ts`, `audit-role-revoke.int.spec.ts`)
-that have shipped as repo CI gates since TOOL-DEPLOY-001 — they are not a *prod* witness, but
+that have shipped as repo CI gates since TOOL-DEPLOY-001 — they are not a \_prod* witness, but
 they pin the contract that prod must satisfy.
 
 ---
@@ -479,8 +480,8 @@ they pin the contract that prod must satisfy.
 
 > ⚠️ **Rollback was never executed for this batch and no anchor image was tagged
 > (`orchestra-api:pre-phase-2-…` does not exist in `docker images`).** The DDL below is
-> derived per-migration from the forward SQL and is presented for *deploy-doc completeness
-> only* — to demonstrate that each migration has a theoretical reverse. Executing any of it
+> derived per-migration from the forward SQL and is presented for _deploy-doc completeness
+> only_ — to demonstrate that each migration has a theoretical reverse. Executing any of it
 > retroactively, more than two days after the fact and with downstream Phase 3 migrations
 > stacked on top, would be a destructive action requiring a separate runbook and explicit
 > approval. **DO NOT** execute these statements without first restoring from a pre-Phase-2
@@ -578,7 +579,7 @@ ALTER TABLE "audit_logs" DROP COLUMN "schemaVersion";
 
 No `orchestra-api:pre-phase-2-…` tag was set. The nearest historical anchors are:
 
-- `orchestra-api:pre-phase1-remediation` (`5a9f56cc`, set 2026-05-25, the *pre-Phase-1* image —
+- `orchestra-api:pre-phase1-remediation` (`5a9f56cc`, set 2026-05-25, the _pre-Phase-1_ image —
   rolling back to this would also reverse Phase 1 / DAT-005, which is **not** what a
   Phase-2-only rollback would want).
 - `orchestra-api:pre-phase3-defense-in-depth` (`10c69f6fbce8`, set 2026-05-28, **after** the
@@ -614,9 +615,9 @@ because they cannot be honestly reconstructed:
 6. **No post-deploy frontend smoke checklist** — see V5 above.
 
 These deviations are the structural reason DOC-001 was filed: the audit trail under
-`docs/deploy/` requires a uniform format precisely so a reader can rely on the *presence*
-of these sections, not have to read the surrounding code/PROGRESS_LOG to know what was
-verified. This document closes the *existence* gap; it cannot close the *evidentiary* gap
+`docs/deploy/` requires a uniform format precisely so a reader can rely on the _presence_
+of these sections, not have to read the surrounding code/PROGRESS*LOG to know what was
+verified. This document closes the \_existence* gap; it cannot close the _evidentiary_ gap
 retroactively.
 
 ---
@@ -624,7 +625,7 @@ retroactively.
 ## Process learnings (for future deploy batches)
 
 1. **Any migration touching prod requires its own `docs/deploy/<date>-<scope>.md`** authored
-   *ahead of* execution, with the Phase-1/3 structure (scope, baseline, preflight, gates,
+   _ahead of_ execution, with the Phase-1/3 structure (scope, baseline, preflight, gates,
    verification, rollback). Tooling sessions that ride migrations along are the high-risk
    class — DOC-001 was surfaced precisely because the Phase 2 batch was framed as a TOOL-
    DEPLOY-001 closeout, not as its own deploy event.
@@ -645,20 +646,20 @@ retroactively.
 
 ## DEPLOY EXECUTION LOG — 2026-05-26 (UTC) — RETROACTIVE RECONSTRUCTION
 
-| Step                                       | Status                          | Evidence                                                                         |
-|--------------------------------------------|---------------------------------|----------------------------------------------------------------------------------|
-| Pre-deploy baseline capture                | ❌ Not performed                 | Gap.                                                                             |
-| Safety dump (named file)                   | ❌ Not captured                  | Gap.                                                                             |
-| Rollback anchor image tag                  | ❌ Not set                       | Gap.                                                                             |
-| `git pull` to ≥ `33f7a9c`                  | ✅ Inferred                      | Prod HEAD at 2026-05-28 Gate-0 = `3fd8986` (downstream of `8c37e1d`).            |
-| `docker compose build api` (source-baked image) | ✅ Inferred                | Migrations applied imply a rebuilt image carrying the new audit-persistence code.|
-| `migrate deploy` of 4 migrations           | ✅ **Verified post-hoc**         | `_prisma_migrations` cluster at 2026-05-26 ~21:09 UTC.                           |
-| `init-roles.sql` one-shot (TOOL-DEPLOY-001) | ✅ Inferred (same window)        | PROGRESS_LOG 2026-05-26 — TOOL-DEPLOY-001 closeout.                              |
-| `audit:normalize-action-codes` (AUD-READ-001) | ✅ Inferred                   | PROGRESS_LOG runbook + post-hoc 0 `PASSWORD_RESET_ADMIN` rows on prod.           |
-| `audit:recompute-chain-on-schema-bump` (DAT-021) | ✅ Inferred                | PROGRESS_LOG runbook + Phase 3 Gate-5 "chain valid" smoke on 2026-05-28.         |
-| `docker compose up -d api`                 | ✅ Inferred                      | Service healthy on 2026-05-28 pre-Phase-3 (Phase 3 doc Gate-0).                  |
-| First boot writes `deployments` row + RELEASE_DEPLOYED audit row | ⚠ Conditional      | Depends on whether `RELEASE_SHA` was set in `.env.production` at the time.       |
-| Post-deploy smoke (UI / API matrix)        | ❌ Not performed                 | Gap.                                                                             |
+| Step                                                             | Status                    | Evidence                                                                          |
+| ---------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------- |
+| Pre-deploy baseline capture                                      | ❌ Not performed          | Gap.                                                                              |
+| Safety dump (named file)                                         | ❌ Not captured           | Gap.                                                                              |
+| Rollback anchor image tag                                        | ❌ Not set                | Gap.                                                                              |
+| `git pull` to ≥ `33f7a9c`                                        | ✅ Inferred               | Prod HEAD at 2026-05-28 Gate-0 = `3fd8986` (downstream of `8c37e1d`).             |
+| `docker compose build api` (source-baked image)                  | ✅ Inferred               | Migrations applied imply a rebuilt image carrying the new audit-persistence code. |
+| `migrate deploy` of 4 migrations                                 | ✅ **Verified post-hoc**  | `_prisma_migrations` cluster at 2026-05-26 ~21:09 UTC.                            |
+| `init-roles.sql` one-shot (TOOL-DEPLOY-001)                      | ✅ Inferred (same window) | PROGRESS_LOG 2026-05-26 — TOOL-DEPLOY-001 closeout.                               |
+| `audit:normalize-action-codes` (AUD-READ-001)                    | ✅ Inferred               | PROGRESS_LOG runbook + post-hoc 0 `PASSWORD_RESET_ADMIN` rows on prod.            |
+| `audit:recompute-chain-on-schema-bump` (DAT-021)                 | ✅ Inferred               | PROGRESS_LOG runbook + Phase 3 Gate-5 "chain valid" smoke on 2026-05-28.          |
+| `docker compose up -d api`                                       | ✅ Inferred               | Service healthy on 2026-05-28 pre-Phase-3 (Phase 3 doc Gate-0).                   |
+| First boot writes `deployments` row + RELEASE_DEPLOYED audit row | ⚠ Conditional            | Depends on whether `RELEASE_SHA` was set in `.env.production` at the time.        |
+| Post-deploy smoke (UI / API matrix)                              | ❌ Not performed          | Gap.                                                                              |
 
 **This batch is on prod, the 4 migrations are applied, and the downstream Phase 3 deploy
 (2026-05-28) validated the cumulative state. The audit-trail format gap is what DOC-001

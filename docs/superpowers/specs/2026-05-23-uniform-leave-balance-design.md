@@ -12,6 +12,7 @@ Today, the leave-creation endpoint applies two independent and inconsistent gate
 2. A **per-type annual cap** (`leaves.service.ts:378-386`) — if `LeaveTypeConfig.maxDaysPerYear` is set, the cumulative year-to-date usage is compared against that cap.
 
 Side effects of this split:
+
 - A `LeaveBalance` entry on any non-CP type is **ignored** at validation time.
 - A CP request with no `LeaveBalance` row resolves the allocation to `0` and is therefore **rejected** — silently in the dataset, since the only CP leaves in production were imported via a CSV path that bypasses validation (`leaves.service.ts:2563`).
 - "Unlimited" is conflated: `maxDaysPerYear = NULL` looks unlimited in the admin UI, but the CP-only branch can still reject submissions.
@@ -22,15 +23,15 @@ Side effects of this split:
 SELECT id, code, name, "maxDaysPerYear", "isActive" FROM leave_type_configs;
 ```
 
-| code | name | maxDaysPerYear | isActive |
-|---|---|---|---|
-| CP | Congés payés | NULL | t |
-| RTT | RTT | NULL | t |
-| SICK_LEAVE | Maladie | NULL | t |
-| UNPAID | Sans solde | NULL | t |
-| OTHER | Autre | NULL | t |
-| FORMATION | Formation | NULL | t |
-| ALTERNANCE | Alternance | NULL | t |
+| code       | name         | maxDaysPerYear | isActive |
+| ---------- | ------------ | -------------- | -------- |
+| CP         | Congés payés | NULL           | t        |
+| RTT        | RTT          | NULL           | t        |
+| SICK_LEAVE | Maladie      | NULL           | t        |
+| UNPAID     | Sans solde   | NULL           | t        |
+| OTHER      | Autre        | NULL           | t        |
+| FORMATION  | Formation    | NULL           | t        |
+| ALTERNANCE | Alternance   | NULL           | t        |
 
 ```
 SELECT COUNT(*) FROM leave_balances;
@@ -53,24 +54,29 @@ Make leave-balance gating **uniform across all leave types** by collapsing the t
 ### What changes
 
 **Schema**:
+
 - Drop column `leave_type_configs.maxDaysPerYear` (Prisma migration).
 - No data migration: column is NULL across all rows in production.
 
 **Backend — `apps/api/src/leaves/leaves.service.ts`**:
+
 - Replace the two existing branches (`if code === 'CP'`, `if maxDaysPerYear`) at the leave-creation gate (lines 367-386) with a single generic check based on `LeaveBalance` presence.
 - Introduce two helpers (or refactor `resolveAllocatedDays`): `hasConfiguredBalance(userId, typeId, year): Promise<boolean>` and `getAvailableDays(userId, typeId, year): Promise<number>` (= total − approved − pending). The presence check fires the gate; the available days drive the comparison.
 - The CSV import path (`leaves.service.ts:2563`) keeps its current behavior of bypassing balance validation (separate ticket if we want to harmonize). This is **out of scope** here.
 
 **Backend — DTOs**:
+
 - Remove `maxDaysPerYear` from `apps/api/src/leave-types/dto/create-leave-type.dto.ts` and any update DTO.
 - Remove the field from shared types in `packages/types/` if exposed.
 
 **Frontend — `apps/web/src/components/LeaveTypesManager.tsx`**:
+
 - Drop the "Limite/an" column from the type-list table (around line 323-325).
 - Drop the `maxDaysPerYear` field from the create/edit form, including the placeholder strings showing "illimité" attached to that field.
 - The "Soldes" tab on `apps/web/app/[locale]/leaves/page.tsx` (CRUD on `LeaveBalance`) remains the single configuration surface for per-type quotas.
 
 **Tests**:
+
 - Vitest backend (`leaves.service.spec.ts`): drop `maxDaysPerYear`-related tests; add tests for the new generic gate (4 branches: no balance → allow, individual override → enforce, global default → enforce, override beats global).
 - Playwright E2E: add a scenario where a non-CP type (RTT) has a global `LeaveBalance(totalDays=N)` and a request above `N` is rejected with 400; add a scenario where a type with no balance accepts arbitrary requests.
 - Remove the existing CP-specific balance test in favor of the generic ones.
@@ -86,12 +92,12 @@ Make leave-balance gating **uniform across all leave types** by collapsing the t
 
 ## Behavior matrix (after the change)
 
-| Type has `LeaveBalance` for (user, type, year) | Type has global `LeaveBalance` for (null, type, year) | Result |
-|---|---|---|
-| no | no | **Unlimited** (no gate) |
-| no | yes, totalDays = N | Enforce against `N − used − pending` |
-| yes, totalDays = M | (any) | Enforce against `M − used − pending` (individual wins) |
-| no | yes, totalDays = 0 | All requests rejected with `Solde insuffisant` |
+| Type has `LeaveBalance` for (user, type, year) | Type has global `LeaveBalance` for (null, type, year) | Result                                                 |
+| ---------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------ |
+| no                                             | no                                                    | **Unlimited** (no gate)                                |
+| no                                             | yes, totalDays = N                                    | Enforce against `N − used − pending`                   |
+| yes, totalDays = M                             | (any)                                                 | Enforce against `M − used − pending` (individual wins) |
+| no                                             | yes, totalDays = 0                                    | All requests rejected with `Solde insuffisant`         |
 
 Same rules apply to every leave type, including CP.
 
@@ -129,23 +135,28 @@ The permission is added to the templates `ADMIN` and `RESPONSABLE` only — per 
 ### Scope
 
 **RBAC catalog (`packages/rbac/atomic-permissions.ts`)**:
+
 - Add `"leaves:self_approve"` to the `PermissionCode` union (alphabetical order in the `leaves` group).
 - Add it to `CATALOG_PERMISSIONS` (alphabetical position).
 - Add it to a relevant `LEAVES_*` bundle, or create a new bundle if no existing one is semantically correct. Reading the file will clarify the right composition; the goal is to land in templates `ADMIN` and `RESPONSABLE` only.
 
 **RBAC templates (`packages/rbac/templates.ts`)**:
+
 - Make sure `ADMIN` and `RESPONSABLE` templates pick up the new permission (either via a bundle they already use, or via an explicit added entry).
 
 **Backend — `apps/api/src/leaves/leaves.service.ts`**:
+
 - In `create()` (around lines 393-403), when the leave is for `userId === requestingUserId` (no `targetUserId` redirect) and the requesting user has `leaves:self_approve`, set `initialStatus = APPROVED` and `validatorId = null`, bypassing the `requiresApproval` branch. The check uses the existing `roleHasPermission(role, perm)` helper (`leaves.service.ts:245`) for consistency.
 - The "declared by manager for collaborator" path keeps its own existing auto-approval logic (`declaredByManager || !leaveTypeConfig.requiresApproval`), unchanged. Self-approval applies only when the leave is for oneself.
 
 **Templates count and tests**:
+
 - `packages/rbac/__tests__/templates.spec.ts` — bump `CATALOG_PERMISSIONS` length (116 → 117) and increment `EXPECTED_COUNTS` for any template that gains the permission (at least `ADMIN` and `RESPONSABLE`; let the failing tests dictate the exact list, as we did in the balanced-planning removal).
 - `apps/api/src/rbac/__tests__/permissions.service.spec.ts` — bump the catalog count assertion (116 → 117).
 - `apps/api/src/rbac/__tests__/templates.spec.ts` (if present) — sync any explicit ADMIN/RESPONSABLE permission lists.
 
 **Tests for the new flow**:
+
 - `leaves.service.spec.ts`: 4 test cases.
   - User with `leaves:self_approve` creating own leave → status APPROVED, no validatorId
   - User with `leaves:self_approve` creating leave for another user (`targetUserId`) → existing flow (no special bypass; `declaredByManager` path handles approval)
@@ -155,12 +166,12 @@ The permission is added to the templates `ADMIN` and `RESPONSABLE` only — per 
 
 ### Behavior matrix (self-approval)
 
-| Requesting user | targetUserId set? | Has `leaves:self_approve`? | Type `requiresApproval` | Resulting status | validatorId |
-|---|---|---|---|---|---|
-| any | self | yes | any | **APPROVED** | null |
-| any | self | no | true | PENDING | resolved validator |
-| any | self | no | false | APPROVED | null |
-| manager | other | (irrelevant for self-approve) | any | existing logic (`declaredByManager` path) | existing logic |
+| Requesting user | targetUserId set? | Has `leaves:self_approve`?    | Type `requiresApproval` | Resulting status                          | validatorId        |
+| --------------- | ----------------- | ----------------------------- | ----------------------- | ----------------------------------------- | ------------------ |
+| any             | self              | yes                           | any                     | **APPROVED**                              | null               |
+| any             | self              | no                            | true                    | PENDING                                   | resolved validator |
+| any             | self              | no                            | false                   | APPROVED                                  | null               |
+| manager         | other             | (irrelevant for self-approve) | any                     | existing logic (`declaredByManager` path) | existing logic     |
 
 ### Acceptance criteria (added)
 

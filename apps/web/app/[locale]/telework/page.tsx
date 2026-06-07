@@ -15,7 +15,7 @@ import {
 } from "@/types";
 import toast from "react-hot-toast";
 import { format, isSameDay } from "date-fns";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 // ─────────────────────────────────────────────
 // Recurring Rule Modal

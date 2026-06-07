@@ -11,7 +11,7 @@ import { HolidaysManager } from "@/components/holidays/HolidaysManager";
 import { SchoolVacationsManager } from "@/components/school-vacations/SchoolVacationsManager";
 import { SCHOOL_VACATION_ZONE_LABELS } from "@/types";
 import { useTranslations, useLocale } from "next-intl";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 type CategoryTab = "display" | "planning" | "holidays" | "schoolVacations";
 

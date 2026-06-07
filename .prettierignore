@@ -1,0 +1,29 @@
+# Dependencies & build output (generated — never source)
+node_modules/
+**/node_modules/
+**/dist/
+**/.next/
+**/build/
+**/coverage/
+.turbo/
+**/.turbo/
+**/*.tsbuildinfo
+
+# Test & tooling artifacts
+playwright-report/
+test-results/
+playwright/.auth/
+.playwright-mcp/
+
+# Security-remediation backlog: an append-only operational ledger governed by its
+# OWN coherence gate (.github/workflows/backlog-coherence.yml +
+# scripts/check-backlog-coherence.sh) and full of machine-generated run artifacts
+# (.shards.json, .verdicts.json, .foldplan.json, .todo-index.json, …). Prettier
+# destructively restructures BACKLOG.md (blockquote nesting, *emphasis* markers)
+# and is the wrong formatter for this content.
+backlog/
+
+# Source-audit artifacts: immutable, machine-generated findings/clusters JSON.
+# The session contract (CLAUDE_SESSION_CONTRACT.md) forbids retro-editing
+# audits/** — these are append-only audit history, not source to be reformatted.
+audits/

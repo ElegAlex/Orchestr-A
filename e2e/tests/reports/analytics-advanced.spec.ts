@@ -68,11 +68,17 @@ test.describe("Analytics Avancés tab", () => {
 
       // ── 6. Multi-select projets : ouvrir, décocher (smoke best-effort) ─────
       // Le dropdown affiche par défaut "Tous les projets" ou similaire.
-      const multiSelectBtn = page.locator("button:has(svg.lucide-chevron-down)").first();
-      if (await multiSelectBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const multiSelectBtn = page
+        .locator("button:has(svg.lucide-chevron-down)")
+        .first();
+      if (
+        await multiSelectBtn.isVisible({ timeout: 2000 }).catch(() => false)
+      ) {
         await multiSelectBtn.click();
         const firstCheckbox = page.locator('input[type="checkbox"]').first();
-        if (await firstCheckbox.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (
+          await firstCheckbox.isVisible({ timeout: 2000 }).catch(() => false)
+        ) {
           await firstCheckbox.click();
           // Re-ouvre la box et la referme pour stabiliser ; pas d'assertion forte
           // (le data peut être vide en environnement test, on vérifie juste le no-crash)

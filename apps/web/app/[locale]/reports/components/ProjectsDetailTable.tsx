@@ -9,7 +9,7 @@ import { fr } from "date-fns/locale";
 import { api } from "@/lib/api";
 import { ProjectIcon } from "@/components/ProjectIcon";
 import { ProjectDetail } from "../types";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface ProjectsDetailTableProps {
   projects: ProjectDetail[];
@@ -426,7 +426,9 @@ export function ProjectsDetailTable({
                       <span className="text-gray-400"> · </span>
                       <button
                         onClick={() =>
-                          router.push(`/${locale}/tasks?projectId=${row.id}&overdue=true`)
+                          router.push(
+                            `/${locale}/tasks?projectId=${row.id}&overdue=true`,
+                          )
                         }
                         className="font-semibold text-red-600 hover:text-red-800 hover:underline"
                       >

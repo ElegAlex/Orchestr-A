@@ -89,7 +89,8 @@ export function useAuthedAvatar(avatarUrl: string | null | undefined): {
     let active = true;
     loadAuthedBlob(avatarUrl)
       .then((objectUrl) => {
-        if (active) setFetched({ url: avatarUrl, src: objectUrl, failed: false });
+        if (active)
+          setFetched({ url: avatarUrl, src: objectUrl, failed: false });
       })
       .catch(() => {
         if (active) setFetched({ url: avatarUrl, src: null, failed: true });

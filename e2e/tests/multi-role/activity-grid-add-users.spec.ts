@@ -111,9 +111,9 @@ test.describe("ActivityGrid — bouton + Ajouter", () => {
       await submitBtn.click();
 
       // 9. Toast de succès
-      await expect(
-        page.getByText(/assignation\(s\) créée\(s\)/i),
-      ).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/assignation\(s\) créée\(s\)/i)).toBeVisible({
+        timeout: 10000,
+      });
     },
   );
 
@@ -122,40 +122,39 @@ test.describe("ActivityGrid — bouton + Ajouter", () => {
   // ---------------------------------------------------------------------------
 
   for (const role of ["manager", "responsable"] as const) {
-    test(
-      `${role} voit le bouton + Ajouter et peut ouvrir le modal`,
-      async ({ asRole }) => {
-        const page = await asRole(role);
+    test(`${role} voit le bouton + Ajouter et peut ouvrir le modal`, async ({
+      asRole,
+    }) => {
+      const page = await asRole(role);
 
-        // Naviguer et basculer en Vue activité (skip si pas d'accès)
-        await navigateToActivityView(page, role);
+      // Naviguer et basculer en Vue activité (skip si pas d'accès)
+      await navigateToActivityView(page, role);
 
-        // Chercher le bouton "+ Ajouter"
-        const addUserButtons = page.getByRole("button", {
-          name: /^\+\s*ajouter$/i,
-        });
-        const buttonCount = await addUserButtons.count();
+      // Chercher le bouton "+ Ajouter"
+      const addUserButtons = page.getByRole("button", {
+        name: /^\+\s*ajouter$/i,
+      });
+      const buttonCount = await addUserButtons.count();
 
-        if (buttonCount === 0) {
-          test.skip(
-            true,
-            `Aucun + Ajouter visible pour ${role} — données vides ?`,
-          );
-          return;
-        }
+      if (buttonCount === 0) {
+        test.skip(
+          true,
+          `Aucun + Ajouter visible pour ${role} — données vides ?`,
+        );
+        return;
+      }
 
-        // Le bouton doit être visible
-        await expect(addUserButtons.first()).toBeVisible();
+      // Le bouton doit être visible
+      await expect(addUserButtons.first()).toBeVisible();
 
-        // Cliquer ouvre le modal
-        await addUserButtons.first().scrollIntoViewIfNeeded();
-        await addUserButtons.first().click();
+      // Cliquer ouvre le modal
+      await addUserButtons.first().scrollIntoViewIfNeeded();
+      await addUserButtons.first().click();
 
-        await expect(
-          page.getByRole("heading", { name: /ajouter des agents/i }),
-        ).toBeVisible({ timeout: 8000 });
-      },
-    );
+      await expect(
+        page.getByRole("heading", { name: /ajouter des agents/i }),
+      ).toBeVisible({ timeout: 8000 });
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -163,48 +162,45 @@ test.describe("ActivityGrid — bouton + Ajouter", () => {
   // ---------------------------------------------------------------------------
 
   for (const role of ["contributeur", "observateur", "referent"] as const) {
-    test(
-      `${role} ne voit pas le bouton + Ajouter`,
-      async ({ asRole }) => {
-        const page = await asRole(role);
+    test(`${role} ne voit pas le bouton + Ajouter`, async ({ asRole }) => {
+      const page = await asRole(role);
 
-        // Naviguer vers le planning
-        await page.goto("/fr/planning");
-        await expect(
-          page.getByRole("heading", {
-            name: /planning des ressources/i,
-            level: 1,
-          }),
-        ).toBeVisible({ timeout: 15000 });
+      // Naviguer vers le planning
+      await page.goto("/fr/planning");
+      await expect(
+        page.getByRole("heading", {
+          name: /planning des ressources/i,
+          level: 1,
+        }),
+      ).toBeVisible({ timeout: 15000 });
 
-        // Vérifier l'accès à la Vue activité
-        const activityBtn = page.getByRole("button", {
-          name: /vue activité/i,
-        });
-        const hasActivityView = await activityBtn
-          .isVisible({ timeout: 5000 })
-          .catch(() => false);
+      // Vérifier l'accès à la Vue activité
+      const activityBtn = page.getByRole("button", {
+        name: /vue activité/i,
+      });
+      const hasActivityView = await activityBtn
+        .isVisible({ timeout: 5000 })
+        .catch(() => false);
 
-        if (!hasActivityView) {
-          test.skip(
-            true,
-            `${role} n'a pas accès à la Vue activité — le bouton + Ajouter est donc implicitement absent`,
-          );
-          return;
-        }
+      if (!hasActivityView) {
+        test.skip(
+          true,
+          `${role} n'a pas accès à la Vue activité — le bouton + Ajouter est donc implicitement absent`,
+        );
+        return;
+      }
 
-        await activityBtn.click();
-        await expect(activityBtn).toHaveAttribute("aria-pressed", "true");
+      await activityBtn.click();
+      await expect(activityBtn).toHaveAttribute("aria-pressed", "true");
 
-        // La grille est visible
-        await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+      // La grille est visible
+      await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
 
-        // Le bouton "+ Ajouter" ne doit PAS être présent
-        // (permission `predefined_tasks:assign` absente du template de ce rôle)
-        await expect(
-          page.getByRole("button", { name: /^\+\s*ajouter$/i }),
-        ).not.toBeVisible();
-      },
-    );
+      // Le bouton "+ Ajouter" ne doit PAS être présent
+      // (permission `predefined_tasks:assign` absente du template de ce rôle)
+      await expect(
+        page.getByRole("button", { name: /^\+\s*ajouter$/i }),
+      ).not.toBeVisible();
+    });
   }
 });

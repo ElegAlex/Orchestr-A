@@ -23,7 +23,9 @@ import { HolidaysService } from '../src/holidays/holidays.service';
 async function main(): Promise<void> {
   const createdById = process.env.HOLIDAY_CREATOR_ID;
   if (!createdById) {
-    throw new Error('HOLIDAY_CREATOR_ID env var is required (admin user uuid).');
+    throw new Error(
+      'HOLIDAY_CREATOR_ID env var is required (admin user uuid).',
+    );
   }
 
   const years = process.argv
@@ -31,7 +33,9 @@ async function main(): Promise<void> {
     .map((a) => parseInt(a, 10))
     .filter((y) => Number.isInteger(y) && y > 1900 && y < 3000);
   if (years.length === 0) {
-    throw new Error('Pass at least one year as an argument, e.g. 2025 2026 2027.');
+    throw new Error(
+      'Pass at least one year as an argument, e.g. 2025 2026 2027.',
+    );
   }
 
   const prisma = new PrismaClient();

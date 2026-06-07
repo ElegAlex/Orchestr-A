@@ -14,17 +14,17 @@
 
 Les règles suivantes prévalent sur le BACKLOG source (hiérarchie user > skill > default) :
 
-| Override | Source règle | Conséquence |
-|---|---|---|
-| **Commit direct sur `master`**, pas de branche par wave | mémoire `feedback_no_feature_branches` | Annule §8.5 spec. Chaque wave ajoute ses commits directement sur master, push + deploy à chaque fin de wave. |
-| **Vrai SSH + rebuild VPS** en exit criteria de CHAQUE wave | mémoire `feedback_deploy_workflow_is_fake` | Annule la confiance dans `.github/workflows/deploy.yml`. Après push, `ssh debian@92.222.35.25` + `git pull` + `docker compose -f docker-compose.prod.yml up -d --build <service>`. |
-| **Sub-agents en `model: "sonnet"` explicite** | mémoire `feedback_use_opus_for_agents` | Chaque dispatch Agent tool DOIT passer `model: "sonnet"`. |
-| **Monitor armé AU LANCEMENT** pour tout process > 10s | mémoire `feedback_never_trust_blind_monitor` | Builds, deploys, `gh run watch` : jamais de fire-and-forget. |
-| **Aucun hardcode de rôle** dans la logique métier | mémoire `feedback_no_hardcode_hotfix` | Passer par `roleManagementService.getPermissionsForRole()` / `PermissionsService` — pas de `role === 'ADMIN'`. |
-| **API computed flags** (`canEdit`, `canUpdateStatus`, etc.) par ressource | mémoire `feedback_api_computed_flags` | Le frontend ne recompute jamais l'autorisation localement. |
-| **Requête de diag RBAC** en DoD de toute wave ajoutant une permission | mémoire `project_rbac_seed_silent_skip` | SQL fourni dans W1 et W4 DoD, résultat attendu = 0 ligne. |
-| **Mockups HTML validés par PO** avant tâches UI E3.2, E4.3, E5.2 | mémoire `feedback_demand_mockup_for_visual_specs` | Intégré en W0.5, gate bloquant W2-E3.2, W3-E4.3, W4-E5.2. |
-| **Wording RBAC** : « rôles institutionnels », jamais « custom » | mémoire `feedback_no_custom_role_wording` | Applicable à la doc utilisateur W5.2. |
+| Override                                                                  | Source règle                                      | Conséquence                                                                                                                                                                        |
+| ------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Commit direct sur `master`**, pas de branche par wave                   | mémoire `feedback_no_feature_branches`            | Annule §8.5 spec. Chaque wave ajoute ses commits directement sur master, push + deploy à chaque fin de wave.                                                                       |
+| **Vrai SSH + rebuild VPS** en exit criteria de CHAQUE wave                | mémoire `feedback_deploy_workflow_is_fake`        | Annule la confiance dans `.github/workflows/deploy.yml`. Après push, `ssh debian@92.222.35.25` + `git pull` + `docker compose -f docker-compose.prod.yml up -d --build <service>`. |
+| **Sub-agents en `model: "sonnet"` explicite**                             | mémoire `feedback_use_opus_for_agents`            | Chaque dispatch Agent tool DOIT passer `model: "sonnet"`.                                                                                                                          |
+| **Monitor armé AU LANCEMENT** pour tout process > 10s                     | mémoire `feedback_never_trust_blind_monitor`      | Builds, deploys, `gh run watch` : jamais de fire-and-forget.                                                                                                                       |
+| **Aucun hardcode de rôle** dans la logique métier                         | mémoire `feedback_no_hardcode_hotfix`             | Passer par `roleManagementService.getPermissionsForRole()` / `PermissionsService` — pas de `role === 'ADMIN'`.                                                                     |
+| **API computed flags** (`canEdit`, `canUpdateStatus`, etc.) par ressource | mémoire `feedback_api_computed_flags`             | Le frontend ne recompute jamais l'autorisation localement.                                                                                                                         |
+| **Requête de diag RBAC** en DoD de toute wave ajoutant une permission     | mémoire `project_rbac_seed_silent_skip`           | SQL fourni dans W1 et W4 DoD, résultat attendu = 0 ligne.                                                                                                                          |
+| **Mockups HTML validés par PO** avant tâches UI E3.2, E4.3, E5.2          | mémoire `feedback_demand_mockup_for_visual_specs` | Intégré en W0.5, gate bloquant W2-E3.2, W3-E4.3, W4-E5.2.                                                                                                                          |
+| **Wording RBAC** : « rôles institutionnels », jamais « custom »           | mémoire `feedback_no_custom_role_wording`         | Applicable à la doc utilisateur W5.2.                                                                                                                                              |
 
 ---
 
@@ -46,6 +46,7 @@ Les règles suivantes prévalent sur le BACKLOG source (hiérarchie user > skill
 **Entry criteria :** BACKLOG validé, arbitrages produit pris (audit table = option A, mockups produits par l'agent).
 
 **Exit criteria :**
+
 - 3 ADRs mergés dans `docs/adr/`.
 - Mockups HTML pour E3.2, E4.3, E5.2 validés par le PO (visuel).
 - Catalogue RBAC compile-time étendu (4 permissions) dans `packages/rbac/atomic-permissions.ts` et ajouté aux templates pertinents.
@@ -66,30 +67,36 @@ Les règles suivantes prévalent sur le BACKLOG source (hiérarchie user > skill
 ### Task W0.2 — ADR 01 : Schéma Prisma cible consolidé
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/docs/adr/2026-04-24-01-schema-planning-activites.md`
 
 - [ ] **Step 1 :** Rédiger l'ADR avec les 4 extensions de schéma consolidées dans un seul document, à exécuter en 3 migrations disjointes (une par wave).
 
 Contenu obligatoire :
 
-```markdown
+````markdown
 # ADR-01 — Schéma Prisma cible pour Planning d'activités récurrentes
 
 ## Contexte
+
 Extension des modèles `PredefinedTask`, `PredefinedTaskAssignment`, `PredefinedTaskRecurringRule` + création d'un modèle `AuditLog` pour tracer les transitions de statut et les apply du balancer.
 
 ## Décision
 
 ### Extension 1 — PredefinedTask (W1)
+
 ```prisma
 model PredefinedTask {
   // ... champs existants
   weight Int @default(1) // 1..5, pondération pour équilibrage
 }
 ```
+````
+
 Contrainte : `@Min(1) @Max(5)` côté DTO (pas de CHECK SQL, validation applicative uniquement — cohérence avec le reste du schema).
 
 ### Extension 2 — PredefinedTaskAssignment (W2)
+
 ```prisma
 model PredefinedTaskAssignment {
   // ... champs existants
@@ -105,6 +112,7 @@ model PredefinedTaskAssignment {
 ```
 
 ### Extension 3 — PredefinedTaskRecurringRule (W2)
+
 ```prisma
 model PredefinedTaskRecurringRule {
   // ... champs existants
@@ -116,6 +124,7 @@ model PredefinedTaskRecurringRule {
 ```
 
 ### Extension 4 — AuditLog (W1, nouvelle table)
+
 ```prisma
 model AuditLog {
   id         String   @id @default(uuid())
@@ -134,23 +143,26 @@ model AuditLog {
 ```
 
 ## Conséquences
+
 - 3 migrations disjointes (W1, W2) — pas de rollback partiel inter-wave.
 - Aucun jour férié ne décale les assignations en V1 (voir ADR-03).
 - `completedBy` et `actor` demandent une relation sur `User` (à ajouter côté inverse dans le modèle User).
-```
+
+````
 
 - [ ] **Step 2 :** Commit.
 
 ```bash
 git add docs/adr/2026-04-24-01-schema-planning-activites.md
 git commit -m "docs(adr): schéma Prisma cible pour Planning d'activités récurrentes"
-```
+````
 
 ---
 
 ### Task W0.3 — ADR 02 : Stratégie d'audit persistant
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/docs/adr/2026-04-24-02-audit-strategy.md`
 
 - [ ] **Step 1 :** Rédiger l'ADR.
@@ -161,9 +173,11 @@ Contenu obligatoire :
 # ADR-02 — Stratégie d'audit persistant V1
 
 ## Contexte
+
 Le besoin E3 (statut d'exécution) et E4 (balancer apply) exigent une traçabilité RGPD. L'`AuditService` existant écrit en console (Winston) sans persistance DB. Option A validée : créer une table dédiée `AuditLog`.
 
 ## Décision
+
 1. Nouvelle table `audit_logs` (voir ADR-01).
 2. Nouveau service `AuditPersistenceService` (séparé de l'existant `AuditService` console) dans `apps/api/src/audit/audit-persistence.service.ts`. Méthode unique : `log({ action, entityType, entityId, actorId?, payload? })`.
 3. Appels obligatoires :
@@ -172,6 +186,7 @@ Le besoin E3 (statut d'exécution) et E4 (balancer apply) exigent une traçabili
 4. Scope V1 **strict** : ces 2 actions uniquement. Pas de log sur CRUD existant. Extension future hors périmètre.
 
 ## Conséquences
+
 - Nouvelle dépendance du module `predefined-tasks` sur `audit`.
 - Rétention DB : aucune politique en V1 (à traiter hors lot si volumes > 100k lignes).
 - Pas de mutation de payload (immutable par convention, pas de `updatedAt`).
@@ -189,38 +204,59 @@ git commit -m "docs(adr): stratégie d'audit persistant via table audit_logs"
 ### Task W0.4 — ADR 03 : Algorithme d'équilibrage glouton
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/docs/adr/2026-04-24-03-balancer-algorithm.md`
 
 - [ ] **Step 1 :** Rédiger l'ADR avec pseudo-code et 5 jeux de tests déterministes.
 
 Contenu obligatoire :
 
-```markdown
+````markdown
 # ADR-03 — Algorithme d'équilibrage glouton V1
 
 ## Contexte
+
 US E4.1 exige un service `PlanningBalancerService.balance(input)` avec contraintes : heuristique gloutonne, <3s pour 20 agents × 30 tâches sur un mois, écartement des absents par occurrence, support contraintes de compétence optionnelles.
 
 ## Décision
 
 ### Types
+
 ```typescript
 type BalancerInput = {
-  occurrences: Array<{ taskId: string; weight: number; date: Date; period: "MORNING" | "AFTERNOON" | "FULL_DAY" }>;
+  occurrences: Array<{
+    taskId: string;
+    weight: number;
+    date: Date;
+    period: "MORNING" | "AFTERNOON" | "FULL_DAY";
+  }>;
   agents: Array<{ userId: string; skills?: string[] }>;
   absences: Map<string /* userId */, Array<{ startDate: Date; endDate: Date }>>; // indexé par user
   taskRequiredSkills?: Map<string /* taskId */, string[]>;
 };
 
 type BalancerOutput = {
-  proposedAssignments: Array<{ taskId: string; userId: string; date: Date; period: string; weight: number }>;
+  proposedAssignments: Array<{
+    taskId: string;
+    userId: string;
+    date: Date;
+    period: string;
+    weight: number;
+  }>;
   workloadByAgent: Array<{ userId: string; weightedLoad: number }>;
   equityRatio: number; // 1 - σ/µ, plus proche de 1 = mieux
-  unassignedOccurrences: Array<{ taskId: string; date: Date; period: string; reason: string }>;
+  unassignedOccurrences: Array<{
+    taskId: string;
+    date: Date;
+    period: string;
+    reason: string;
+  }>;
 };
 ```
+````
 
 ### Pseudo-code
+
 ```
 function balance(input):
   workload := Map<userId, number> initialisé à 0 pour chaque agent
@@ -254,10 +290,12 @@ function balance(input):
 ```
 
 ### Complexité
+
 - O(|occurrences| × |agents|) dans le pire cas (linéaire pour trouver le min).
 - 20 × 30 × 30 (jours) = 18 000 itérations max → très loin des 3 s.
 
 ### Jeux de tests déterministes (minimum 5, en W3)
+
 1. **Cas trivial** : 1 agent, 1 occurrence → 1 assignation, equity = 1.
 2. **Répartition parfaite** : 2 agents, 4 occurrences même poids → 2 par agent, equity = 1.
 3. **Poids asymétriques** : 3 agents, 6 occurrences poids [5,5,1,1,1,1] → vérifier que les 5+5 ne sont pas chez le même agent.
@@ -267,26 +305,30 @@ function balance(input):
 7. **Départage stable** : 2 agents charges égales → userId lexicographiquement inférieur gagne (reproductibilité).
 
 ### Idempotence de l'apply
+
 Le tuple `@@unique([predefinedTaskId, userId, date, period])` sur `PredefinedTaskAssignment` assure qu'un replay sur la même plage ne duplique pas. Implémentation : `createMany({ ... skipDuplicates: true })` dans la transaction.
 
 ### Hors périmètre V1
+
 - Optimisation globale (ILP, contrainte programming).
 - Jours fériés comme contrainte (l'heuristique les ignore, l'utilisateur peut pré-filtrer les occurrences via le front).
 - Rotation d'équité inter-plages (la V1 est stateless, chaque appel repart à charge 0).
-```
+
+````
 
 - [ ] **Step 2 :** Commit.
 
 ```bash
 git add docs/adr/2026-04-24-03-balancer-algorithm.md
 git commit -m "docs(adr): algorithme d'équilibrage glouton V1 (pseudo-code + jeux de tests)"
-```
+````
 
 ---
 
 ### Task W0.5 — Mockups HTML pour E3.2 / E4.3 / E5.2
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/docs/superpowers/mockups/2026-04-24-planning-activites/E3.2-status-popover.html`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/docs/superpowers/mockups/2026-04-24-planning-activites/E4.3-balanced-planning-modal.html`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/docs/superpowers/mockups/2026-04-24-planning-activites/E5.2-activity-grid.html`
@@ -327,13 +369,14 @@ Output: juste le path du fichier créé + un résumé <100 mots des choix de des
 
 3 surfaces UI à risque densité élevée, validation PO requise avant implémentation des tâches correspondantes.
 
-| Surface | Fichier | Story bloquée si non validé |
-|---|---|---|
-| Popover transition de statut | [E3.2-status-popover.html](./E3.2-status-popover.html) | W2 — E3.2 |
-| Modale planning équilibré | [E4.3-balanced-planning-modal.html](./E4.3-balanced-planning-modal.html) | W3 — E4.3 |
-| Grille Vue Activité | [E5.2-activity-grid.html](./E5.2-activity-grid.html) | W4 — E5.2 |
+| Surface                      | Fichier                                                                  | Story bloquée si non validé |
+| ---------------------------- | ------------------------------------------------------------------------ | --------------------------- |
+| Popover transition de statut | [E3.2-status-popover.html](./E3.2-status-popover.html)                   | W2 — E3.2                   |
+| Modale planning équilibré    | [E4.3-balanced-planning-modal.html](./E4.3-balanced-planning-modal.html) | W3 — E4.3                   |
+| Grille Vue Activité          | [E5.2-activity-grid.html](./E5.2-activity-grid.html)                     | W4 — E5.2                   |
 
 ## Validation PO
+
 Ouvrir chaque fichier dans le navigateur (file://), choisir la variante préférée, annoter via commentaire GitHub ou mail. Une fois validé, le sub-agent UI correspondant reçoit la variante choisie comme contrainte d'implémentation.
 ```
 
@@ -351,12 +394,14 @@ git commit -m "docs(mockups): 3 surfaces UI du lot Planning activités récurren
 ### Task W0.6 — Catalogue RBAC compile-time étendu
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/packages/rbac/atomic-permissions.ts`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/packages/rbac/templates.ts`
 
 - [ ] **Step 1 :** Lire les fichiers existants pour identifier le format exact des constantes et des templates.
 
 Commande :
+
 ```bash
 grep -n "predefined_tasks:" /home/alex/Documents/REPO/ORCHESTRA/packages/rbac/atomic-permissions.ts /home/alex/Documents/REPO/ORCHESTRA/packages/rbac/templates.ts
 ```
@@ -379,34 +424,35 @@ grep -n "predefined_tasks:" /home/alex/Documents/REPO/ORCHESTRA/packages/rbac/at
 ```
 
 Ajouter aussi dans les atomiques si pattern existant (exemple) :
+
 ```typescript
 export const PREDEFINED_TASKS_ADMIN = [
-  'predefined_tasks:create',
-  'predefined_tasks:edit',
-  'predefined_tasks:delete',
-  'predefined_tasks:assign',
-  'predefined_tasks:balance',          // NEW — admin seulement
-  'predefined_tasks:update-any-status',// NEW — admin/responsable
+  "predefined_tasks:create",
+  "predefined_tasks:edit",
+  "predefined_tasks:delete",
+  "predefined_tasks:assign",
+  "predefined_tasks:balance", // NEW — admin seulement
+  "predefined_tasks:update-any-status", // NEW — admin/responsable
 ] as const;
 
 export const PREDEFINED_TASKS_OWN = [
-  'predefined_tasks:view',
-  'predefined_tasks:update-own-status',// NEW — tous rôles opérationnels
+  "predefined_tasks:view",
+  "predefined_tasks:update-own-status", // NEW — tous rôles opérationnels
 ] as const;
 
 export const PLANNING_ACTIVITY = [
-  'planning:activity-view',            // NEW
+  "planning:activity-view", // NEW
 ] as const;
 ```
 
 - [ ] **Step 3 :** Distribuer les permissions aux templates dans `templates.ts` selon la règle métier (sans hardcode dans le code applicatif, uniquement dans le template) :
 
-| Permission | ADMIN | RESPONSABLE | MANAGER | REFERENT_TECHNIQUE | CONTRIBUTEUR | OBSERVATEUR |
-|---|---|---|---|---|---|---|
-| `predefined_tasks:balance` | ✅ | ✅ (scope service) | ❌ | ❌ | ❌ | ❌ |
-| `predefined_tasks:update-any-status` | ✅ | ✅ (scope service) | ✅ (scope service) | ❌ | ❌ | ❌ |
-| `predefined_tasks:update-own-status` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| `planning:activity-view` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Permission                           | ADMIN | RESPONSABLE        | MANAGER            | REFERENT_TECHNIQUE | CONTRIBUTEUR | OBSERVATEUR |
+| ------------------------------------ | ----- | ------------------ | ------------------ | ------------------ | ------------ | ----------- |
+| `predefined_tasks:balance`           | ✅    | ✅ (scope service) | ❌                 | ❌                 | ❌           | ❌          |
+| `predefined_tasks:update-any-status` | ✅    | ✅ (scope service) | ✅ (scope service) | ❌                 | ❌           | ❌          |
+| `predefined_tasks:update-own-status` | ✅    | ✅                 | ✅                 | ✅                 | ✅           | ❌          |
+| `planning:activity-view`             | ✅    | ✅                 | ✅                 | ✅                 | ✅           | ✅          |
 
 Note : le scope (service managé) est porté par le guard côté API (`@OwnershipCheck`), pas par la permission elle-même. La permission donne le droit, le service-scope filtre le périmètre. (cf. `project_responsable_scope_perimeter`).
 
@@ -440,6 +486,7 @@ git commit -m "feat(rbac): ajoute 4 permissions pour planning activités récurr
 - [ ] Push `origin/master` + deploy VPS via vrai SSH (cf. conventions).
 
 **Commande deploy :**
+
 ```bash
 ssh debian@92.222.35.25 'cd /opt/orchestra && git pull origin master && docker compose -f docker-compose.prod.yml build api web && docker compose -f docker-compose.prod.yml up -d api web'
 ```
@@ -455,6 +502,7 @@ Puis `curl -sf https://orchestr-a.com/api/health | jq .` — statut `ok`.
 **Entry criteria :** W0 closed, mockups validés (pas de dépendance mockup pour W1, mais ADRs et RBAC compile-time sont obligatoires).
 
 **Exit criteria :**
+
 - Migration Prisma `weight` + `audit_logs` appliquée en prod sans régression.
 - Les 4 permissions RBAC sont bien présentes dans `role_permissions` pour les rôles prévus (requête de diag = 0 ligne).
 - Pondération visible dans le formulaire de tâche prédéfinie + dans `DayCell`.
@@ -465,6 +513,7 @@ Puis `curl -sf https://orchestr-a.com/api/health | jq .` — statut `ok`.
 ### Task W1.1 — Migration Prisma : `weight` + `AuditLog`
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/packages/database/prisma/schema.prisma`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/packages/database/prisma/migrations/<TIMESTAMP>_add_weight_and_audit_log/migration.sql` (généré par `prisma migrate dev`)
 
@@ -518,6 +567,7 @@ cat packages/database/prisma/migrations/*_add_weight_and_audit_log/migration.sql
 ```
 
 Expected (extrait) :
+
 ```sql
 ALTER TABLE "predefined_tasks" ADD COLUMN "weight" INTEGER NOT NULL DEFAULT 1;
 CREATE TABLE "audit_logs" ( ... );
@@ -546,6 +596,7 @@ git commit -m "feat(database): weight sur PredefinedTask + modèle AuditLog"
 ### Task W1.2 — Migration de seed RBAC idempotente
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/packages/database/prisma/migrations/<TIMESTAMP>_seed_planning_permissions/migration.sql`
 
 **Sub-agent :** `[SÉQUENTIEL]` — orchestrateur.
@@ -634,6 +685,7 @@ docker exec orchestra-postgres-dev psql -U orchestra -d orchestra_dev -c "SELECT
 ```
 
 Expected (tableau) :
+
 ```
  role               | perm
 --------------------+--------------------------------------
@@ -667,6 +719,7 @@ git commit -m "chore(rbac): seed idempotent des 4 permissions Planning activité
 ### Task W1.3 — Backend E1 : DTO + service `weight` (sub-agent parallèle A)
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/dto/create-predefined-task.dto.ts`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/dto/update-predefined-task.dto.ts`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/predefined-tasks.service.ts`
@@ -725,6 +778,7 @@ Expected : 5+ nouveaux tests PASS sur `weight`.
 ### Task W1.4 — Frontend E1 : WeightInput + form + i18n (sub-agent parallèle B)
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/predefined-tasks/WeightInput.tsx`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/predefined-tasks/WeightInput.test.tsx`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/app/[locale]/admin/predefined-tasks/page.tsx` (intégration dans `TaskFormModal`)
@@ -801,6 +855,7 @@ Expected : tests PASS, type-check clean.
 ### Task W1.5 — E1.2 : exposer `weight` dans `DayCell`
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/hooks/usePlanningData.ts` (type de retour)
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/planning/DayCell.tsx`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/planning/__tests__/DayCell.test.tsx` (ou créer si absent)
@@ -819,16 +874,21 @@ grep -n "predefinedAssignments\|PredefinedAssignment\|predefinedTask" /home/alex
 
 ```tsx
 // Dans le rendu d'une assignment de tâche prédéfinie :
-const sizeClass = assignment.predefinedTask.weight >= 4 ? 'h-3 w-3'
-                 : assignment.predefinedTask.weight >= 2 ? 'h-2 w-2'
-                 : 'h-1.5 w-1.5';
+const sizeClass =
+  assignment.predefinedTask.weight >= 4
+    ? "h-3 w-3"
+    : assignment.predefinedTask.weight >= 2
+      ? "h-2 w-2"
+      : "h-1.5 w-1.5";
 
 <span
   className={`inline-block rounded-full ${sizeClass}`}
-  style={{ backgroundColor: assignment.predefinedTask.color ?? '#64748b' }}
-  aria-label={t('weight.ariaLabel', { level: assignment.predefinedTask.weight })}
+  style={{ backgroundColor: assignment.predefinedTask.color ?? "#64748b" }}
+  aria-label={t("weight.ariaLabel", {
+    level: assignment.predefinedTask.weight,
+  })}
   title={t(`weight.levels.${assignment.predefinedTask.weight}`)}
-/>
+/>;
 ```
 
 - [ ] **Step 4 :** Écrire/étendre `DayCell.test.tsx` : tester qu'une assignation de poids 4 rend une pastille h-3, qu'une de poids 1 rend h-1.5.
@@ -853,6 +913,7 @@ git commit -m "feat(planning): expose weight dans DayCell via taille de pastille
 ### Task W1.6 — E2E Playwright + build + deploy W1
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/e2e/tests/workflows/predefined-tasks-weight.spec.ts`
 
 **Sub-agent :** `[SÉQUENTIEL]` — orchestrateur.
@@ -860,27 +921,32 @@ git commit -m "feat(planning): expose weight dans DayCell via taille de pastille
 - [ ] **Step 1 :** Écrire le scénario E2E.
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('E1 — Poids des tâches prédéfinies', () => {
-  test.use({ storageState: 'playwright/.auth/admin.json' });
+test.describe("E1 — Poids des tâches prédéfinies", () => {
+  test.use({ storageState: "playwright/.auth/admin.json" });
 
-  test('Un admin crée une tâche avec weight=3 et la voit dans le planning', async ({ page }) => {
+  test("Un admin crée une tâche avec weight=3 et la voit dans le planning", async ({
+    page,
+  }) => {
     // 1. Créer une tâche prédéfinie via l'admin UI
-    await page.goto('/fr/admin/predefined-tasks');
-    await page.getByRole('button', { name: /nouvelle tâche/i }).click();
-    await page.getByLabel(/nom/i).fill('Tâche test W1');
-    await page.getByRole('radiogroup', { name: /poids/i }).getByRole('radio', { name: /normale/i }).click();
-    await page.getByRole('button', { name: /enregistrer/i }).click();
+    await page.goto("/fr/admin/predefined-tasks");
+    await page.getByRole("button", { name: /nouvelle tâche/i }).click();
+    await page.getByLabel(/nom/i).fill("Tâche test W1");
+    await page
+      .getByRole("radiogroup", { name: /poids/i })
+      .getByRole("radio", { name: /normale/i })
+      .click();
+    await page.getByRole("button", { name: /enregistrer/i }).click();
 
     // 2. Vérifier que la tâche apparaît dans la liste avec le poids affiché
-    await expect(page.getByText('Tâche test W1')).toBeVisible();
+    await expect(page.getByText("Tâche test W1")).toBeVisible();
     await expect(page.getByText(/normale/i)).toBeVisible();
 
     // 3. Vérifier côté API que le weight est bien stocké
-    const res = await page.request.get('/api/predefined-tasks');
+    const res = await page.request.get("/api/predefined-tasks");
     const tasks = await res.json();
-    const created = tasks.find((t: any) => t.name === 'Tâche test W1');
+    const created = tasks.find((t: any) => t.name === "Tâche test W1");
     expect(created.weight).toBe(3);
   });
 });
@@ -961,6 +1027,7 @@ Expected : `{"status":"ok", ...}`.
 **Entry criteria :** W1 close. Mockup E3.2 validé par PO.
 
 **Exit criteria :**
+
 - Migrations Prisma appliquées sans régression (recurrence + completion fields).
 - Endpoint `PATCH /predefined-tasks/assignments/:id/completion` fonctionnel avec RBAC scoped.
 - `AssignmentStatusBadge` rendu dans `DayCell` avec popover de transition.
@@ -973,6 +1040,7 @@ Expected : `{"status":"ok", ...}`.
 ### Task W2.1 — Migration Prisma : recurrence fields + completion fields
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/packages/database/prisma/schema.prisma`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/packages/database/prisma/migrations/<TIMESTAMP>_add_recurrence_and_completion/migration.sql`
 
@@ -1039,6 +1107,7 @@ cat packages/database/prisma/migrations/*_add_recurrence_and_completion/migratio
 ```
 
 Expected (extraits) :
+
 ```sql
 ALTER TABLE "predefined_task_recurring_rules" ALTER COLUMN "dayOfWeek" DROP NOT NULL;
 ALTER TABLE "predefined_task_recurring_rules" ADD COLUMN "recurrenceType" TEXT NOT NULL DEFAULT 'WEEKLY';
@@ -1064,6 +1133,7 @@ git commit -m "feat(database): recurrenceType + completionStatus sur predefined_
 ### Task W2.2 — E2 Backend : DTO + validation + génération (sub-agent parallèle A)
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/dto/create-recurring-rule.dto.ts`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/dto/create-bulk-recurring-rules.dto.ts`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/occurrence-generator.ts` (fonction pure, testable seule)
@@ -1159,6 +1229,7 @@ Sortie: diffs, sortie tests (détail des cas mensuels), confirmation commit.
 ### Task W2.3 — E2 Frontend : extension `RecurringRulesModal` (sub-agent parallèle B)
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/predefined-tasks/RecurringRulesModal.tsx`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/messages/fr/predefinedTasks.json`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/messages/en/predefinedTasks.json`
@@ -1239,6 +1310,7 @@ Sortie: diffs, tests, type-check, confirmation commit.
 ### Task W2.4 — E3.1 Backend : endpoint statut + audit (sub-agent parallèle C)
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/predefined-tasks.controller.ts` (nouvelle route)
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/predefined-tasks.service.ts` (méthode `updateCompletionStatus`)
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/dto/update-completion-status.dto.ts`
@@ -1358,6 +1430,7 @@ Sortie: diffs, sortie tests (détail des cas), confirmation commit.
 **Gate bloquant :** mockup E3.2 validé par PO (W0.5).
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/predefined-tasks/AssignmentStatusBadge.tsx`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/predefined-tasks/__tests__/AssignmentStatusBadge.test.tsx`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/hooks/useUpdateAssignmentStatus.ts`
@@ -1440,6 +1513,7 @@ Sortie: diffs, tests, type-check, confirmation commit "feat(planning): Assignmen
 ### Task W2.6 — E3.3 Alerte retard : `AppSettings.lateThresholdDays` + logique front
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/packages/database/prisma/migrations/<TIMESTAMP>_seed_late_threshold/migration.sql`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/app-settings/app-settings.service.ts` (ou équivalent) : getter typé
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/planning/planning.service.ts` : inclure la valeur dans `/planning/overview`
@@ -1485,8 +1559,12 @@ return {
 - [ ] **Step 4 :** Côté front, dans `DayCell.tsx`, calculer `isLate`.
 
 ```tsx
-function isAssignmentLate(assignment: PredefinedAssignment, now: Date, thresholdDays: number) {
-  if (assignment.completionStatus !== 'NOT_DONE') return false;
+function isAssignmentLate(
+  assignment: PredefinedAssignment,
+  now: Date,
+  thresholdDays: number,
+) {
+  if (assignment.completionStatus !== "NOT_DONE") return false;
   const assignmentDate = new Date(assignment.date);
   const diffDays = differenceInBusinessDays(now, assignmentDate);
   return diffDays > thresholdDays;
@@ -1511,6 +1589,7 @@ git commit -m "feat(planning): alerte retard sur assignations NOT_DONE via AppSe
 ### Task W2.7 — E2E W2 + build + deploy
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/e2e/tests/workflows/recurring-rules-monthly.spec.ts`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/e2e/tests/workflows/assignment-status.spec.ts`
 
@@ -1519,28 +1598,30 @@ git commit -m "feat(planning): alerte retard sur assignations NOT_DONE via AppSe
 - [ ] **Step 1 :** Écrire E2E `recurring-rules-monthly.spec.ts`.
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('E2 — Récurrence mensuelle', () => {
-  test.use({ storageState: 'playwright/.auth/admin.json' });
+test.describe("E2 — Récurrence mensuelle", () => {
+  test.use({ storageState: "playwright/.auth/admin.json" });
 
-  test('Créer une règle MONTHLY_DAY et générer les occurrences', async ({ page }) => {
-    await page.goto('/fr/planning');
-    await page.getByRole('button', { name: /règles récurrentes/i }).click();
-    await page.getByRole('button', { name: /nouvelle règle/i }).click();
+  test("Créer une règle MONTHLY_DAY et générer les occurrences", async ({
+    page,
+  }) => {
+    await page.goto("/fr/planning");
+    await page.getByRole("button", { name: /règles récurrentes/i }).click();
+    await page.getByRole("button", { name: /nouvelle règle/i }).click();
 
     await page.getByLabel(/type de récurrence/i).click();
-    await page.getByRole('option', { name: /mensuelle à date fixe/i }).click();
-    await page.getByLabel(/jour du mois/i).fill('15');
+    await page.getByRole("option", { name: /mensuelle à date fixe/i }).click();
+    await page.getByLabel(/jour du mois/i).fill("15");
     await page.getByLabel(/agent/i).click();
-    await page.getByRole('option').first().click();
+    await page.getByRole("option").first().click();
     await page.getByLabel(/tâche/i).click();
-    await page.getByRole('option').first().click();
-    await page.getByLabel(/date de début/i).fill('2026-05-01');
-    await page.getByLabel(/date de fin/i).fill('2026-07-31');
-    await page.getByRole('button', { name: /enregistrer/i }).click();
+    await page.getByRole("option").first().click();
+    await page.getByLabel(/date de début/i).fill("2026-05-01");
+    await page.getByLabel(/date de fin/i).fill("2026-07-31");
+    await page.getByRole("button", { name: /enregistrer/i }).click();
 
-    await page.getByRole('button', { name: /générer/i }).click();
+    await page.getByRole("button", { name: /générer/i }).click();
     await expect(page.getByText(/3 assignations créées/i)).toBeVisible();
   });
 });
@@ -1549,29 +1630,43 @@ test.describe('E2 — Récurrence mensuelle', () => {
 - [ ] **Step 2 :** Écrire E2E `assignment-status.spec.ts`.
 
 ```typescript
-import { test, expect } from '@playwright/test';
-import { asRole } from '../fixtures/asRole';
+import { test, expect } from "@playwright/test";
+import { asRole } from "../fixtures/asRole";
 
-test.describe('E3 — Statut d\'exécution', () => {
-  test('Un agent marque sa tâche comme faite et le responsable voit le changement', async ({ browser }) => {
+test.describe("E3 — Statut d'exécution", () => {
+  test("Un agent marque sa tâche comme faite et le responsable voit le changement", async ({
+    browser,
+  }) => {
     // Setup: créer une assignation pour le contributeur
-    const admin = await asRole(browser, 'ADMIN');
-    const assignment = await admin.request.post('/api/predefined-tasks/assignments', {
-      data: { predefinedTaskId: '...', userId: '<contributeur-id>', date: '2026-04-24', period: 'MORNING' }
-    });
+    const admin = await asRole(browser, "ADMIN");
+    const assignment = await admin.request.post(
+      "/api/predefined-tasks/assignments",
+      {
+        data: {
+          predefinedTaskId: "...",
+          userId: "<contributeur-id>",
+          date: "2026-04-24",
+          period: "MORNING",
+        },
+      },
+    );
     const { id } = await assignment.json();
 
     // Étape 1 — Contributeur: cliquer sur l'assignment et marquer DONE
-    const contrib = await asRole(browser, 'CONTRIBUTEUR');
-    await contrib.page.goto('/fr/planning');
+    const contrib = await asRole(browser, "CONTRIBUTEUR");
+    await contrib.page.goto("/fr/planning");
     await contrib.page.getByTestId(`assignment-${id}`).click();
-    await contrib.page.getByRole('button', { name: /faite/i }).click();
-    await expect(contrib.page.getByTestId(`assignment-${id}-badge`)).toHaveAttribute('data-status', 'DONE');
+    await contrib.page.getByRole("button", { name: /faite/i }).click();
+    await expect(
+      contrib.page.getByTestId(`assignment-${id}-badge`),
+    ).toHaveAttribute("data-status", "DONE");
 
     // Étape 2 — Responsable voit le statut DONE
-    const resp = await asRole(browser, 'RESPONSABLE');
-    await resp.page.goto('/fr/planning');
-    await expect(resp.page.getByTestId(`assignment-${id}-badge`)).toHaveAttribute('data-status', 'DONE');
+    const resp = await asRole(browser, "RESPONSABLE");
+    await resp.page.goto("/fr/planning");
+    await expect(
+      resp.page.getByTestId(`assignment-${id}-badge`),
+    ).toHaveAttribute("data-status", "DONE");
   });
 });
 ```
@@ -1626,6 +1721,7 @@ Expected : `"ok"` et `1`.
 **Entry criteria :** W2 close. Mockup E4.3 validé par PO. ADR-03 mergé.
 
 **Exit criteria :**
+
 - Service `PlanningBalancerService` : ≥95% couverture sur 7 jeux de tests déterministes (ADR-03).
 - Endpoint `generate-balanced` idempotent, transactionnel (rollback en cas d'échec partiel).
 - Modale `BalancedPlanningModal` : preview → apply sans régression.
@@ -1636,6 +1732,7 @@ Expected : `"ok"` et `1`.
 ### Task W3.1 — Service `PlanningBalancerService` (logique pure, orchestrateur)
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/planning-balancer.service.ts`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/planning-balancer.service.spec.ts`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/planning-balancer.types.ts`
@@ -1647,7 +1744,7 @@ Expected : `"ok"` et `1`.
 ```typescript
 // apps/api/src/predefined-tasks/planning-balancer.types.ts
 
-export type BalancerPeriod = 'MORNING' | 'AFTERNOON' | 'FULL_DAY';
+export type BalancerPeriod = "MORNING" | "AFTERNOON" | "FULL_DAY";
 
 export interface BalancerOccurrence {
   taskId: string;
@@ -1685,7 +1782,7 @@ export interface BalancerUnassigned {
   taskId: string;
   date: Date;
   period: BalancerPeriod;
-  reason: 'NO_ELIGIBLE_AGENT';
+  reason: "NO_ELIGIBLE_AGENT";
 }
 
 export interface BalancerOutput {
@@ -1699,13 +1796,15 @@ export interface BalancerOutput {
 - [ ] **Step 2 :** Écrire les 7 jeux de tests (ADR-03) dans `planning-balancer.service.spec.ts`.
 
 ```typescript
-import { PlanningBalancerService } from './planning-balancer.service';
-import { BalancerInput } from './planning-balancer.types';
+import { PlanningBalancerService } from "./planning-balancer.service";
+import { BalancerInput } from "./planning-balancer.types";
 
-describe('PlanningBalancerService', () => {
+describe("PlanningBalancerService", () => {
   let service: PlanningBalancerService;
 
-  beforeEach(() => { service = new PlanningBalancerService(); });
+  beforeEach(() => {
+    service = new PlanningBalancerService();
+  });
 
   const buildInput = (partial: Partial<BalancerInput>): BalancerInput => ({
     occurrences: [],
@@ -1714,89 +1813,175 @@ describe('PlanningBalancerService', () => {
     ...partial,
   });
 
-  it('cas 1 — trivial : 1 agent, 1 occurrence', () => {
-    const out = service.balance(buildInput({
-      agents: [{ userId: 'u1' }],
-      occurrences: [{ taskId: 't1', weight: 1, date: new Date('2026-05-01'), period: 'MORNING' }],
-    }));
+  it("cas 1 — trivial : 1 agent, 1 occurrence", () => {
+    const out = service.balance(
+      buildInput({
+        agents: [{ userId: "u1" }],
+        occurrences: [
+          {
+            taskId: "t1",
+            weight: 1,
+            date: new Date("2026-05-01"),
+            period: "MORNING",
+          },
+        ],
+      }),
+    );
     expect(out.proposedAssignments).toHaveLength(1);
-    expect(out.proposedAssignments[0].userId).toBe('u1');
+    expect(out.proposedAssignments[0].userId).toBe("u1");
     expect(out.equityRatio).toBe(1);
   });
 
-  it('cas 2 — répartition parfaite : 2 agents, 4 occurrences poids=1', () => {
-    const out = service.balance(buildInput({
-      agents: [{ userId: 'u1' }, { userId: 'u2' }],
-      occurrences: Array.from({ length: 4 }, (_, i) => ({
-        taskId: 't1', weight: 1, date: new Date(`2026-05-0${i + 1}`), period: 'MORNING',
-      })),
-    }));
+  it("cas 2 — répartition parfaite : 2 agents, 4 occurrences poids=1", () => {
+    const out = service.balance(
+      buildInput({
+        agents: [{ userId: "u1" }, { userId: "u2" }],
+        occurrences: Array.from({ length: 4 }, (_, i) => ({
+          taskId: "t1",
+          weight: 1,
+          date: new Date(`2026-05-0${i + 1}`),
+          period: "MORNING",
+        })),
+      }),
+    );
     const byAgent = new Map<string, number>();
-    out.proposedAssignments.forEach(a => byAgent.set(a.userId, (byAgent.get(a.userId) ?? 0) + 1));
-    expect(byAgent.get('u1')).toBe(2);
-    expect(byAgent.get('u2')).toBe(2);
+    out.proposedAssignments.forEach((a) =>
+      byAgent.set(a.userId, (byAgent.get(a.userId) ?? 0) + 1),
+    );
+    expect(byAgent.get("u1")).toBe(2);
+    expect(byAgent.get("u2")).toBe(2);
     expect(out.equityRatio).toBe(1);
   });
 
-  it('cas 3 — poids asymétriques : 3 agents, poids [5,5,1,1,1,1]', () => {
-    const out = service.balance(buildInput({
-      agents: [{ userId: 'a' }, { userId: 'b' }, { userId: 'c' }],
-      occurrences: [5, 5, 1, 1, 1, 1].map((w, i) => ({
-        taskId: 't1', weight: w, date: new Date(`2026-05-0${i + 1}`), period: 'MORNING',
-      })),
-    }));
-    const usersOfWeight5 = out.proposedAssignments.filter(a => a.weight === 5).map(a => a.userId);
+  it("cas 3 — poids asymétriques : 3 agents, poids [5,5,1,1,1,1]", () => {
+    const out = service.balance(
+      buildInput({
+        agents: [{ userId: "a" }, { userId: "b" }, { userId: "c" }],
+        occurrences: [5, 5, 1, 1, 1, 1].map((w, i) => ({
+          taskId: "t1",
+          weight: w,
+          date: new Date(`2026-05-0${i + 1}`),
+          period: "MORNING",
+        })),
+      }),
+    );
+    const usersOfWeight5 = out.proposedAssignments
+      .filter((a) => a.weight === 5)
+      .map((a) => a.userId);
     expect(new Set(usersOfWeight5).size).toBe(2); // les deux lourdes chez 2 agents différents
   });
 
-  it('cas 4 — absence bloquante', () => {
-    const out = service.balance(buildInput({
-      agents: [{ userId: 'u1' }, { userId: 'u2' }],
-      occurrences: [
-        { taskId: 't', weight: 1, date: new Date('2026-05-01'), period: 'MORNING' },
-        { taskId: 't', weight: 1, date: new Date('2026-05-02'), period: 'MORNING' },
-      ],
-      absences: new Map([['u1', [{ startDate: new Date('2026-05-01'), endDate: new Date('2026-05-01') }]]]),
-    }));
-    const assign01 = out.proposedAssignments.find(a => a.date.toISOString().startsWith('2026-05-01'));
-    const assign02 = out.proposedAssignments.find(a => a.date.toISOString().startsWith('2026-05-02'));
-    expect(assign01!.userId).toBe('u2');
-    expect(assign02!.userId).toBe('u1'); // u2 a pris la 1ère, u1 a charge=0 sur la 2e
+  it("cas 4 — absence bloquante", () => {
+    const out = service.balance(
+      buildInput({
+        agents: [{ userId: "u1" }, { userId: "u2" }],
+        occurrences: [
+          {
+            taskId: "t",
+            weight: 1,
+            date: new Date("2026-05-01"),
+            period: "MORNING",
+          },
+          {
+            taskId: "t",
+            weight: 1,
+            date: new Date("2026-05-02"),
+            period: "MORNING",
+          },
+        ],
+        absences: new Map([
+          [
+            "u1",
+            [
+              {
+                startDate: new Date("2026-05-01"),
+                endDate: new Date("2026-05-01"),
+              },
+            ],
+          ],
+        ]),
+      }),
+    );
+    const assign01 = out.proposedAssignments.find((a) =>
+      a.date.toISOString().startsWith("2026-05-01"),
+    );
+    const assign02 = out.proposedAssignments.find((a) =>
+      a.date.toISOString().startsWith("2026-05-02"),
+    );
+    expect(assign01!.userId).toBe("u2");
+    expect(assign02!.userId).toBe("u1"); // u2 a pris la 1ère, u1 a charge=0 sur la 2e
   });
 
-  it('cas 5 — compétence requise', () => {
-    const out = service.balance(buildInput({
-      agents: [
-        { userId: 'a', skills: [] },
-        { userId: 'b', skills: ['X'] },
-        { userId: 'c', skills: [] },
-      ],
-      occurrences: [{ taskId: 't1', weight: 3, date: new Date('2026-05-01'), period: 'MORNING' }],
-      taskRequiredSkills: new Map([['t1', ['X']]]),
-    }));
-    expect(out.proposedAssignments[0].userId).toBe('b');
+  it("cas 5 — compétence requise", () => {
+    const out = service.balance(
+      buildInput({
+        agents: [
+          { userId: "a", skills: [] },
+          { userId: "b", skills: ["X"] },
+          { userId: "c", skills: [] },
+        ],
+        occurrences: [
+          {
+            taskId: "t1",
+            weight: 3,
+            date: new Date("2026-05-01"),
+            period: "MORNING",
+          },
+        ],
+        taskRequiredSkills: new Map([["t1", ["X"]]]),
+      }),
+    );
+    expect(out.proposedAssignments[0].userId).toBe("b");
   });
 
-  it('cas 6 — aucun éligible', () => {
-    const out = service.balance(buildInput({
-      agents: [{ userId: 'u1' }],
-      occurrences: [{ taskId: 't', weight: 1, date: new Date('2026-05-01'), period: 'MORNING' }],
-      absences: new Map([['u1', [{ startDate: new Date('2026-04-30'), endDate: new Date('2026-05-02') }]]]),
-    }));
+  it("cas 6 — aucun éligible", () => {
+    const out = service.balance(
+      buildInput({
+        agents: [{ userId: "u1" }],
+        occurrences: [
+          {
+            taskId: "t",
+            weight: 1,
+            date: new Date("2026-05-01"),
+            period: "MORNING",
+          },
+        ],
+        absences: new Map([
+          [
+            "u1",
+            [
+              {
+                startDate: new Date("2026-04-30"),
+                endDate: new Date("2026-05-02"),
+              },
+            ],
+          ],
+        ]),
+      }),
+    );
     expect(out.proposedAssignments).toHaveLength(0);
     expect(out.unassignedOccurrences).toHaveLength(1);
-    expect(out.unassignedOccurrences[0].reason).toBe('NO_ELIGIBLE_AGENT');
+    expect(out.unassignedOccurrences[0].reason).toBe("NO_ELIGIBLE_AGENT");
   });
 
-  it('cas 7 — départage stable par userId (lexicographique)', () => {
-    const out = service.balance(buildInput({
-      agents: [{ userId: 'user-b' }, { userId: 'user-a' }],
-      occurrences: [{ taskId: 't', weight: 1, date: new Date('2026-05-01'), period: 'MORNING' }],
-    }));
-    expect(out.proposedAssignments[0].userId).toBe('user-a');
+  it("cas 7 — départage stable par userId (lexicographique)", () => {
+    const out = service.balance(
+      buildInput({
+        agents: [{ userId: "user-b" }, { userId: "user-a" }],
+        occurrences: [
+          {
+            taskId: "t",
+            weight: 1,
+            date: new Date("2026-05-01"),
+            period: "MORNING",
+          },
+        ],
+      }),
+    );
+    expect(out.proposedAssignments[0].userId).toBe("user-a");
   });
 
-  it('bench — 20 agents × 30 tâches × 30 jours < 3s', () => {
+  it("bench — 20 agents × 30 tâches × 30 jours < 3s", () => {
     const agents = Array.from({ length: 20 }, (_, i) => ({ userId: `u${i}` }));
     const occurrences: BalancerOccurrence[] = [];
     for (let d = 0; d < 30; d++) {
@@ -1805,7 +1990,7 @@ describe('PlanningBalancerService', () => {
           taskId: `t${t}`,
           weight: (t % 5) + 1,
           date: new Date(2026, 4, 1 + d),
-          period: 'MORNING',
+          period: "MORNING",
         });
       }
     }
@@ -1828,13 +2013,13 @@ pnpm --filter @orchestra/api test planning-balancer.service.spec 2>&1 | tail -25
 - [ ] **Step 4 :** Implémenter `planning-balancer.service.ts` selon l'ADR-03.
 
 ```typescript
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 import {
   BalancerInput,
   BalancerOutput,
   BalancerOccurrence,
   BalancerAgent,
-} from './planning-balancer.types';
+} from "./planning-balancer.types";
 
 @Injectable()
 export class PlanningBalancerService {
@@ -1850,15 +2035,16 @@ export class PlanningBalancerService {
       return a.taskId.localeCompare(b.taskId);
     });
 
-    const proposedAssignments: BalancerOutput['proposedAssignments'] = [];
-    const unassignedOccurrences: BalancerOutput['unassignedOccurrences'] = [];
+    const proposedAssignments: BalancerOutput["proposedAssignments"] = [];
+    const unassignedOccurrences: BalancerOutput["unassignedOccurrences"] = [];
 
     for (const occ of occurrences) {
       const requiredSkills = input.taskRequiredSkills?.get(occ.taskId) ?? [];
-      const eligibles = input.agents.filter(agent => {
-        if (this.isAbsentOn(input.absences.get(agent.userId) ?? [], occ.date)) return false;
+      const eligibles = input.agents.filter((agent) => {
+        if (this.isAbsentOn(input.absences.get(agent.userId) ?? [], occ.date))
+          return false;
         if (requiredSkills.length === 0) return true;
-        return requiredSkills.every(sk => (agent.skills ?? []).includes(sk));
+        return requiredSkills.every((sk) => (agent.skills ?? []).includes(sk));
       });
 
       if (eligibles.length === 0) {
@@ -1866,7 +2052,7 @@ export class PlanningBalancerService {
           taskId: occ.taskId,
           date: occ.date,
           period: occ.period,
-          reason: 'NO_ELIGIBLE_AGENT',
+          reason: "NO_ELIGIBLE_AGENT",
         });
         continue;
       }
@@ -1886,25 +2072,40 @@ export class PlanningBalancerService {
         period: occ.period,
         weight: occ.weight,
       });
-      workload.set(chosen.userId, (workload.get(chosen.userId) ?? 0) + occ.weight);
+      workload.set(
+        chosen.userId,
+        (workload.get(chosen.userId) ?? 0) + occ.weight,
+      );
     }
 
     const workloadByAgent = Array.from(workload.entries())
       .map(([userId, weightedLoad]) => ({ userId, weightedLoad }))
       .sort((a, b) => a.userId.localeCompare(b.userId));
 
-    const loads = workloadByAgent.map(a => a.weightedLoad);
+    const loads = workloadByAgent.map((a) => a.weightedLoad);
     const mean = loads.reduce((acc, v) => acc + v, 0) / (loads.length || 1);
-    const variance = loads.reduce((acc, v) => acc + (v - mean) ** 2, 0) / (loads.length || 1);
+    const variance =
+      loads.reduce((acc, v) => acc + (v - mean) ** 2, 0) / (loads.length || 1);
     const stddev = Math.sqrt(variance);
-    const equityRatio = mean > 0 ? Math.max(0, Math.min(1, 1 - stddev / mean)) : 1;
+    const equityRatio =
+      mean > 0 ? Math.max(0, Math.min(1, 1 - stddev / mean)) : 1;
 
-    return { proposedAssignments, workloadByAgent, equityRatio, unassignedOccurrences };
+    return {
+      proposedAssignments,
+      workloadByAgent,
+      equityRatio,
+      unassignedOccurrences,
+    };
   }
 
-  private isAbsentOn(absences: Array<{ startDate: Date; endDate: Date }>, date: Date): boolean {
+  private isAbsentOn(
+    absences: Array<{ startDate: Date; endDate: Date }>,
+    date: Date,
+  ): boolean {
     const t = date.getTime();
-    return absences.some(a => a.startDate.getTime() <= t && t <= a.endDate.getTime());
+    return absences.some(
+      (a) => a.startDate.getTime() <= t && t <= a.endDate.getTime(),
+    );
   }
 }
 ```
@@ -1927,6 +2128,7 @@ git commit -m "feat(predefined-tasks): PlanningBalancerService glouton + 7 jeux 
 ### Task W3.2 — Endpoint `POST /recurring-rules/generate-balanced` (sub-agent A)
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/predefined-tasks.controller.ts`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/predefined-tasks.service.ts`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/api/src/predefined-tasks/dto/generate-balanced.dto.ts`
@@ -2059,6 +2261,7 @@ Sortie: diffs, sortie tests, confirmation commit.
 **Gate bloquant :** mockup E4.3 validé par PO (W0.5).
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/predefined-tasks/BalancedPlanningModal.tsx`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/predefined-tasks/__tests__/BalancedPlanningModal.test.tsx`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/hooks/usePlanningBalancer.ts`
@@ -2131,48 +2334,65 @@ pnpm run dev  # Monitor
 ### Task W3.4 — E2E W3 + build + deploy
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/e2e/tests/workflows/balanced-planning.spec.ts`
 
 - [ ] **Step 1 :** Écrire E2E.
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('E4 — Planning équilibré', () => {
-  test.use({ storageState: 'playwright/.auth/admin.json' });
+test.describe("E4 — Planning équilibré", () => {
+  test.use({ storageState: "playwright/.auth/admin.json" });
 
-  test('Prévisualiser puis appliquer sur 3 tâches × 4 agents', async ({ page }) => {
-    await page.goto('/fr/planning');
-    await page.getByRole('button', { name: /générer un planning équilibré/i }).click();
+  test("Prévisualiser puis appliquer sur 3 tâches × 4 agents", async ({
+    page,
+  }) => {
+    await page.goto("/fr/planning");
+    await page
+      .getByRole("button", { name: /générer un planning équilibré/i })
+      .click();
 
-    await page.getByLabel(/date de début/i).fill('2026-05-01');
-    await page.getByLabel(/date de fin/i).fill('2026-05-31');
+    await page.getByLabel(/date de début/i).fill("2026-05-01");
+    await page.getByLabel(/date de fin/i).fill("2026-05-31");
     await page.getByLabel(/agents/i).click();
-    for (const n of [1, 2, 3, 4]) await page.getByRole('option').nth(n - 1).click();
-    await page.keyboard.press('Escape');
+    for (const n of [1, 2, 3, 4])
+      await page
+        .getByRole("option")
+        .nth(n - 1)
+        .click();
+    await page.keyboard.press("Escape");
     await page.getByLabel(/tâches à équilibrer/i).click();
-    for (const n of [1, 2, 3]) await page.getByRole('option').nth(n - 1).click();
-    await page.keyboard.press('Escape');
+    for (const n of [1, 2, 3])
+      await page
+        .getByRole("option")
+        .nth(n - 1)
+        .click();
+    await page.keyboard.press("Escape");
 
-    await page.getByRole('button', { name: /prévisualiser/i }).click();
+    await page.getByRole("button", { name: /prévisualiser/i }).click();
 
     // Aperçu visible
-    await expect(page.getByRole('heading', { name: /aperçu/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /aperçu/i })).toBeVisible();
     await expect(page.getByText(/ratio d'équité/i)).toBeVisible();
 
     // Apply
-    await page.getByRole('button', { name: /appliquer/i }).click();
-    await page.getByRole('button', { name: /confirmer/i }).click();
+    await page.getByRole("button", { name: /appliquer/i }).click();
+    await page.getByRole("button", { name: /confirmer/i }).click();
 
     await expect(page.getByText(/assignations créées/i)).toBeVisible();
 
     // Replay idempotence
-    await page.getByRole('button', { name: /générer un planning équilibré/i }).click();
+    await page
+      .getByRole("button", { name: /générer un planning équilibré/i })
+      .click();
     // ... même config
-    await page.getByRole('button', { name: /prévisualiser/i }).click();
-    await page.getByRole('button', { name: /appliquer/i }).click();
-    await page.getByRole('button', { name: /confirmer/i }).click();
-    await expect(page.getByText(/0 assignation créée.*déjà existantes/i)).toBeVisible();
+    await page.getByRole("button", { name: /prévisualiser/i }).click();
+    await page.getByRole("button", { name: /appliquer/i }).click();
+    await page.getByRole("button", { name: /confirmer/i }).click();
+    await expect(
+      page.getByText(/0 assignation créée.*déjà existantes/i),
+    ).toBeVisible();
   });
 });
 ```
@@ -2225,6 +2445,7 @@ Expected : `401 Unauthorized` (pas 404).
 **Entry criteria :** W3 close. Mockup E5.2 validé par PO.
 
 **Exit criteria :**
+
 - `PlanningView` supporte le mode `activity` via bouton gaté, sans régression sur `week` / `month`.
 - `ActivityGrid` opérationnel, filtrage par service + plage, feuille de style print.
 - Tests non-régression sur modes `week` + `month`.
@@ -2234,6 +2455,7 @@ Expected : `401 Unauthorized` (pas 404).
 ### Task W4.1 — Extension `usePlanningViewStore` + type `viewMode`
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/stores/planningView.store.ts`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/hooks/usePlanningData.ts` (si type ViewMode y est défini)
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/planning/PlanningView.tsx` (consommation du store)
@@ -2251,7 +2473,7 @@ grep -rn "viewMode\|'week'\|'month'" /home/alex/Documents/REPO/ORCHESTRA/apps/we
 
 ```typescript
 // planningView.store.ts
-export type ViewMode = 'week' | 'month' | 'activity';
+export type ViewMode = "week" | "month" | "activity";
 
 interface PlanningViewState {
   // ... existant
@@ -2261,7 +2483,7 @@ interface PlanningViewState {
 
 export const usePlanningViewStore = create<PlanningViewState>((set) => ({
   // ...
-  viewMode: 'week',
+  viewMode: "week",
   setViewMode: (mode) => set({ viewMode: mode }),
 }));
 ```
@@ -2271,19 +2493,19 @@ export const usePlanningViewStore = create<PlanningViewState>((set) => ({
 - [ ] **Step 4 :** Écrire un test minimal sur le store.
 
 ```typescript
-import { act, renderHook } from '@testing-library/react';
-import { usePlanningViewStore } from '../planningView.store';
+import { act, renderHook } from "@testing-library/react";
+import { usePlanningViewStore } from "../planningView.store";
 
-describe('planningView.store — viewMode', () => {
-  it('default viewMode = week', () => {
+describe("planningView.store — viewMode", () => {
+  it("default viewMode = week", () => {
     const { result } = renderHook(() => usePlanningViewStore());
-    expect(result.current.viewMode).toBe('week');
+    expect(result.current.viewMode).toBe("week");
   });
 
-  it('setViewMode change la valeur', () => {
+  it("setViewMode change la valeur", () => {
     const { result } = renderHook(() => usePlanningViewStore());
-    act(() => result.current.setViewMode('activity'));
-    expect(result.current.viewMode).toBe('activity');
+    act(() => result.current.setViewMode("activity"));
+    expect(result.current.viewMode).toBe("activity");
   });
 });
 ```
@@ -2307,6 +2529,7 @@ git commit -m "feat(planning): étend planningView.store avec viewMode=activity"
 ### Task W4.2 — Bouton « Vue activité » gaté par permission
 
 **Files:**
+
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/planning/PlanningView.tsx` (barre de contrôles)
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/messages/fr/planning.json`
 - Modify: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/messages/en/planning.json`
@@ -2323,16 +2546,21 @@ grep -rn "useCurrentUserPermissions\|hasPermission\|userPermissions" /home/alex/
 - [ ] **Step 2 :** Ajouter le 3e bouton dans la barre de contrôles (après Semaine / Mois).
 
 ```tsx
-{hasPermission('planning:activity-view') && (
-  <button
-    type="button"
-    onClick={() => setViewMode('activity')}
-    aria-pressed={viewMode === 'activity'}
-    className={cn('px-3 py-1.5 rounded', viewMode === 'activity' ? 'bg-blue-600 text-white' : 'bg-zinc-100')}
-  >
-    {t('activity')}
-  </button>
-)}
+{
+  hasPermission("planning:activity-view") && (
+    <button
+      type="button"
+      onClick={() => setViewMode("activity")}
+      aria-pressed={viewMode === "activity"}
+      className={cn(
+        "px-3 py-1.5 rounded",
+        viewMode === "activity" ? "bg-blue-600 text-white" : "bg-zinc-100",
+      )}
+    >
+      {t("activity")}
+    </button>
+  );
+}
 ```
 
 - [ ] **Step 3 :** i18n : ajouter `"activity": "Vue activité"` + `"activity": "Activity view"`.
@@ -2343,13 +2571,17 @@ grep -rn "useCurrentUserPermissions\|hasPermission\|userPermissions" /home/alex/
 it("n'affiche pas le bouton 'Vue activité' sans permission", () => {
   mockPermissions([]);
   render(<PlanningView />);
-  expect(screen.queryByRole('button', { name: /vue activité/i })).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /vue activité/i }),
+  ).not.toBeInTheDocument();
 });
 
 it("affiche le bouton avec permission", () => {
-  mockPermissions(['planning:activity-view']);
+  mockPermissions(["planning:activity-view"]);
   render(<PlanningView />);
-  expect(screen.getByRole('button', { name: /vue activité/i })).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: /vue activité/i }),
+  ).toBeInTheDocument();
 });
 ```
 
@@ -2369,6 +2601,7 @@ git commit -m "feat(planning): bouton Vue activité gaté par planning:activity-
 **Gate bloquant :** mockup E5.2 validé par PO.
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/planning/ActivityGrid.tsx`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/planning/__tests__/ActivityGrid.test.tsx`
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/apps/web/src/components/planning/ActivityGrid.print.css`
@@ -2442,44 +2675,53 @@ pnpm run dev  # Monitor
 ### Task W4.4 — E2E W4 + build + deploy
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/e2e/tests/workflows/activity-view.spec.ts`
 
 - [ ] **Step 1 :** Écrire E2E.
 
 ```typescript
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('E5 — Vue Activité', () => {
-  test.describe('Permission gating', () => {
-    test.use({ storageState: 'playwright/.auth/observateur.json' });
-    test('OBSERVATEUR voit le bouton Vue activité', async ({ page }) => {
-      await page.goto('/fr/planning');
-      await expect(page.getByRole('button', { name: /vue activité/i })).toBeVisible();
+test.describe("E5 — Vue Activité", () => {
+  test.describe("Permission gating", () => {
+    test.use({ storageState: "playwright/.auth/observateur.json" });
+    test("OBSERVATEUR voit le bouton Vue activité", async ({ page }) => {
+      await page.goto("/fr/planning");
+      await expect(
+        page.getByRole("button", { name: /vue activité/i }),
+      ).toBeVisible();
     });
   });
 
-  test.describe('Usage nominal', () => {
-    test.use({ storageState: 'playwright/.auth/admin.json' });
+  test.describe("Usage nominal", () => {
+    test.use({ storageState: "playwright/.auth/admin.json" });
 
-    test('Bascule semaine → activité, filtrage, impression', async ({ page }) => {
-      await page.goto('/fr/planning');
-      await page.getByRole('button', { name: /vue activité/i }).click();
+    test("Bascule semaine → activité, filtrage, impression", async ({
+      page,
+    }) => {
+      await page.goto("/fr/planning");
+      await page.getByRole("button", { name: /vue activité/i }).click();
 
       // Grid présent
-      await expect(page.getByRole('table')).toBeVisible();
-      await expect(page.getByRole('columnheader').first()).toContainText(/jour/i);
+      await expect(page.getByRole("table")).toBeVisible();
+      await expect(page.getByRole("columnheader").first()).toContainText(
+        /jour/i,
+      );
 
       // Filtrage par service
       await page.getByLabel(/service/i).click();
-      await page.getByRole('option').first().click();
-      await page.keyboard.press('Escape');
+      await page.getByRole("option").first().click();
+      await page.keyboard.press("Escape");
 
       // Bouton imprimer présent
-      await expect(page.getByRole('button', { name: /imprimer/i })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: /imprimer/i }),
+      ).toBeVisible();
 
       // Retour semaine
-      await page.getByRole('button', { name: /^semaine$/i }).click();
-      await expect(page.getByRole('table')).not.toBeVisible();
+      await page.getByRole("button", { name: /^semaine$/i }).click();
+      await expect(page.getByRole("table")).not.toBeVisible();
     });
   });
 });
@@ -2527,6 +2769,7 @@ Expected : 200 ou 302 (redirect auth).
 **Entry criteria :** W4 close.
 
 **Exit criteria :**
+
 - Recette PV signé par Preschez.
 - Documentation utilisateur publiée.
 - Service CDG créé, 6 agents rattachés, permissions effectives.
@@ -2549,19 +2792,23 @@ Date : <YYYY-MM-DD>
 Présents : L. Preschez, A. Beouch, <6 agents>, A. Berge
 
 ## Parcours testés
+
 - [x] A : Configurer une tâche récurrente
 - [x] B : Générer un planning équilibré
 - [x] C : Suivre son planning
 
 ## Résultat
+
 - Feux : <Vert | Vert avec réserves | Rouge>
 
 ## Anomalies
-| # | Description | Gravité | Statut |
-|---|---|---|---|
-| 1 | ... | <bloquant/mineur> | <ouverte/fermée> |
+
+| #   | Description | Gravité           | Statut           |
+| --- | ----------- | ----------------- | ---------------- |
+| 1   | ...         | <bloquant/mineur> | <ouverte/fermée> |
 
 ## Signatures
+
 - PO : L. Preschez
 - Support : A. Beouch
 - Éditeur : A. Berge
@@ -2579,6 +2826,7 @@ git commit -m "docs(recette): PV recette Planning d'activités récurrentes CDG"
 ### Task W5.2 — Documentation utilisateur (sub-agent parallèle A)
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/docs/user/planning-activites.md`
 
 **Sub-agent :** `[PARALLÈLE A]` — Sonnet. Prompt :
@@ -2682,6 +2930,7 @@ ssh debian@92.222.35.25 "docker exec orchestra-postgres pg_dump -U orchestra orc
 ### Task W5.4 — Monitoring 2 premières générations mensuelles (orchestrateur)
 
 **Files:**
+
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/docs/reports/2026-MM-DD-generation-cdg-M1.md` (après 1ère génération)
 - Create: `/home/alex/Documents/REPO/ORCHESTRA/docs/reports/2026-MM-DD-generation-cdg-M2.md` (après 2e)
 
@@ -2694,6 +2943,7 @@ ssh debian@92.222.35.25 "docker exec orchestra-postgres psql -U orchestra -d orc
 ```
 
 Vérifier :
+
 - `assignmentsCreated` cohérent avec le nombre d'occurrences attendues.
 - `equityRatio` > 0.85 (cible < 15% d'écart-type).
 - Temps de réponse : corréler avec logs API (`docker logs orchestra-api --since 1h | grep generate-balanced`).
@@ -2720,30 +2970,30 @@ Vérifier :
 
 ### 1. Couverture spec
 
-| Story | Wave | Tâches |
-|---|---|---|
-| E1.1 `weight` backend | W1 | W1.1, W1.3 |
-| E1.1 `weight` frontend | W1 | W1.4 |
-| E1.2 rendu `DayCell` | W1 | W1.5 |
-| E2.1 modèle récurrent étendu | W2 | W2.1, W2.2 |
-| E2.2 génération mensuelle | W2 | W2.2 (occurrence-generator + service) |
-| E3.1 endpoint statut | W2 | W2.4 |
-| E3.2 badge + popover | W2 | W2.5 |
-| E3.3 alerte retard | W2 | W2.6 |
-| E4.1 service balancer | W3 | W3.1 |
-| E4.2 endpoint balanced | W3 | W3.2 |
-| E4.3 modale UI | W3 | W3.3 |
-| E5.1 viewMode activity | W4 | W4.1, W4.2 |
-| E5.2 ActivityGrid + print | W4 | W4.3 |
-| ADRs | W0 | W0.2, W0.3, W0.4 |
-| Permissions RBAC compile-time | W0 | W0.6 |
-| Permissions RBAC DB | W1 | W1.2 |
-| i18n namespaces | W1 + W2 + W3 + W4 | W1.4, W2.3, W2.5, W3.3, W4.2 |
-| E2E | par vague | W1.6, W2.7, W3.4, W4.4 |
-| Doc utilisateur | W5 | W5.2 |
-| Recette CDG | W5 | W5.1 |
-| Provisioning CDG | W5 | W5.3 |
-| Monitoring | W5 | W5.4 |
+| Story                         | Wave              | Tâches                                |
+| ----------------------------- | ----------------- | ------------------------------------- |
+| E1.1 `weight` backend         | W1                | W1.1, W1.3                            |
+| E1.1 `weight` frontend        | W1                | W1.4                                  |
+| E1.2 rendu `DayCell`          | W1                | W1.5                                  |
+| E2.1 modèle récurrent étendu  | W2                | W2.1, W2.2                            |
+| E2.2 génération mensuelle     | W2                | W2.2 (occurrence-generator + service) |
+| E3.1 endpoint statut          | W2                | W2.4                                  |
+| E3.2 badge + popover          | W2                | W2.5                                  |
+| E3.3 alerte retard            | W2                | W2.6                                  |
+| E4.1 service balancer         | W3                | W3.1                                  |
+| E4.2 endpoint balanced        | W3                | W3.2                                  |
+| E4.3 modale UI                | W3                | W3.3                                  |
+| E5.1 viewMode activity        | W4                | W4.1, W4.2                            |
+| E5.2 ActivityGrid + print     | W4                | W4.3                                  |
+| ADRs                          | W0                | W0.2, W0.3, W0.4                      |
+| Permissions RBAC compile-time | W0                | W0.6                                  |
+| Permissions RBAC DB           | W1                | W1.2                                  |
+| i18n namespaces               | W1 + W2 + W3 + W4 | W1.4, W2.3, W2.5, W3.3, W4.2          |
+| E2E                           | par vague         | W1.6, W2.7, W3.4, W4.4                |
+| Doc utilisateur               | W5                | W5.2                                  |
+| Recette CDG                   | W5                | W5.1                                  |
+| Provisioning CDG              | W5                | W5.3                                  |
+| Monitoring                    | W5                | W5.4                                  |
 
 Aucun gap identifié. Les éléments §6.4 (cartographie UI), §7 (exigences non fonctionnelles : perf, couverture, i18n, a11y) sont couverts dans les DoD respectifs des tâches. §15 (déploiement/rollback) est couvert par les sections deploy de chaque wave.
 
@@ -2798,6 +3048,7 @@ ORDER BY p.code;
 ```
 
 Résultat attendu (cf. W1.2) :
+
 ```
 predefined_tasks:balance            | {ADMIN, RESPONSABLE}
 predefined_tasks:update-any-status  | {ADMIN, MANAGER, RESPONSABLE}
@@ -2839,6 +3090,7 @@ ssh debian@92.222.35.25 '...'
 ### A.5 — Liste des commits types attendus (par wave)
 
 **W0** (3-5 commits) :
+
 - `docs(adr): schéma Prisma cible pour Planning d'activités récurrentes`
 - `docs(adr): stratégie d'audit persistant via table audit_logs`
 - `docs(adr): algorithme d'équilibrage glouton V1 (pseudo-code + jeux de tests)`
@@ -2846,6 +3098,7 @@ ssh debian@92.222.35.25 '...'
 - `feat(rbac): ajoute 4 permissions pour planning activités récurrentes (compile-time)`
 
 **W1** (4-6 commits) :
+
 - `feat(database): weight sur PredefinedTask + modèle AuditLog`
 - `chore(rbac): seed idempotent des 4 permissions Planning activités`
 - `feat(predefined-tasks): ajoute champ weight (1..5) avec validation`
@@ -2854,6 +3107,7 @@ ssh debian@92.222.35.25 '...'
 - `test(e2e): scénario E1 pondération tâches prédéfinies`
 
 **W2** (5-7 commits) :
+
 - `feat(database): recurrenceType + completionStatus sur predefined_task_*`
 - `feat(predefined-tasks): récurrence mensuelle (MONTHLY_DAY + MONTHLY_ORDINAL) + generator pur`
 - `feat(predefined-tasks): UI récurrence mensuelle dans RecurringRulesModal`
@@ -2863,18 +3117,21 @@ ssh debian@92.222.35.25 '...'
 - `test(e2e): scénarios E2 (récurrence mensuelle) + E3 (statut + sync rôles)`
 
 **W3** (3-5 commits) :
+
 - `feat(predefined-tasks): PlanningBalancerService glouton + 7 jeux de tests`
 - `feat(predefined-tasks): endpoint generate-balanced preview/apply avec audit + idempotence`
 - `feat(planning): BalancedPlanningModal + usePlanningBalancer + bouton PlanningView`
 - `test(e2e): scénario E4 prévisualiser + apply + idempotence`
 
 **W4** (3-4 commits) :
+
 - `feat(planning): étend planningView.store avec viewMode=activity`
 - `feat(planning): bouton Vue activité gaté par planning:activity-view`
 - `feat(planning): ActivityGrid + print CSS + rendu conditionnel PlanningView`
 - `test(e2e): scénario E5 Vue activité (gating + nominal)`
 
 **W5** (2-4 commits) :
+
 - `docs(user): guide Planning d'activités récurrentes V1`
 - `docs(recette): PV recette Planning d'activités récurrentes CDG`
 - `docs(reports): monitoring première génération CDG`
@@ -2891,4 +3148,3 @@ Plan complet et sauvegardé à `docs/superpowers/plans/2026-04-24-planning-activ
 2. **Inline Execution** — exécution dans la session courante avec checkpoints de review groupés. Nécessite sub-skill `superpowers:executing-plans`.
 
 **Quelle approche ?**
-

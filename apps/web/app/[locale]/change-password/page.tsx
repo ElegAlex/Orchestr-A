@@ -24,8 +24,7 @@ export default function ChangePasswordPage() {
   const [error, setError] = useState<string | null>(null);
 
   const validate = (): string | null => {
-    if (!currentPassword)
-      return "Veuillez saisir votre mot de passe actuel.";
+    if (!currentPassword) return "Veuillez saisir votre mot de passe actuel.";
     if (newPassword.length < 8)
       return "Le nouveau mot de passe doit contenir au moins 8 caractères.";
     if (newPassword !== confirmPassword)
@@ -79,8 +78,8 @@ export default function ChangePasswordPage() {
             Changement de mot de passe requis
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Votre administrateur vous demande de définir un nouveau mot de
-            passe avant de continuer.
+            Votre administrateur vous demande de définir un nouveau mot de passe
+            avant de continuer.
           </p>
         </div>
 

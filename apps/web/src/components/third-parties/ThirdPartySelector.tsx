@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { thirdPartiesService } from "@/services/third-parties.service";
 import { ThirdParty, ThirdPartyType } from "@/types";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface ThirdPartySelectorProps {
   value?: string | null;

@@ -7,7 +7,11 @@ const nextConfig: NextConfig = {
   output: "standalone",
   devIndicators: false,
   experimental: {
-    optimizePackageImports: ["lucide-react", "@radix-ui/react-icons", "date-fns"],
+    optimizePackageImports: [
+      "lucide-react",
+      "@radix-ui/react-icons",
+      "date-fns",
+    ],
   },
   async headers() {
     return [

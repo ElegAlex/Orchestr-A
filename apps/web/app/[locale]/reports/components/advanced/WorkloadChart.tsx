@@ -53,9 +53,7 @@ export function WorkloadChart({ limit = 15 }: Props) {
       </p>
 
       {isLoading && <Skeleton />}
-      {isError && (
-        <p className="text-sm text-red-600">{t("loadError")}</p>
-      )}
+      {isError && <p className="text-sm text-red-600">{t("loadError")}</p>}
 
       {!isLoading && !isError && data && data.length === 0 && (
         <p className="text-sm text-gray-500">{t("noActiveTasks")}</p>
@@ -93,13 +91,7 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   );
 }
 
-function UserRow({
-  user,
-  isFirst,
-}: {
-  user: WorkloadUser;
-  isFirst: boolean;
-}) {
+function UserRow({ user, isFirst }: { user: WorkloadUser; isFirst: boolean }) {
   const segments: Array<{ key: StatusKey; count: number }> = (
     ["TODO", "IN_PROGRESS", "IN_REVIEW", "BLOCKED"] as StatusKey[]
   )

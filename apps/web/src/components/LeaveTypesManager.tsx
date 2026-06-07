@@ -9,7 +9,7 @@ import {
   UpdateLeaveTypeDto,
 } from "@/services/leave-types.service";
 import toast from "react-hot-toast";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface LeaveTypesManagerProps {
   onTypeChange?: () => void;

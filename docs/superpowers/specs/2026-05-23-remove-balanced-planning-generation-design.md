@@ -36,37 +36,44 @@ The complete auto-generation pipeline, end to end:
 ### Files to delete
 
 Backend:
+
 - `apps/api/src/predefined-tasks/planning-balancer.service.ts`
 - `apps/api/src/predefined-tasks/planning-balancer.types.ts`
 - `apps/api/src/predefined-tasks/planning-balancer.service.spec.ts`
 - `apps/api/src/predefined-tasks/dto/generate-balanced.dto.ts`
 
 Frontend:
+
 - `apps/web/src/components/predefined-tasks/BalancedPlanningModal.tsx`
 - `apps/web/src/components/predefined-tasks/__tests__/BalancedPlanningModal.test.tsx`
 - `apps/web/src/hooks/usePlanningBalancer.ts`
 - `apps/web/src/hooks/__tests__/usePlanningBalancer.test.ts`
 
 E2E:
+
 - `e2e/tests/workflows/balanced-planning.spec.ts`
 
 ### Files to edit
 
 Backend:
+
 - `apps/api/src/predefined-tasks/predefined-tasks.controller.ts` — remove the `POST /predefined-tasks/recurring-rules/generate-balanced` handler and its imports
 - `apps/api/src/predefined-tasks/predefined-tasks.service.ts` — remove `generateBalanced()` method and any helper exclusively used by it
 - `apps/api/src/predefined-tasks/predefined-tasks.module.ts` — remove `PlanningBalancerService` from providers
 - `apps/api/src/predefined-tasks/predefined-tasks.service.spec.ts` — remove `describe`/`it` blocks targeting `generateBalanced`
 
 Frontend:
+
 - `apps/web/src/services/predefined-tasks.service.ts` — remove `generateBalanced()` method and the types `GenerateBalancedDto`, `BalancerProposedAssignment`, `BalancerResult`, `BalancerUnassignedReason`, `BalancerMode`
 - `apps/web/src/components/planning/PlanningView.tsx` — remove the `BalancedPlanningModal` import, the `showBalancer` state, the "Planning équilibré" button block, and the modal render block
 
 RBAC:
+
 - Remove the `predefined_tasks:balance` permission key from `ROLE_TEMPLATES` (compile-time templates) and any UI listing of permissions
 - Post-deploy: purge Redis `role-permissions:*` per project convention
 
 Docs:
+
 - `docs/adr/2026-04-24-03-balancer-algorithm.md` — mark `Status: Superseded — feature removed 2026-05-23` with a one-line rationale; do not delete (ADRs are historical artifacts)
 - Mockup `docs/superpowers/mockups/2026-04-24-planning-activites/E4.3-balanced-planning-modal.html` — leave in place; not referenced by code
 

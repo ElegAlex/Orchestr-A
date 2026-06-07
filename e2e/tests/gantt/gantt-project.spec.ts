@@ -94,9 +94,7 @@ test.beforeAll(async () => {
       );
     }
     const tasksBody = await tasksRes.json();
-    const tasks: Array<{ id: string; title: string }> = Array.isArray(
-      tasksBody,
-    )
+    const tasks: Array<{ id: string; title: string }> = Array.isArray(tasksBody)
       ? tasksBody
       : (tasksBody.data ?? tasksBody.items ?? []);
 

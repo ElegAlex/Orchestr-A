@@ -25,7 +25,7 @@ import toast from "react-hot-toast";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { parseCSV as parseCSVRaw } from "@/lib/csv-parser";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 /**
  * Fallback role code quand aucun rôle `isDefault: true` n'est trouvé côté DB.
@@ -174,10 +174,7 @@ export default function UsersPage() {
       setDepartments(depts);
       setServices(servs);
     } catch (err) {
-      logger.error(
-        "Erreur lors du chargement des départements/services:",
-        err,
-      );
+      logger.error("Erreur lors du chargement des départements/services:", err);
     }
   };
 
@@ -839,7 +836,10 @@ export default function UsersPage() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="create-user-firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="create-user-firstName"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     {t("createModal.firstName")}
                   </label>
                   <input
@@ -854,7 +854,10 @@ export default function UsersPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="create-user-lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="create-user-lastName"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     {t("createModal.lastName")}
                   </label>
                   <input
@@ -871,7 +874,10 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label htmlFor="create-user-email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="create-user-email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   {t("createModal.email")}
                 </label>
                 <input
@@ -887,7 +893,10 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label htmlFor="create-user-login" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="create-user-login"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   {t("createModal.login")}
                 </label>
                 <input
@@ -905,7 +914,10 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label htmlFor="create-user-password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="create-user-password"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   {t("createModal.password")}
                 </label>
                 <div className="relative">
@@ -943,7 +955,10 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label htmlFor="create-user-role" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="create-user-role"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   {t("createModal.role")}
                 </label>
                 <select
@@ -971,7 +986,10 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label htmlFor="create-user-department" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="create-user-department"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   {t("createModal.department")}
                 </label>
                 <select

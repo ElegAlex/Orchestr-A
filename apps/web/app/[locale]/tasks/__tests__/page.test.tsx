@@ -1,4 +1,10 @@
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  act,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // Mock next-intl
@@ -167,7 +173,9 @@ jest.mock("@/services/projects.service", () => ({
 
 jest.mock("@/services/services.service", () => ({
   servicesService: {
-    getAllWithMemberCounts: jest.fn().mockResolvedValue({ services: [], memberCounts: {} }),
+    getAllWithMemberCounts: jest
+      .fn()
+      .mockResolvedValue({ services: [], memberCounts: {} }),
   },
 }));
 

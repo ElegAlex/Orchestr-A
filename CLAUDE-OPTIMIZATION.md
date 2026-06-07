@@ -86,18 +86,23 @@ If the project explicitly mandates French in configuration (sovereignty, audit, 
 # [Project]
 
 ## Stack
+
 [2-5 lines max: languages, major frameworks, database]
 
 ## Mandatory conventions
+
 [Rules Claude Code must follow without asking]
 
 ## Workflows
+
 [Common commands: tests, build, deploy]
 
 ## Known pitfalls
+
 [Counter-intuitive things specific to this project]
 
 ## Out of scope
+
 [What Claude Code MUST NOT touch]
 ```
 
@@ -139,14 +144,14 @@ Claude Code may **propose a new subagent** when observing a recurring pattern (3
 
 Without being asked, Claude Code flags:
 
-| Observed signal | Suggested action |
-|-----------------|------------------|
-| Context ≥ 60% | Propose targeted `/compact` or `/clear` + brief |
-| Context ≥ 80% | Insist: compact/clear before next complex turn |
-| 2 fixes on same bug | Propose `/rewind` rather than continue |
-| Task switch detected | Propose `/clear` with handoff brief |
-| File read 3rd time in session | Propose extracting to CLAUDE.md or skill |
-| Subagent returning >5 KB result | Suggest refining the subagent prompt |
+| Observed signal                 | Suggested action                                |
+| ------------------------------- | ----------------------------------------------- |
+| Context ≥ 60%                   | Propose targeted `/compact` or `/clear` + brief |
+| Context ≥ 80%                   | Insist: compact/clear before next complex turn  |
+| 2 fixes on same bug             | Propose `/rewind` rather than continue          |
+| Task switch detected            | Propose `/clear` with handoff brief             |
+| File read 3rd time in session   | Propose extracting to CLAUDE.md or skill        |
+| Subagent returning >5 KB result | Suggest refining the subagent prompt            |
 
 Flag ≠ execute. Final decision stays with user. But **do not wait passively** for the limit to be hit.
 
@@ -156,6 +161,7 @@ Before any `/clear`, Claude Code automatically produces a 5-10 line brief:
 
 ```markdown
 # Handoff — [date] [task]
+
 **Context**: [1-2 lines on where we are]
 **Decisions made**: [short list]
 **Active files**: [paths]
@@ -220,6 +226,7 @@ If absent and the project allows, propose to the user.
 ## 9. Self-improvement of this directive
 
 Claude Code may edit this file when:
+
 - A principle did not apply in practice → clarify or remove it.
 - A new usage pattern emerges → add it.
 - A rule becomes redundant with a native Claude Code feature → remove it.

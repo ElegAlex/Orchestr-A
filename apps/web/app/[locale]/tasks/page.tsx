@@ -15,7 +15,7 @@ import { TaskForm } from "@/components/tasks/TaskForm";
 import TaskKanban from "@/components/tasks/TaskKanban";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import toast from "react-hot-toast";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 export default function TasksPage() {
   const router = useRouter();
@@ -332,7 +332,10 @@ export default function TasksPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Project Filter */}
             <div>
-              <label htmlFor="filter-project" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="filter-project"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {t("filters.project")}
               </label>
               <select
@@ -353,7 +356,10 @@ export default function TasksPage() {
 
             {/* Priority Filter */}
             <div>
-              <label htmlFor="filter-priority" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="filter-priority"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 {t("filters.priority")}
               </label>
               <select

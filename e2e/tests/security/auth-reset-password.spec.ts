@@ -146,7 +146,10 @@ test.describe(
     test("responsable (ADMIN_DELEGATED) cannot reset an ADMIN-tier user → 403", async ({
       request,
     }) => {
-      expect(targetUserId, "target user setup failed in beforeAll").toBeTruthy();
+      expect(
+        targetUserId,
+        "target user setup failed in beforeAll",
+      ).toBeTruthy();
       const res = await request.post(
         `${baseUrl()}/api/auth/reset-password-token`,
         {
@@ -163,7 +166,10 @@ test.describe(
     test("admin can reset, response carries token, target refresh tokens are revoked", async ({
       request,
     }) => {
-      expect(targetUserId, "target user setup failed in beforeAll").toBeTruthy();
+      expect(
+        targetUserId,
+        "target user setup failed in beforeAll",
+      ).toBeTruthy();
 
       const tokenRes = await request.post(
         `${baseUrl()}/api/auth/reset-password-token`,
@@ -197,13 +203,10 @@ test.describe(
 
       // Pre-reset refresh token must be revoked.
       if (targetRefreshToken) {
-        const refreshRes = await request.post(
-          `${baseUrl()}/api/auth/refresh`,
-          {
-            headers: { "Content-Type": "application/json" },
-            data: { refreshToken: targetRefreshToken },
-          },
-        );
+        const refreshRes = await request.post(`${baseUrl()}/api/auth/refresh`, {
+          headers: { "Content-Type": "application/json" },
+          data: { refreshToken: targetRefreshToken },
+        });
         expect(
           refreshRes.status(),
           "old refresh token must be invalidated by password reset",

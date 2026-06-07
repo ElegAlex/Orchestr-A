@@ -1,7 +1,7 @@
 # Phase 1 Remediation — Production Deploy Execution Log
 
 This document is the durable record of the
-operational deploy of the *Phase 1* security/data remediation bundle to production. Every
+operational deploy of the _Phase 1_ security/data remediation bundle to production. Every
 command and its output are captured below, in execution order, with timestamps (UTC — prod
 host runs `Etc/UTC`).
 
@@ -65,6 +65,7 @@ host runs `Etc/UTC`).
 **Captured:** 2026-05-24T22:42–22:45Z (prod UTC). All commands read-only.
 
 ### git state + commits behind master
+
 ```
 $ git log --oneline -3
 716f7ec docs(leaves): closeout — post-deploy stuck-row fix + findValidatorForUser dormancy
@@ -76,12 +77,14 @@ HEAD          = 716f7ec04d9770028b7cc3a8d78b138c9ddb44b2
 origin/master = 399e81a0848358a94a7a964de28c2c9c76180836
 commits behind origin/master: 26
 ```
-⚠️ **Assumption check — commit count:** task stated *19 behind*; actual is **26**. Investigated
+
+⚠️ **Assumption check — commit count:** task stated _19 behind_; actual is **26**. Investigated
 at the migration level (below): the extra commits are docs/backlog/tooling (incl. CLAUDE-CFG-001
 and leaves closeouts), **none touching the schema beyond the 2 DAT-005 migrations**. Treated as
 **benign** — the deploy-relevant delta is unchanged. Surfaced at GATE 1.
 
 ### Migration-folder delta (HEAD → origin/master) — the deploy-relevant check
+
 ```
 $ git diff --name-status HEAD origin/master -- packages/database/prisma/migrations/
 A  packages/database/prisma/migrations/20260524100000_dat005_backup_float_columns/migration.sql
@@ -91,10 +94,12 @@ A  .../20260524100000_dat005_backup_float_columns/migration.sql
 A  .../20260524100100_dat005_convert_float_to_decimal/migration.sql
 M  packages/database/prisma/schema.prisma
 ```
+
 ✅ **Exactly the 2 DAT-005 migrations will be applied by Phase 3** (plus the schema.prisma edit,
 which is baked into the rebuilt image). No surprise migrations.
 
 ### docker compose ps
+
 ```
 NAME                       IMAGE              SERVICE    STATUS
 orchestr-a-api-prod        orchestra-api      api        Up 30 hours (healthy)
@@ -104,9 +109,11 @@ orchestr-a-postgres-prod   postgres:18-alpine postgres   Up 5 weeks (healthy)
 orchestr-a-redis-prod      redis:7.4-alpine   redis      Up 5 weeks (healthy)
 orchestr-a-web-prod        orchestra-web      web        Up 33 hours (healthy)
 ```
+
 ✅ All services healthy.
 
 ### docker images | grep orchestra (rollback anchors)
+
 ```
 orchestra-api   latest                      5a9f56cc0337   30 hours ago   1.68GB   <-- CURRENT api (rollback target)
 orchestra-web   latest                      64e50f617765   33 hours ago   253MB    <-- CURRENT web
@@ -114,10 +121,12 @@ orchestra-api   pre-v4-role-object-fix      782a8055cbbb   4 weeks ago    1.68GB
 orchestra-api   pre-institutional-guard     b2d57e4a8700   4 weeks ago    1.68GB
 ... (older pre-* tagged images retained as historical anchors)
 ```
+
 Note: the current `orchestra-api:latest` (`5a9f56cc0337`) is the **Phase 5 rollback target** for
 the api image. Before Phase 3 build overwrites `:latest`, it will be re-tagged (see Phase 3).
 
-### _prisma_migrations — last 10 applied
+### \_prisma_migrations — last 10 applied
+
 ```
 20260523171000_self_approved_and_global_balance_unique      | 2026-05-23 16:32:06+00  <-- HEAD of prod
 20260523124537_drop_max_days_per_year                       | 2026-05-23 13:34:49+00
@@ -130,9 +139,11 @@ the api image. Before Phase 3 build overwrites `:latest`, it will be re-tagged (
 20260421152235_add_timeentry_dismissal_and_composite_index  | 2026-04-21 18:41:37+00
 20260420120000_rbac_v4_drop_legacy                          | 2026-04-20 08:32:16+00
 ```
+
 ✅ **Assumption check — last migration = `20260523171000`** → CONFIRMED.
 
 ### Row counts (baseline for Phase 4 reconciliation)
+
 ```
 users          | 41
 leaves         | 132
@@ -144,6 +155,7 @@ holidays       | 33   (2025/26/27 × 11 = 33, matches prior out-of-band seed)
 ```
 
 ### information_schema — 5 target columns (pre-DAT-005 expectation)
+
 ```
  table_name        | column_name    | data_type        | numeric_precision | numeric_scale
 -------------------+----------------+------------------+-------------------+---------------
@@ -153,9 +165,11 @@ holidays       | 33   (2025/26/27 × 11 = 33, matches prior out-of-band seed)
  tasks             | estimatedHours | double precision |                53 |
  time_entries      | hours          | double precision |                53 |
 ```
+
 ✅ **Assumption check — all 5 target columns still `double precision`** → CONFIRMED.
 
 ### api service definition (relevant to Phase 3 ordering)
+
 `docker-compose.prod.yml` `api` service: `build: {context: ., dockerfile: ./apps/api/Dockerfile}`,
 `volumes: [api_logs_prod:/app/logs, api_uploads_prod:/app/uploads]` — **NO source bind-mount**.
 `RBAC_GUARD_MODE: enforce` is already set (SEC-001 enforce mode present in compose env).
@@ -165,21 +179,24 @@ pnpm prisma migrate deploy` uses the **current (old)** image, whose baked migrat
 deploy`.** Recommended reordering surfaced at GATE 1.
 
 ### Environment
+
 ```
 $ df -h /
 /dev/sda1   74G   70G   1.1G  99%  /
 ```
+
 ⚠️ **Disk at 99% / ~1.1 GB free.** Blocker risk for Phase 3 `docker compose build api`. Surfaced
 to operator at orientation and again at GATE 1.
 
 ### Phase 1 assumption summary
-| Assumption (task)                       | Result                                    |
-|-----------------------------------------|-------------------------------------------|
-| Last migration = `20260523171000`       | ✅ CONFIRMED                               |
-| 5 target columns still `double precision` | ✅ CONFIRMED                             |
-| 19 commits behind master                | ⚠️ Actually **26** — benign (no extra migrations; docs/backlog/tooling only) |
-| Holidays populated 2025/26/27           | ✅ 33 rows                                 |
-| All containers healthy                  | ✅                                         |
+
+| Assumption (task)                         | Result                                                                       |
+| ----------------------------------------- | ---------------------------------------------------------------------------- |
+| Last migration = `20260523171000`         | ✅ CONFIRMED                                                                 |
+| 5 target columns still `double precision` | ✅ CONFIRMED                                                                 |
+| 19 commits behind master                  | ⚠️ Actually **26** — benign (no extra migrations; docs/backlog/tooling only) |
+| Holidays populated 2025/26/27             | ✅ 33 rows                                                                   |
+| All containers healthy                    | ✅                                                                           |
 
 **Decision:** core deploy-safety assumptions hold. Proceeding to Phase 2 (read-only preflight).
 Non-blocking deviations (commit count, Phase 3 build/migrate ordering, disk pressure) consolidated
@@ -193,6 +210,7 @@ for GATE 1.
 testing done on an isolated throwaway instance.
 
 ### Method
+
 1. `pg_dump -F c` of prod → `/opt/orchestra/backups-prod/orchestr_a_prod_pre_dat005_20260524_224524.dump`
    (441,418 bytes).
 2. Throwaway `postgres:18-alpine` container `orchestra-dat005-preflight`
@@ -206,6 +224,7 @@ testing done on an isolated throwaway instance.
    pre-deploy backup.
 
 ### Restore sanity (throwaway row counts)
+
 ```
 leave_balances     | 0
 leaves             | 132     (matches prod baseline)
@@ -215,13 +234,14 @@ time_entries       | 15      (matches prod baseline)
 ```
 
 ### Preflight result — per column
-| Table.column                  | Non-null rows | Rows that would lose precision | Verdict |
-|-------------------------------|---------------|--------------------------------|---------|
-| time_entries.hours            | 15            | 0                              | ✓ OK    |
-| leaves.days                   | 132           | 0                              | ✓ OK    |
-| leave_balances.totalDays      | 0             | 0                              | ✓ OK    |
-| tasks.estimatedHours          | 1             | 0                              | ✓ OK    |
-| project_snapshots.progress    | 2657          | 0                              | ✓ OK    |
+
+| Table.column               | Non-null rows | Rows that would lose precision | Verdict |
+| -------------------------- | ------------- | ------------------------------ | ------- |
+| time_entries.hours         | 15            | 0                              | ✓ OK    |
+| leaves.days                | 132           | 0                              | ✓ OK    |
+| leave_balances.totalDays   | 0             | 0                              | ✓ OK    |
+| tasks.estimatedHours       | 1             | 0                              | ✓ OK    |
+| project_snapshots.progress | 2657          | 0                              | ✓ OK    |
 
 All sampled values are integers or `.5` increments; every `would_round` flag = `f`. Full sample
 tables were inspected in the live run (10-row samples per column, e.g. `0.5 → 0.50`, `2 → 2.00`,
@@ -243,9 +263,9 @@ tables were inspected in the live run (10-row samples per column, e.g. `0.5 → 
   `docker compose build api` (api image is 1.68 GB; a rebuild needs headroom). Suggested:
   `docker image prune` / drop stale `pre-*` tagged images.
 - ⚠️ **Phase 3 step ordering correction required:** api image is source-baked (no bind-mount).
-  Running `prisma migrate deploy` on the *current* image applies 0 migrations. Recommended order:
+  Running `prisma migrate deploy` on the _current_ image applies 0 migrations. Recommended order:
   **safety dump → git pull → `docker compose build api` → `docker compose run --rm api pnpm prisma
-  migrate deploy` → `docker compose up -d api`.**
+migrate deploy` → `docker compose up -d api`.**
 - ℹ️ Commit count is 26 (task said 19) but the migration delta is exactly the 2 DAT-005 migrations
   — benign.
 
@@ -260,13 +280,16 @@ tables were inspected in the live run (10-row samples per column, e.g. `0.5 → 
 delegated.
 
 ### Disk remediation (pre-Phase-3) — Category A only
+
 Read-only investigation found the disk dominated by dozens of dangling `<none>` 1.68 GB api
 build images + 34.6 GB of stale Docker **build cache**. Category A (safe, idempotent) cleanup:
+
 ```
 docker image prune -f      → reclaimed 1.477 GB
 docker builder prune -f    → reclaimed 34.62 GB
 docker container prune -f  → 0 B (no stopped containers)
 ```
+
 **Disk: 999 MB free (99%) → 41 GB free (44%).** All prod services verified `Up (healthy)` after
 cleanup. Category B (orphan `orchestra-api-run-*` containers, old tagged/unused images, journal
 vacuum) was **not needed** — 41 GB is abundant headroom for the 1.68 GB api rebuild — and left
@@ -279,41 +302,50 @@ untouched. No volumes touched (Category C respected).
 **Captured:** 2026-05-25T08:45–08:52Z (prod UTC).
 
 ### 3.0 Rollback anchor
+
 `docker tag orchestra-api:latest orchestra-api:pre-phase1-remediation` →
 anchor = `5a9f56cc0337` (the pre-deploy api image; Phase 5 image-rollback target).
 
 ### 3.1 Safety dump
+
 `orchestr_a_prod_predeploy_phase1_20260525_084554.dump` (441,418 bytes) in `backups-prod/`.
 
 ### 3.2–3.3 git pull
+
 Clean fast-forward `716f7ec → 399e81a` (== origin/master). Working tree clean except one
 untracked local env backup (`.env.production.backup-20260415-140812`) — benign, not in incoming
 commits. Both DAT-005 migration folders present after pull.
 
-### 3.4 build api  ✅
+### 3.4 build api ✅
+
 `docker compose build api` → exit 0. New `orchestra-api:latest` = `sha256:9bbfe84a…` (≠ anchor
 `5a9f56cc`). Disk after build: 38 GB free.
 
-### 3.5 prisma migrate deploy  ✅ (migration) / ⚠️ (entrypoint auto-start crashed)
+### 3.5 prisma migrate deploy ✅ (migration) / ⚠️ (entrypoint auto-start crashed)
+
 `docker compose run --rm api pnpm prisma migrate deploy`:
+
 ```
 39 migrations found in prisma/migrations
 Applying migration `20260524100000_dat005_backup_float_columns`
 Applying migration `20260524100100_dat005_convert_float_to_decimal`
 All migrations have been successfully applied.
 ```
+
 ✅ **Exactly the 2 DAT-005 migrations applied.** Confirmed on prod: `leaves.days → numeric(6,2)`,
 `time_entries.hours → numeric(5,2)`; 5 `_dat005_backup_*` tables present.
 
 ⚠️ **BUT** the image entrypoint (`docker-entrypoint.sh`) runs a fixed sequence (connectivity →
 migrate → admin-check → **start NestJS**), so after applying migrations the one-off container
 tried to boot the app and crashed:
+
 ```
 Error: Cannot find module '/app/apps/api/dist/main.js'  (MODULE_NOT_FOUND)
 ### MIGRATE_EXIT=1
 ```
 
 ### Root-cause diagnosis (new-image startup regression)
+
 - `apps/api/docker-entrypoint.sh:111` → `exec node apps/api/dist/main.js` (hard-coded path).
 - **OLD image:** `main.js` at `dist/main.js`. **NEW image:** `main.js` at `dist/**src**/main.js`
   (new `dist/` also has a `scripts/` dir).
@@ -325,13 +357,16 @@ Error: Cannot find module '/app/apps/api/dist/main.js'  (MODULE_NOT_FOUND)
   longer matches → **`docker compose up -d api` would crash-loop on the new image.**
 
 ### Prod state at halt
+
 - **DB:** migrated to Decimal (verified, preflight was 0-lossy). 5 backup tables retained.
 - **Live api:** STILL the OLD image (`5a9f56cc`), `Up (healthy)`, **0 errors in last 10 min** —
   old code on new Decimal schema, holding (low-traffic window).
 - **New image:** present but has the startup path bug; NOT deployed to the live service.
 
 ### Decision point (halted, awaiting operator)
+
 `up -d api` not run. Two recovery paths:
+
 1. **Roll-forward (recommended):** 1-line fix — exclude `scripts` from the API build
    (`apps/api/tsconfig.build.json`) so output returns to `dist/main.js`. Commit→push master→prod
    pull→rebuild→`up -d api`. Keeps the clean, verified migration. Verify `dist/main.js` path
@@ -349,10 +384,12 @@ code change beyond "deploy existing master".**
 **Operator decision:** roll-forward (keep the verified migration; fix the build).
 
 ### Symptom
+
 New api image crashed at startup: `Cannot find module '/app/apps/api/dist/main.js'`. Live service
 was never switched to it (still old image, healthy). DB already migrated to Decimal.
 
 ### Root cause (RCA)
+
 `apps/api/docker-entrypoint.sh:111` hard-codes `exec node apps/api/dist/main.js`. `apps/api/
 tsconfig.json` has `outDir: ./dist` but **no explicit `rootDir`/`include`**, so tsc infers
 `rootDir` as the common ancestor of all compiled inputs. The file `apps/api/scripts/
@@ -361,11 +398,13 @@ import-french-holidays.ts` — **added during the COR-003 holidays de-risk work 
 `apps/api/`. Output relocated from `dist/main.js` to `dist/src/main.js`, breaking the entrypoint.
 
 ### Fix
+
 Commit **`8e4b593`** `fix(build): exclude scripts/ from api build to restore dist/main.js
 entrypoint` — added `"scripts/**"` to `exclude` in `apps/api/tsconfig.build.json`. Minimal,
 additive; `rootDir` untouched (structural fix tracked as **BUILD-001**, Phase 13).
 
 ### Verification
+
 - **Local build** (`pnpm --filter api run build`): `apps/api/dist/main.js` present at flat root;
   `dist/src` absent; excluded holidays script absent from `dist`; `dist/scripts/` contains only the
   legitimate `src/scripts/backfill-snapshots.js`.
@@ -375,14 +414,17 @@ additive; `rootDir` untouched (structural fix tracked as **BUILD-001**, Phase 13
   absent.
 
 ### Redeploy
+
 `docker compose up -d api` → recreated, **healthy in ~20s**. Running container image =
 `sha256:7cd9b14a…` (the hotfixed image; **not** the `5a9f56cc` anchor). Boot log:
+
 ```
 [2/4] Running database migrations... 39 migrations found. No pending migrations to apply.
   API Ready - Listening on port 4000
 [NestApplication] Nest application successfully started
 Server listening at http://127.0.0.1:4000
 ```
+
 No error-level logs. **Phase 3 complete.** Old-code/new-schema mismatch resolved.
 
 ---
@@ -391,18 +433,20 @@ No error-level logs. **Phase 3 complete.** Old-code/new-schema mismatch resolved
 
 **Captured:** 2026-05-25T09:03Z (prod UTC). All checks green.
 
-| Check | Result |
-|-------|--------|
-| 4.1 All services healthy | ✅ api/web/nginx/postgres/redis `Up (healthy)`; api `Up 2 min` on new image |
-| 4.2 Both DAT-005 migrations applied | ✅ `…backup_float_columns` + `…convert_float_to_decimal`, each `applied_steps_count=1`, `finished_at` 2026-05-25 08:49:22+00 (no mixed state) |
-| 4.3 5 columns now `numeric(p,s)` | ✅ leaves.days `(6,2)`, leave_balances.totalDays `(6,2)`, time_entries.hours `(5,2)`, tasks.estimatedHours `(5,2)`, project_snapshots.progress `(5,2)` |
-| 4.4 `_dat005_backup_*` tables | ✅ 5 present (leaves_days, leave_balances_total_days, time_entries_hours, tasks_estimated_hours, project_snapshots_progress) |
-| 4.5 Row counts vs baseline | ✅ leaves=132, time_entries=15, tasks=321 (unchanged — no data loss) |
-| 4.6 Running api image | ✅ `sha256:7cd9b14a…` (hotfixed image), not anchor `5a9f56cc` |
+| Check                               | Result                                                                                                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 4.1 All services healthy            | ✅ api/web/nginx/postgres/redis `Up (healthy)`; api `Up 2 min` on new image                                                                            |
+| 4.2 Both DAT-005 migrations applied | ✅ `…backup_float_columns` + `…convert_float_to_decimal`, each `applied_steps_count=1`, `finished_at` 2026-05-25 08:49:22+00 (no mixed state)          |
+| 4.3 5 columns now `numeric(p,s)`    | ✅ leaves.days `(6,2)`, leave_balances.totalDays `(6,2)`, time_entries.hours `(5,2)`, tasks.estimatedHours `(5,2)`, project_snapshots.progress `(5,2)` |
+| 4.4 `_dat005_backup_*` tables       | ✅ 5 present (leaves_days, leave_balances_total_days, time_entries_hours, tasks_estimated_hours, project_snapshots_progress)                           |
+| 4.5 Row counts vs baseline          | ✅ leaves=132, time_entries=15, tasks=321 (unchanged — no data loss)                                                                                   |
+| 4.6 Running api image               | ✅ `sha256:7cd9b14a…` (hotfixed image), not anchor `5a9f56cc`                                                                                          |
 
 ### COR-003 smoke witness — date correction (important for Gate 2)
+
 Day-of-week (2026): Apr 27=Mon, Apr 28=Tue, Apr 29=Wed, Apr 30=Thu, **May 1=Fri (Fête du Travail,
 holiday on prod, isWorkDay=false)**, May 2=Sat.
+
 - The spec's **Apr 28 → May 2** = weekdays Tue–Fri (4) − May 1 holiday = **3** charged days (not 4;
   "expect 4" there would be a false-fail).
 - **Clean witness matching "expect 4": Apr 27 → May 1** = weekdays Mon–Fri (5) − May 1 holiday =
@@ -425,6 +469,7 @@ api image `orchestra-api:pre-phase1-remediation` (`5a9f56cc`); DB backups in `ba
 **no token, cookie, or password value is recorded here or in any commit.**
 
 ### Auth contract discovered
+
 - Session model = **opaque refresh cookie + short-lived access token**. The refresh cookie alone
   does NOT authenticate `/api/*` (`/api/auth/me` → 401). `POST /api/auth/login` returns an
   **`access_token`** in the body → used as `Authorization: Bearer` for all `/api/*` calls; the
@@ -440,14 +485,16 @@ api image `orchestra-api:pre-phase1-remediation` (`5a9f56cc`); DB backups in `ba
   created by the **non-self-approving temp user** (lands `PENDING`), then approved by admin.
 
 ### Results
-| # | Check | Method | Result |
-|---|-------|--------|--------|
-| 1 | COR-003 holiday subtraction + DAT-005 Decimal serialization | temp user `POST /api/leaves` 2026-04-27→2026-05-01 (CP) | HTTP 201; **`days = 4`** (5 weekdays Mon–Fri − May 1 «Fête du Travail») ; **`days` is JSON number (`int`), not string** ; `status=PENDING` → ✅ PASS |
-| 2 | DAT-001 transactional approve + durable audit | admin `POST /api/leaves/<id>/approve` | HTTP 200, `status=APPROVED`, `selfApproved=false`; `audit_logs` row `LEAVE_APPROVED` with **actorId = admin**, payload `before.status=PENDING → after.status=APPROVED`, **`selfApproved=false`**, `validatedById=admin` → ✅ PASS |
-| 3 | SEC-002 horizontal user-scope | non-admin temp user `PATCH /api/users/<admin-id>` | HTTP **403** "Forbidden resource" → ✅ PASS |
-| 4 | leave delete | admin `DELETE /api/leaves/<id>` | HTTP 200 → ✅ PASS |
+
+| #   | Check                                                       | Method                                                  | Result                                                                                                                                                                                                                            |
+| --- | ----------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | COR-003 holiday subtraction + DAT-005 Decimal serialization | temp user `POST /api/leaves` 2026-04-27→2026-05-01 (CP) | HTTP 201; **`days = 4`** (5 weekdays Mon–Fri − May 1 «Fête du Travail») ; **`days` is JSON number (`int`), not string** ; `status=PENDING` → ✅ PASS                                                                              |
+| 2   | DAT-001 transactional approve + durable audit               | admin `POST /api/leaves/<id>/approve`                   | HTTP 200, `status=APPROVED`, `selfApproved=false`; `audit_logs` row `LEAVE_APPROVED` with **actorId = admin**, payload `before.status=PENDING → after.status=APPROVED`, **`selfApproved=false`**, `validatedById=admin` → ✅ PASS |
+| 3   | SEC-002 horizontal user-scope                               | non-admin temp user `PATCH /api/users/<admin-id>`       | HTTP **403** "Forbidden resource" → ✅ PASS                                                                                                                                                                                       |
+| 4   | leave delete                                                | admin `DELETE /api/leaves/<id>`                         | HTTP 200 → ✅ PASS                                                                                                                                                                                                                |
 
 ### Temp user lifecycle & cleanup
+
 - Temp non-admin user created (`CONTRIB_DEV`) for checks 1–3 — id recorded operationally, **no
   credentials logged**. Hard-deleted at end (HTTP 200).
 - A probe leave (admin self-approved during auth-contract discovery) was deleted (HTTP 200).
@@ -463,6 +510,7 @@ api image `orchestra-api:pre-phase1-remediation` (`5a9f56cc`); DB backups in `ba
 checks (Phase 4.5), the Phase 1 remediation bundle is **verified live on production**.
 
 ### Final state
+
 - **Code:** prod `git HEAD = 8e4b593` (master + build hotfix). API image `sha256:7cd9b14a…`, healthy.
 - **Schema:** DAT-005 applied — 5 columns `numeric(p,2)`; 5 `_dat005_backup_*` tables retained.
 - **Verified behaviors:** SEC-001 (`RBAC_GUARD_MODE=enforce`), SEC-002 (403 on cross-user PATCH),
@@ -474,6 +522,7 @@ checks (Phase 4.5), the Phase 1 remediation bundle is **verified live on product
   `_dat005_backup_*` tables + `scripts/db/rollback-dat005-decimal-conversion.sql`.
 
 ### Deviations from the original plan (for audit)
+
 1. Prod was **26** commits behind master, not 19 (benign — only the 2 DAT-005 migrations were
    schema-relevant).
 2. Phase 3 step order corrected to **build → migrate → up** (source-baked image; Gate 1 greenlit).

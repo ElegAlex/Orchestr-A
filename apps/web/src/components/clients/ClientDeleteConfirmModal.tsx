@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { clientsService } from "@/services/clients.service";
 import { Client, ClientDeletionImpact } from "@/types";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface ClientDeleteConfirmModalProps {
   isOpen: boolean;

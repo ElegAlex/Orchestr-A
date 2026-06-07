@@ -21,7 +21,7 @@ import { parseCSV } from "@/lib/csv-parser";
 import { Leave, LeaveType, LeaveStatus, HalfDay, User } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 type TabType =
   | "my-leaves"
@@ -776,7 +776,8 @@ export default function LeavesPage() {
             {/* SEC-029 — use API-computed canRequestCancel flag instead of
                   client-side userId comparison, consistent with canEdit/canDelete */}
             {!showValidationActions &&
-              (leave as Leave & { canRequestCancel?: boolean }).canRequestCancel && (
+              (leave as Leave & { canRequestCancel?: boolean })
+                .canRequestCancel && (
                 <button
                   onClick={() => handleRequestCancel(leave.id)}
                   className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition"

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Milestone, MilestoneStatus } from "@/types";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface MilestoneModalProps {
   isOpen: boolean;

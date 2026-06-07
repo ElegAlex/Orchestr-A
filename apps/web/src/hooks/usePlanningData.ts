@@ -26,7 +26,7 @@ import { getServiceStyle } from "@/lib/planning-utils";
 import { useSettingsStore } from "@/stores/settings.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 const DEFAULT_VISIBLE_DAYS: number[] = [1, 2, 3, 4, 5];
 const EMPTY_SPECIAL_DAYS: number[] = [];

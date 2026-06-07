@@ -17,23 +17,27 @@
 ### Files to delete (10)
 
 Backend:
+
 - `apps/api/src/predefined-tasks/planning-balancer.service.ts`
 - `apps/api/src/predefined-tasks/planning-balancer.service.spec.ts`
 - `apps/api/src/predefined-tasks/planning-balancer.types.ts`
 - `apps/api/src/predefined-tasks/dto/generate-balanced.dto.ts`
 
 Frontend:
+
 - `apps/web/src/components/predefined-tasks/BalancedPlanningModal.tsx`
 - `apps/web/src/components/predefined-tasks/__tests__/BalancedPlanningModal.test.tsx`
 - `apps/web/src/hooks/usePlanningBalancer.ts`
 - `apps/web/src/hooks/__tests__/usePlanningBalancer.test.ts`
 
 E2E:
+
 - `e2e/tests/workflows/balanced-planning.spec.ts`
 
 ### Files to edit (8)
 
 Backend:
+
 - `apps/api/src/predefined-tasks/predefined-tasks.controller.ts` — drop `generate-balanced` route + DTO import
 - `apps/api/src/predefined-tasks/predefined-tasks.controller.spec.ts` — drop `generateBalanced` mock entry + describe block
 - `apps/api/src/predefined-tasks/predefined-tasks.service.ts` — drop balancer imports, constructor injection, `generateBalanced()` method + section comment
@@ -41,16 +45,19 @@ Backend:
 - `apps/api/src/predefined-tasks/predefined-tasks.module.ts` — drop `PlanningBalancerService` import + provider
 
 RBAC:
+
 - `packages/rbac/atomic-permissions.ts` — drop the `predefined_tasks:balance` literal from union type, from `PREDEFINED_TASKS_ADMIN`, and from `CATALOG_PERMISSIONS`
 - `packages/rbac/__tests__/templates.spec.ts` — adjust `EXPECTED_COUNTS` and the catalog-length assertion (117 → 116)
 
 Frontend:
+
 - `apps/web/src/services/predefined-tasks.service.ts` — drop balancer types + service method
 - `apps/web/src/components/planning/PlanningView.tsx` — drop import, state, button, modal render
 - `apps/web/messages/fr/predefinedTasks.json` — drop `balancer` block
 - `apps/web/messages/en/predefinedTasks.json` — drop `balancer` block
 
 Docs:
+
 - `docs/adr/2026-04-24-03-balancer-algorithm.md` — flip Status to "Superseded — feature removed 2026-05-23"
 
 ---
@@ -58,6 +65,7 @@ Docs:
 ## Task 1: Backend — remove balancer files (algorithm, types, DTO, unit spec)
 
 **Files:**
+
 - Delete: `apps/api/src/predefined-tasks/planning-balancer.service.ts`
 - Delete: `apps/api/src/predefined-tasks/planning-balancer.service.spec.ts`
 - Delete: `apps/api/src/predefined-tasks/planning-balancer.types.ts`
@@ -108,6 +116,7 @@ Expected: four `D` lines for the deleted files.
 ## Task 2: Backend — remove balancer wiring from PredefinedTasksModule
 
 **Files:**
+
 - Modify: `apps/api/src/predefined-tasks/predefined-tasks.module.ts`
 
 - [ ] **Step 1: Edit the module file**
@@ -117,11 +126,11 @@ Use the Edit tool to replace the entire file content with the version below (the
 Target final state of `apps/api/src/predefined-tasks/predefined-tasks.module.ts`:
 
 ```typescript
-import { Module } from '@nestjs/common';
-import { PredefinedTasksService } from './predefined-tasks.service';
-import { PredefinedTasksController } from './predefined-tasks.controller';
-import { AuditModule } from '../audit/audit.module';
-import { LeavesModule } from '../leaves/leaves.module';
+import { Module } from "@nestjs/common";
+import { PredefinedTasksService } from "./predefined-tasks.service";
+import { PredefinedTasksController } from "./predefined-tasks.controller";
+import { AuditModule } from "../audit/audit.module";
+import { LeavesModule } from "../leaves/leaves.module";
 
 @Module({
   imports: [AuditModule, LeavesModule],
@@ -145,6 +154,7 @@ Expected: no output (exit code 1).
 ## Task 3: Backend — remove `generateBalanced` from controller
 
 **Files:**
+
 - Modify: `apps/api/src/predefined-tasks/predefined-tasks.controller.ts` (drop import at line 32 and the route handler at lines 276-295)
 
 - [ ] **Step 1: Remove the DTO import**
@@ -152,7 +162,7 @@ Expected: no output (exit code 1).
 Use Edit to replace:
 
 ```typescript
-import { GenerateBalancedDto } from './dto/generate-balanced.dto';
+import { GenerateBalancedDto } from "./dto/generate-balanced.dto";
 ```
 
 with an empty string (delete the line). The surrounding imports are at lines 26-32 — the engineer can locate it via the unique `GenerateBalancedDto` token.
@@ -200,6 +210,7 @@ Expected: no output.
 ## Task 4: Backend — remove `generateBalanced` from controller spec
 
 **Files:**
+
 - Modify: `apps/api/src/predefined-tasks/predefined-tasks.controller.spec.ts`
 
 - [ ] **Step 1: Remove the mock entry**
@@ -215,44 +226,55 @@ In the `mockPredefinedTasksService` literal (around line 81), remove the line:
 Remove the section starting with the comment header and ending at the closing `});` of the describe — the block is:
 
 ```typescript
-  // ===========================
-  // generateBalanced — smoke test (W3.2)
-  // ===========================
+// ===========================
+// generateBalanced — smoke test (W3.2)
+// ===========================
 
-  describe('generateBalanced', () => {
-    it('smoke: POST retourne 200 avec le résultat du service', async () => {
-      const mockUser = {
-        id: 'admin-1',
-        role: { code: 'ADMIN', templateKey: 'ADMIN', id: 'r-admin', label: 'Admin', isSystem: true },
-      };
-      const balancedResult = {
-        mode: 'preview',
-        proposedAssignments: [],
-        workloadByAgent: [],
-        equityRatio: 1,
-        unassignedOccurrences: [],
-        assignmentsCreated: 0,
-      };
-      mockPredefinedTasksService.generateBalanced.mockResolvedValue(balancedResult);
+describe("generateBalanced", () => {
+  it("smoke: POST retourne 200 avec le résultat du service", async () => {
+    const mockUser = {
+      id: "admin-1",
+      role: {
+        code: "ADMIN",
+        templateKey: "ADMIN",
+        id: "r-admin",
+        label: "Admin",
+        isSystem: true,
+      },
+    };
+    const balancedResult = {
+      mode: "preview",
+      proposedAssignments: [],
+      workloadByAgent: [],
+      equityRatio: 1,
+      unassignedOccurrences: [],
+      assignmentsCreated: 0,
+    };
+    mockPredefinedTasksService.generateBalanced.mockResolvedValue(
+      balancedResult,
+    );
 
-      const dto = {
-        startDate: '2026-04-01',
-        endDate: '2026-04-30',
-        userIds: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
-        taskIds: ['11111111-1111-1111-1111-111111111111'],
-        mode: 'preview' as const,
-      };
+    const dto = {
+      startDate: "2026-04-01",
+      endDate: "2026-04-30",
+      userIds: ["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"],
+      taskIds: ["11111111-1111-1111-1111-111111111111"],
+      mode: "preview" as const,
+    };
 
-      const result = await controller.generateBalanced(dto as any, mockUser as any);
+    const result = await controller.generateBalanced(
+      dto as any,
+      mockUser as any,
+    );
 
-      expect(mockPredefinedTasksService.generateBalanced).toHaveBeenCalledWith(
-        dto,
-        mockUser,
-      );
-      expect(result.mode).toBe('preview');
-      expect(result.assignmentsCreated).toBe(0);
-    });
+    expect(mockPredefinedTasksService.generateBalanced).toHaveBeenCalledWith(
+      dto,
+      mockUser,
+    );
+    expect(result.mode).toBe("preview");
+    expect(result.assignmentsCreated).toBe(0);
   });
+});
 ```
 
 The outer `});` on the final line (closing `describe('PredefinedTasksController', …)`) must remain. After removal, the last describe block in the file should be `generateFromRules` (whose closing `});` is at the line right before the previous block).
@@ -271,6 +293,7 @@ Expected: no output.
 ## Task 5: Backend — remove `generateBalanced` from service
 
 **Files:**
+
 - Modify: `apps/api/src/predefined-tasks/predefined-tasks.service.ts`
 
 - [ ] **Step 1: Remove the balancer-related imports (lines 24-30 region)**
@@ -278,8 +301,8 @@ Expected: no output.
 Delete these three import groups exactly (in the import section at the top of the file):
 
 ```typescript
-import { PlanningBalancerService } from './planning-balancer.service';
-import type { BalancerOccurrence } from './planning-balancer.types';
+import { PlanningBalancerService } from "./planning-balancer.service";
+import type { BalancerOccurrence } from "./planning-balancer.types";
 ```
 
 and
@@ -288,7 +311,7 @@ and
 import {
   GenerateBalancedDto,
   GenerateBalancedResult,
-} from './dto/generate-balanced.dto';
+} from "./dto/generate-balanced.dto";
 ```
 
 - [ ] **Step 2: Remove the constructor injection (line 38)**
@@ -362,6 +385,7 @@ Expected: no errors mentioning balancer/Balancer/generate-balanced. Other unrela
 ## Task 6: Backend — remove `generateBalanced` block from service spec
 
 **Files:**
+
 - Modify: `apps/api/src/predefined-tasks/predefined-tasks.service.spec.ts`
 
 - [ ] **Step 1: Remove the balancer import (line 17)**
@@ -369,7 +393,7 @@ Expected: no errors mentioning balancer/Balancer/generate-balanced. Other unrela
 Delete this line:
 
 ```typescript
-import { PlanningBalancerService } from './planning-balancer.service';
+import { PlanningBalancerService } from "./planning-balancer.service";
 ```
 
 - [ ] **Step 2: Remove the mock object definition (lines 58-60)**
@@ -377,9 +401,9 @@ import { PlanningBalancerService } from './planning-balancer.service';
 Delete this exact block:
 
 ```typescript
-  const mockPlanningBalancerService = {
-    balance: vi.fn(),
-  };
+const mockPlanningBalancerService = {
+  balance: vi.fn(),
+};
 ```
 
 - [ ] **Step 3: Remove the provider entry (lines 159-162)**
@@ -467,6 +491,7 @@ Expected: clean commit, no lint/hook failures.
 ## Task 7: RBAC — remove `predefined_tasks:balance` from atomic permissions
 
 **Files:**
+
 - Modify: `packages/rbac/atomic-permissions.ts`
 
 Three edits in one file.
@@ -537,6 +562,7 @@ Expected: no TypeScript errors.
 ## Task 8: RBAC — update expected catalog and template counts
 
 **Files:**
+
 - Modify: `packages/rbac/__tests__/templates.spec.ts`
 
 The catalog drops from 117 to 116. Every template using `PREDEFINED_TASKS_ADMIN` drops by 1 permission. Use TDD: let the failing test tell you which templates need updating.
@@ -613,6 +639,7 @@ git commit -m "Remove RBAC permission predefined_tasks:balance from catalog and 
 ## Task 9: Frontend — remove balancer types and service method
 
 **Files:**
+
 - Modify: `apps/web/src/services/predefined-tasks.service.ts`
 
 - [ ] **Step 1: Remove the type definitions block (lines 160-197)**
@@ -688,6 +715,7 @@ Expected: no output.
 ## Task 10: Frontend — delete balancer modal, hook, and tests
 
 **Files:**
+
 - Delete: `apps/web/src/components/predefined-tasks/BalancedPlanningModal.tsx`
 - Delete: `apps/web/src/components/predefined-tasks/__tests__/BalancedPlanningModal.test.tsx`
 - Delete: `apps/web/src/hooks/usePlanningBalancer.ts`
@@ -716,6 +744,7 @@ Expected: `OK1` and `OK2`.
 ## Task 11: Frontend — remove balancer integration from PlanningView
 
 **Files:**
+
 - Modify: `apps/web/src/components/planning/PlanningView.tsx`
 
 - [ ] **Step 1: Remove the import (line 11)**
@@ -731,7 +760,7 @@ import { BalancedPlanningModal } from "@/components/predefined-tasks/BalancedPla
 Delete this exact line:
 
 ```typescript
-  const [showBalancer, setShowBalancer] = useState(false);
+const [showBalancer, setShowBalancer] = useState(false);
 ```
 
 - [ ] **Step 3: Remove the "Planning équilibré" button block (lines 323-344)**
@@ -739,28 +768,32 @@ Delete this exact line:
 Delete this exact block (the comment line plus the `{hasPermission(...) && ( … )}` wrapper):
 
 ```tsx
-            {/* Bouton Planning équilibré — gated sur predefined_tasks:balance */}
-            {hasPermission("predefined_tasks:balance") && (
-              <button
-                onClick={() => setShowBalancer(true)}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm flex items-center gap-1.5"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-                </svg>
-                {tPredefined("balancer.openButton")}
-              </button>
-            )}
+{
+  /* Bouton Planning équilibré — gated sur predefined_tasks:balance */
+}
+{
+  hasPermission("predefined_tasks:balance") && (
+    <button
+      onClick={() => setShowBalancer(true)}
+      className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm flex items-center gap-1.5"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+      </svg>
+      {tPredefined("balancer.openButton")}
+    </button>
+  );
+}
 ```
 
 - [ ] **Step 4: Remove the modal render (lines 794-801)**
@@ -768,14 +801,14 @@ Delete this exact block (the comment line plus the `{hasPermission(...) && ( …
 Delete this exact block:
 
 ```tsx
-      <BalancedPlanningModal
-        open={showBalancer}
-        onClose={() => setShowBalancer(false)}
-        onApplied={() => {
-          refetch();
-          setRefreshTrigger((prev) => prev + 1);
-        }}
-      />
+<BalancedPlanningModal
+  open={showBalancer}
+  onClose={() => setShowBalancer(false)}
+  onApplied={() => {
+    refetch();
+    setRefreshTrigger((prev) => prev + 1);
+  }}
+/>
 ```
 
 - [ ] **Step 5: Check the `tPredefined` import is still needed**
@@ -787,7 +820,7 @@ grep -n "tPredefined" apps/web/src/components/planning/PlanningView.tsx
 If the only remaining hit is the import / declaration line and nothing else uses it, also remove its declaration:
 
 ```typescript
-  const tPredefined = useTranslations("predefinedTasks");
+const tPredefined = useTranslations("predefinedTasks");
 ```
 
 Otherwise leave it alone.
@@ -806,6 +839,7 @@ Expected: no output.
 ## Task 12: Frontend — remove balancer i18n strings
 
 **Files:**
+
 - Modify: `apps/web/messages/fr/predefinedTasks.json`
 - Modify: `apps/web/messages/en/predefinedTasks.json`
 
@@ -943,6 +977,7 @@ git commit -m "Remove balanced planning generation: frontend (modal, hook, butto
 ## Task 14: E2E — remove balanced-planning workflow spec
 
 **Files:**
+
 - Delete: `e2e/tests/workflows/balanced-planning.spec.ts`
 
 - [ ] **Step 1: Verify the file exists**
@@ -972,6 +1007,7 @@ Expected: no output.
 ## Task 15: ADR — flip status to Superseded
 
 **Files:**
+
 - Modify: `docs/adr/2026-04-24-03-balancer-algorithm.md`
 
 - [ ] **Step 1: Update the status header**
@@ -1030,6 +1066,7 @@ Expected: success across all workspaces (API + Web + rbac).
 - [ ] **Step 4: Manual smoke (record output, do not block on it)**
 
 If `docker ps` shows postgres and redis up, restart the API + Web dev servers and verify:
+
 - `/planning` loads, the three view tabs (week / month / activity) work
 - No "Planning équilibré" button anywhere
 - POST to `/predefined-tasks/recurring-rules/generate-balanced` returns 404

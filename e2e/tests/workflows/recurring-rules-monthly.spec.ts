@@ -23,7 +23,9 @@ test.describe("E2 — Récurrence mensuelle (API)", () => {
 
   test.afterEach(async ({ request }) => {
     if (createdRuleId) {
-      await request.delete(`/api/predefined-tasks/recurring-rules/${createdRuleId}`);
+      await request.delete(
+        `/api/predefined-tasks/recurring-rules/${createdRuleId}`,
+      );
       createdRuleId = null;
     }
     if (createdTaskId) {

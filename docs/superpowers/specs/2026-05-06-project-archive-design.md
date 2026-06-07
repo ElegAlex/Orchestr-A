@@ -64,6 +64,7 @@ Introduce one query param, identical across all list-style endpoints:
 ```
 
 Endpoints applying the filter (default `active`):
+
 - `GET /projects`
 - `GET /analytics` (already shipped scope-aware; archive filter layered on top)
 - `GET /analytics/export`
@@ -71,6 +72,7 @@ Endpoints applying the filter (default `active`):
 - Any portfolio / dashboard endpoint surfacing project lists or aggregates
 
 Endpoints **not** applying the filter (always return archived too):
+
 - `GET /projects/:id` (direct access)
 - `GET /tasks/:id`, `GET /tasks` (personal task list, search) — tasks of archived projects remain visible to assignees and members
 - `GET /projects/:id/members`, `GET /projects/:id/documents`, etc. (resource-scoped reads)
@@ -106,6 +108,7 @@ New permission: `projects:archive`.
 ### Computed flags
 
 The project response DTO gains two new computed booleans, set by the service:
+
 - `canArchive: boolean` — true if user has `projects:archive` and the project is currently active.
 - `canUnarchive: boolean` — true if user has `projects:archive` and the project is archived.
 
@@ -160,6 +163,7 @@ Audit entries on archive and unarchive use the existing audit log infrastructure
 ## Open questions
 
 None at this point. Three originally raised, all confirmed:
+
 - `archivedAt` timestamp orthogonal to status (not a new enum value): **yes**.
 - Toggle on `/projects` list, no dedicated `/archives` page: **yes**.
 - Archive allowed on any status, including ACTIVE: **yes**.

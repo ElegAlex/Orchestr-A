@@ -105,7 +105,9 @@ function defaultFormData(task: PredefinedTask): RuleFormData {
   };
 }
 
-function formDataFromRule(rule: PredefinedTaskRecurringRule): Partial<RuleFormData> {
+function formDataFromRule(
+  rule: PredefinedTaskRecurringRule,
+): Partial<RuleFormData> {
   const type: RecurrenceType = rule.recurrenceType ?? "WEEKLY";
   const dow: DayOfWeek = rule.dayOfWeek ?? "MONDAY";
   return {
@@ -117,7 +119,9 @@ function formDataFromRule(rule: PredefinedTaskRecurringRule): Partial<RuleFormDa
     dayOfWeek: dow,
     userIds: [rule.userId],
     duration: rule.period,
-    startDate: rule.startDate ? rule.startDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    startDate: rule.startDate
+      ? rule.startDate.slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
     endDate: rule.endDate ? rule.endDate.slice(0, 10) : "",
   };
 }
@@ -179,15 +183,22 @@ export function RecurringRulesModal({
     setFormData(defaultFormData(task));
   };
 
-  const setField = <K extends keyof RuleFormData>(key: K, value: RuleFormData[K]) => {
+  const setField = <K extends keyof RuleFormData>(
+    key: K,
+    value: RuleFormData[K],
+  ) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
   // ── Validation ───────────────────────────────────────────────────────────────
 
   const validate = (): string | null => {
-    if (formData.userIds.length === 0) return "Sélectionnez au moins un collaborateur";
-    if (formData.recurrenceType === "WEEKLY" && formData.daysOfWeek.length === 0) {
+    if (formData.userIds.length === 0)
+      return "Sélectionnez au moins un collaborateur";
+    if (
+      formData.recurrenceType === "WEEKLY" &&
+      formData.daysOfWeek.length === 0
+    ) {
       return "Sélectionnez au moins un jour";
     }
     return null;
@@ -356,7 +367,13 @@ export function RecurringRulesModal({
       ? (DAY_OF_WEEK_LABELS[rule.dayOfWeek]?.toLowerCase() ?? rule.dayOfWeek)
       : "?";
     if (type === "MONTHLY_ORDINAL") {
-      const ordinalLabels: Record<number, string> = { 1: "1er", 2: "2e", 3: "3e", 4: "4e", 5: "Dernier" };
+      const ordinalLabels: Record<number, string> = {
+        1: "1er",
+        2: "2e",
+        3: "3e",
+        4: "4e",
+        5: "Dernier",
+      };
       const ord = rule.monthlyOrdinal ?? 1;
       return `${ordinalLabels[ord] ?? ord} ${dowLabel}`;
     }
@@ -494,7 +511,11 @@ export function RecurringRulesModal({
 
             {/* ── Recurrence type radio group ─────────────────────────────── */}
             {(() => {
-              const RECURRENCE_TYPES: RecurrenceType[] = ["WEEKLY", "MONTHLY_DAY", "MONTHLY_ORDINAL"];
+              const RECURRENCE_TYPES: RecurrenceType[] = [
+                "WEEKLY",
+                "MONTHLY_DAY",
+                "MONTHLY_ORDINAL",
+              ];
               const handleRecurrenceKeyDown = (
                 e: React.KeyboardEvent<HTMLButtonElement>,
                 current: RecurrenceType,
@@ -504,7 +525,9 @@ export function RecurringRulesModal({
                 if (e.key === "ArrowRight" || e.key === "ArrowDown") {
                   next = (idx + 1) % RECURRENCE_TYPES.length;
                 } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-                  next = (idx - 1 + RECURRENCE_TYPES.length) % RECURRENCE_TYPES.length;
+                  next =
+                    (idx - 1 + RECURRENCE_TYPES.length) %
+                    RECURRENCE_TYPES.length;
                 } else if (e.key === "Home") {
                   next = 0;
                 } else if (e.key === "End") {
@@ -614,7 +637,9 @@ export function RecurringRulesModal({
                     <select
                       id="dayOfWeekWeekly"
                       value={formData.dayOfWeek}
-                      onChange={(e) => setField("dayOfWeek", e.target.value as DayOfWeek)}
+                      onChange={(e) =>
+                        setField("dayOfWeek", e.target.value as DayOfWeek)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
                     >
                       {DOW_FULL_OPTIONS.map((d) => (
@@ -641,7 +666,9 @@ export function RecurringRulesModal({
                               setField(
                                 "daysOfWeek",
                                 selected
-                                  ? formData.daysOfWeek.filter((d) => d !== value)
+                                  ? formData.daysOfWeek.filter(
+                                      (d) => d !== value,
+                                    )
                                   : [...formData.daysOfWeek, value],
                               )
                             }
@@ -681,11 +708,13 @@ export function RecurringRulesModal({
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
                   >
-                    {Object.entries(WEEK_INTERVAL_LABELS).map(([val, label]) => (
-                      <option key={val} value={val}>
-                        {label}
-                      </option>
-                    ))}
+                    {Object.entries(WEEK_INTERVAL_LABELS).map(
+                      ([val, label]) => (
+                        <option key={val} value={val}>
+                          {label}
+                        </option>
+                      ),
+                    )}
                   </select>
                 </div>
               </>
@@ -715,7 +744,10 @@ export function RecurringRulesModal({
                   aria-describedby="monthlyDayOfMonth-hint"
                   value={formData.monthlyDayOfMonth}
                   onChange={(e) =>
-                    setField("monthlyDayOfMonth", parseInt(e.target.value, 10) || 1)
+                    setField(
+                      "monthlyDayOfMonth",
+                      parseInt(e.target.value, 10) || 1,
+                    )
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
                 />
@@ -842,7 +874,8 @@ export function RecurringRulesModal({
                   {formData.daysOfWeek.length > 1 ? "s" : ""}
                   {" = "}
                   <strong>
-                    {formData.userIds.length * formData.daysOfWeek.length} règles
+                    {formData.userIds.length * formData.daysOfWeek.length}{" "}
+                    règles
                   </strong>
                   {formData.weekInterval > 1 &&
                     ` (toutes les ${formData.weekInterval} semaines)`}

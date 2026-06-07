@@ -37,9 +37,7 @@ describe("filterHeaders (SEC-031 — host-header injection guard)", () => {
   });
 
   it("strips `x-real-ip`", () => {
-    const result = filterHeaders(
-      makeHeaders({ "x-real-ip": "1.2.3.4" }),
-    );
+    const result = filterHeaders(makeHeaders({ "x-real-ip": "1.2.3.4" }));
     expect(result).not.toHaveProperty("x-real-ip");
   });
 

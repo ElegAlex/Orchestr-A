@@ -12,7 +12,7 @@ import { SkillsMatrix } from "@/components/SkillsMatrix";
 import { ImportPreviewModal } from "@/components/ImportPreviewModal";
 import { parseCSV } from "@/lib/csv-parser";
 import toast from "react-hot-toast";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 export default function SkillsPage() {
   const t = useTranslations("hr.skills");

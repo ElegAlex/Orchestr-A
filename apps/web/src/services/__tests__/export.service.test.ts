@@ -37,8 +37,8 @@ function getBlobHtml(createObjectURL: jest.Mock): Promise<string> {
 /** Parse the HTML string and return all h2 text content (sheet names) */
 function getSheetNames(html: string): string[] {
   const doc = new DOMParser().parseFromString(html, "text/html");
-  return Array.from(doc.querySelectorAll("h2")).map((el) =>
-    el.textContent ?? "",
+  return Array.from(doc.querySelectorAll("h2")).map(
+    (el) => el.textContent ?? "",
   );
 }
 
@@ -178,7 +178,11 @@ describe("ExportService", () => {
     });
 
     it("should pass project rows to the second autoTable call", async () => {
-      await ExportService.exportToPDF(mockAnalyticsData, "quarter", "project-1");
+      await ExportService.exportToPDF(
+        mockAnalyticsData,
+        "quarter",
+        "project-1",
+      );
       const calls = (autoTable as jest.Mock).mock.calls;
       // Second call: projects table — body should contain 2 project rows
       const projectsBody: string[][] = calls[1][1].body;
@@ -192,7 +196,9 @@ describe("ExportService", () => {
       await ExportService.exportToPDF(mockAnalyticsData, "week");
       await ExportService.exportToPDF(mockAnalyticsData, "year");
       // 2 calls each with 2 autoTable calls = 4 total
-      expect((autoTable as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(4);
+      expect((autoTable as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(
+        4,
+      );
     });
   });
 

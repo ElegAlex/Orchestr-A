@@ -32,20 +32,20 @@ Prod host runs `Etc/UTC`; SSH key auth, no password exposed in transcripts.
 
 ### The 5 deltas (re-derived at execution from `git log ebcd9e1..ce0c729 --oneline` filtering `[closes X]` fix commits)
 
-| # | Task | Fix SHA | Nature | Smoke posture |
-|---|------|---------|--------|---------------|
-| 1 | COR-038 | `24c6929` | events parent-cycle P0001/23514 → 409 `ConflictException` (`events.service.ts`) | **code-presence** — `parentEventId` in no Event DTO ⇒ controller-unreachable; defense-in-depth only |
-| 2 | COR-001 | `cb3b5e1` | epics `assertProjectMembership`: ADMIN role-code bypass → `projects:manage_any` permission | **code-presence** — 0 epics in prod ⇒ no row to exercise |
-| 3 | COR-002 | `27c0424` | milestones `assertProjectMembership`: same fix as COR-001 | **code-presence** — `assertProjectMembership` is called only by `update`/`remove` (mutations); no GET path reaches it ⇒ not exerciseable read-only (no prod mutation allowed) |
-| 4 | COR-028 | `d1c420d` | `getUserLeaves(userId)` → `getOwnLeaves(currentUserId)`, query lock | **behavioral (regression)** — pure rename, zero behavioral delta; liveness + flags check |
-| 5 | SEC-030 | `d6ed06f` | `AccessScopeService.userReadWhere` (net-new, 4 buckets), `users.findOne` scope + payload restriction | **behavioral** — the one delta that proves runtime behavior changed |
+| #   | Task    | Fix SHA   | Nature                                                                                               | Smoke posture                                                                                                                                                                 |
+| --- | ------- | --------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | COR-038 | `24c6929` | events parent-cycle P0001/23514 → 409 `ConflictException` (`events.service.ts`)                      | **code-presence** — `parentEventId` in no Event DTO ⇒ controller-unreachable; defense-in-depth only                                                                           |
+| 2   | COR-001 | `cb3b5e1` | epics `assertProjectMembership`: ADMIN role-code bypass → `projects:manage_any` permission           | **code-presence** — 0 epics in prod ⇒ no row to exercise                                                                                                                      |
+| 3   | COR-002 | `27c0424` | milestones `assertProjectMembership`: same fix as COR-001                                            | **code-presence** — `assertProjectMembership` is called only by `update`/`remove` (mutations); no GET path reaches it ⇒ not exerciseable read-only (no prod mutation allowed) |
+| 4   | COR-028 | `d1c420d` | `getUserLeaves(userId)` → `getOwnLeaves(currentUserId)`, query lock                                  | **behavioral (regression)** — pure rename, zero behavioral delta; liveness + flags check                                                                                      |
+| 5   | SEC-030 | `d6ed06f` | `AccessScopeService.userReadWhere` (net-new, 4 buckets), `users.findOne` scope + payload restriction | **behavioral** — the one delta that proves runtime behavior changed                                                                                                           |
 
 > DOC-001 (`006adb7`) is in the `ebcd9e1..ce0c729` range but is **docs-only** (Phase-2 deploy-doc
 > backfill) — correctly **excluded** from the runtime delta set. 5 runtime deltas, not 6.
 
 ### Smoke authentication method (transparency for audit)
 
-No production *application* login was used. `JwtStrategy.validate()` re-fetches the user from DB by
+No production _application_ login was used. `JwtStrategy.validate()` re-fetches the user from DB by
 `payload.sub` and resolves `role.code`/`templateKey` server-side (the token `role` claim is cosmetic;
 `jti` is optional → omitting it bypasses the blacklist check). Behavioral smokes therefore use
 **ephemeral HS256 JWTs minted from the prod `JWT_SECRET`** (read from `/opt/orchestra/.env.production`
@@ -57,14 +57,14 @@ holds `users:manage`) and `agoumallah` (`c9f2c6d3…`, code `CONTRIB_CFA`, no `u
 
 ## Gate 0 — Sanity + baseline reassessment (learning #14) — ✅ COMPLETE
 
-| Check | Result |
-|-------|--------|
-| No IN_PROGRESS task in BACKLOG | ✅ `grep -c 'Status: IN_PROGRESS'` = 0 |
-| Master HEAD | ✅ `ce0c729` (`git rev-parse HEAD`) |
-| Prod current HEAD (SSH) | ✅ `ebcd9e1` — matches expected baseline, **no out-of-band deploy** |
+| Check                                                  | Result                                                                                                                                                             |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| No IN_PROGRESS task in BACKLOG                         | ✅ `grep -c 'Status: IN_PROGRESS'` = 0                                                                                                                             |
+| Master HEAD                                            | ✅ `ce0c729` (`git rev-parse HEAD`)                                                                                                                                |
+| Prod current HEAD (SSH)                                | ✅ `ebcd9e1` — matches expected baseline, **no out-of-band deploy**                                                                                                |
 | Prod `_prisma_migrations` probe (top 5 by finished_at) | ✅ `dat035` / `dat037` / `dat038` / `dat036` / `dat032_dat033` — **56 rows, last = Phase-3 mini-arc final; NO Phase-4 migration** (correct — this deploy has none) |
-| Running api image (rollback anchor source) | ✅ `orchestra-api:latest = 3c264f51b813` (`sha256:3c264f51b8133b…`), `Up 31 hours (healthy)` |
-| Pre-deploy row counts (touched tables) | epics **0** · events **8** · leaves **138** · milestones **108** · project_members **121** · users **41** |
+| Running api image (rollback anchor source)             | ✅ `orchestra-api:latest = 3c264f51b813` (`sha256:3c264f51b8133b…`), `Up 31 hours (healthy)`                                                                       |
+| Pre-deploy row counts (touched tables)                 | epics **0** · events **8** · leaves **138** · milestones **108** · project_members **121** · users **41**                                                          |
 
 **Reassessment outcome:** baseline exactly as expected (prod `ebcd9e1`, migrations frozen at 56). One
 **surprise surfaced and resolved, not auto-corrected silently:** `origin/master` was `92cdcac`, 6
@@ -120,18 +120,18 @@ anchor `3c264f51b813`). Health endpoint `{"status":"ok"}` 200 immediately post-r
 `crypto` (the bundled image lacks a resolvable `jsonwebtoken`), signed with the prod `JWT_SECRET` from
 the api-container env, `sub` = real user id, `jti` omitted (skips blacklist), TTL 10 min. All GET.
 
-| Smoke | Method | Result |
-|-------|--------|--------|
-| **SEC-030.1** admin `GET /users/:id` | behavioral | **HTTP 200**, FULL payload — `email`✓ `login`✓ `skills`✓ present |
-| **SEC-030.2** directory caller `GET /users/<self>` | behavioral | **HTTP 200**, DIRECTORY payload — `email`✗ `login`✗ (stripped), `firstName`✓ present |
-| **SEC-030.3** directory caller `GET /users/<out-of-scope>` | behavioral | **HTTP 404** `{"message":"Utilisateur introuvable",…}` (non-disclosing) |
-| **COR-028** `GET /leaves/me` | behavioral (regression) | **HTTP 200**, 8 leaves, **all `userId` == caller**, `canEdit`/`canDelete` present on every row; APPROVED→`E:false/D:false` (no spurious-true) |
-| **COR-038** events cycle→409 | code-presence | image `events.service.js`: cycle-violation helper + `events_parent_no_cycle` (4 hits) + `ConflictException` (2); `parentEventId` in **0** DTO files ⇒ controller-unreachable. Behavioral proof in `events.service.spec.ts` (green @ `ce0c729`). |
-| **COR-001** epics manage_any | code-presence | image `epics.service.js`: `projects:manage_any` present (1); old `=== 'ADMIN'` bypass **gone** (0). 0 epics in prod ⇒ no row to exercise. |
-| **COR-002** milestones manage_any | code-presence | image `milestones.service.js`: `projects:manage_any` present (1); old `=== 'ADMIN'` bypass **gone** (0). `assertProjectMembership` is mutation-only (`update`/`remove`) ⇒ not exerciseable read-only without mutating prod. |
+| Smoke                                                      | Method                  | Result                                                                                                                                                                                                                                          |
+| ---------------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SEC-030.1** admin `GET /users/:id`                       | behavioral              | **HTTP 200**, FULL payload — `email`✓ `login`✓ `skills`✓ present                                                                                                                                                                                |
+| **SEC-030.2** directory caller `GET /users/<self>`         | behavioral              | **HTTP 200**, DIRECTORY payload — `email`✗ `login`✗ (stripped), `firstName`✓ present                                                                                                                                                            |
+| **SEC-030.3** directory caller `GET /users/<out-of-scope>` | behavioral              | **HTTP 404** `{"message":"Utilisateur introuvable",…}` (non-disclosing)                                                                                                                                                                         |
+| **COR-028** `GET /leaves/me`                               | behavioral (regression) | **HTTP 200**, 8 leaves, **all `userId` == caller**, `canEdit`/`canDelete` present on every row; APPROVED→`E:false/D:false` (no spurious-true)                                                                                                   |
+| **COR-038** events cycle→409                               | code-presence           | image `events.service.js`: cycle-violation helper + `events_parent_no_cycle` (4 hits) + `ConflictException` (2); `parentEventId` in **0** DTO files ⇒ controller-unreachable. Behavioral proof in `events.service.spec.ts` (green @ `ce0c729`). |
+| **COR-001** epics manage_any                               | code-presence           | image `epics.service.js`: `projects:manage_any` present (1); old `=== 'ADMIN'` bypass **gone** (0). 0 epics in prod ⇒ no row to exercise.                                                                                                       |
+| **COR-002** milestones manage_any                          | code-presence           | image `milestones.service.js`: `projects:manage_any` present (1); old `=== 'ADMIN'` bypass **gone** (0). `assertProjectMembership` is mutation-only (`update`/`remove`) ⇒ not exerciseable read-only without mutating prod.                     |
 
 **Reductions documented (not failures).** COR-038/COR-001/COR-002 reduce to code-presence for the
-reasons above — each verified present in the *deployed compiled image* `603f07331516`, not merely on
+reasons above — each verified present in the _deployed compiled image_ `603f07331516`, not merely on
 master. SEC-030 + COR-028 carry the behavioral proof that runtime behavior shipped. SEC-030's
 `userReadWhere` also confirmed present in the image (1 hit) — corroborating the behavioral pass.
 
@@ -193,13 +193,13 @@ counters unchanged; service healthy.
 
 ### Gate-by-gate ledger
 
-| Gate | Time (UTC) | Result | Key artifact |
-|------|------------|--------|--------------|
-| **Gate 0 — Sanity + baseline** | ~19:56 | ✅ + 1 surprise resolved | Prod HEAD `ebcd9e1` (expected); `_prisma_migrations` 56 rows, last `dat035`, no Phase-4 migration; running image `3c264f51b813` healthy; pre-counts captured. **Surprise:** `origin/master` was `92cdcac` (6 behind local `ce0c729`; COR-028+SEC-030 unpushed) → resolved by `git push origin master`, surfaced to operator. |
-| **Gate 1 — Anchor + backup** | ~20:04 | ✅ | Anchor `orchestra-api:pre-cor038-phase4-ab-microdeploy = 3c264f51b813`; backup `pre-cor038-phase4-ab-microdeploy-20260529-200458.sql.gz` 426 KB (pg_dump+gzip exit 0). |
-| **Gate 2 — Build + swap** | ~20:05–20:07 | ✅ | Prod `git checkout ce0c729`; `build api` → new image `603f07331516` (background build + completion monitor); `up -d api` → container healthy on first poll, running new image; health 200. |
-| **Gate 3 — Smokes (5)** | ~20:09–20:10 | ✅ ALL PASS / no HALT | SEC-030: 200 FULL (admin) · 200 DIRECTORY no-email (dir) · **404** out-of-scope. COR-028: 200, 8 leaves all caller-owned, flags correct, no spurious-true. COR-038/001/002: code-presence verified in deployed image (markers present, old `=== 'ADMIN'` bypass gone, parentEventId in 0 DTOs). Auth = ephemeral HS256 JWT from prod `JWT_SECRET`, all GET (zero mutation). |
-| **Gate 4 — Health + closure** | ~20:10 | ✅ | Health ok (uptime 199s); 6/6 services healthy; log scan clean (only boot `RELEASE_DEPLOYED`); counters IDENTICAL to Gate-0 (epics 0/events 8/leaves 138/milestones 108/project_members 121/users 41). |
+| Gate                           | Time (UTC)   | Result                   | Key artifact                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------ | ------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Gate 0 — Sanity + baseline** | ~19:56       | ✅ + 1 surprise resolved | Prod HEAD `ebcd9e1` (expected); `_prisma_migrations` 56 rows, last `dat035`, no Phase-4 migration; running image `3c264f51b813` healthy; pre-counts captured. **Surprise:** `origin/master` was `92cdcac` (6 behind local `ce0c729`; COR-028+SEC-030 unpushed) → resolved by `git push origin master`, surfaced to operator.                                                |
+| **Gate 1 — Anchor + backup**   | ~20:04       | ✅                       | Anchor `orchestra-api:pre-cor038-phase4-ab-microdeploy = 3c264f51b813`; backup `pre-cor038-phase4-ab-microdeploy-20260529-200458.sql.gz` 426 KB (pg_dump+gzip exit 0).                                                                                                                                                                                                      |
+| **Gate 2 — Build + swap**      | ~20:05–20:07 | ✅                       | Prod `git checkout ce0c729`; `build api` → new image `603f07331516` (background build + completion monitor); `up -d api` → container healthy on first poll, running new image; health 200.                                                                                                                                                                                  |
+| **Gate 3 — Smokes (5)**        | ~20:09–20:10 | ✅ ALL PASS / no HALT    | SEC-030: 200 FULL (admin) · 200 DIRECTORY no-email (dir) · **404** out-of-scope. COR-028: 200, 8 leaves all caller-owned, flags correct, no spurious-true. COR-038/001/002: code-presence verified in deployed image (markers present, old `=== 'ADMIN'` bypass gone, parentEventId in 0 DTOs). Auth = ephemeral HS256 JWT from prod `JWT_SECRET`, all GET (zero mutation). |
+| **Gate 4 — Health + closure**  | ~20:10       | ✅                       | Health ok (uptime 199s); 6/6 services healthy; log scan clean (only boot `RELEASE_DEPLOYED`); counters IDENTICAL to Gate-0 (epics 0/events 8/leaves 138/milestones 108/project_members 121/users 41).                                                                                                                                                                       |
 
 ### Three-state attestation
 
@@ -207,7 +207,7 @@ counters unchanged; service healthy.
   running (docker inspect); SEC-030 + COR-028 behavioral smokes (HTTP codes + payload field presence);
   COR-038/001/002 + SEC-030 `userReadWhere` code-presence (grep on deployed compiled JS); old
   `=== 'ADMIN'` bypass absent (grep = 0); counter invariant (pre vs post identical); backup exit codes.
-- **Inferred:** COR-038/COR-001/COR-002 *runtime* correctness — not exercised on prod (controller-
+- **Inferred:** COR-038/COR-001/COR-002 _runtime_ correctness — not exercised on prod (controller-
   unreachable / 0 rows / mutation-only) but proven by their spec suites green at `ce0c729` and present
   in the deployed image.
 - **Gap:** `RELEASE_DEPLOYED` self-reported `releaseSha=3fd8986` is stale (env not wired to the git

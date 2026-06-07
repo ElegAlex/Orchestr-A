@@ -3,8 +3,8 @@ import { WeightInput } from "../WeightInput";
 
 // Mock next-intl with actual FR label values from messages/fr/predefinedTasks.json
 jest.mock("next-intl", () => ({
-  useTranslations: () =>
-    (key: string, params?: Record<string, string | number>) => {
+  useTranslations:
+    () => (key: string, params?: Record<string, string | number>) => {
       const translations: Record<string, string> = {
         "weight.label": "Poids / charge",
         "weight.hint":

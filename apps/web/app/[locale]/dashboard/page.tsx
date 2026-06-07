@@ -11,7 +11,7 @@ import { useAuthStore } from "@/stores/auth.store";
 const PlanningView = dynamic(
   () =>
     import("@/components/planning/PlanningView").then((m) => m.PlanningView),
-  { ssr: false }
+  { ssr: false },
 );
 import { usePermissions } from "@/hooks/usePermissions";
 import { projectsService } from "@/services/projects.service";
@@ -26,7 +26,7 @@ import { PresenceDialog } from "@/components/PresenceDialog";
 import { MyTasksSection } from "@/components/dashboard/MyTasksSection";
 import { TimeEntryModal } from "@/components/time-tracking/TimeEntryModal";
 import toast from "react-hot-toast";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 const MAX_TODOS = 20;
 

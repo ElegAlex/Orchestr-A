@@ -41,17 +41,20 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("next-intl", () => ({
-  useTranslations:
-    () =>
-    (key: string, _params?: Record<string, unknown>) =>
-      key,
+  useTranslations: () => (key: string, _params?: Record<string, unknown>) =>
+    key,
   useLocale: () => "fr",
 }));
 
 jest.mock("@/stores/auth.store", () => ({
   useAuthStore: (selector?: (state: Record<string, unknown>) => unknown) => {
     const state = {
-      user: { id: "user-1", login: "user1", firstName: "Test", lastName: "User" },
+      user: {
+        id: "user-1",
+        login: "user1",
+        firstName: "Test",
+        lastName: "User",
+      },
       permissions: [] as string[],
       permissionsLoaded: true,
     };
@@ -166,7 +169,9 @@ describe("TST-023 — LeavesPage: RBAC gated affordances", () => {
 
       await waitFor(
         () => {
-          expect(screen.queryByText("pendingValidation")).not.toBeInTheDocument();
+          expect(
+            screen.queryByText("pendingValidation"),
+          ).not.toBeInTheDocument();
         },
         { timeout: 10000 },
       );
@@ -322,7 +327,13 @@ const approvedLeaveWithFlag = {
   days: 5,
   createdAt: "2026-06-01T00:00:00Z",
   updatedAt: "2026-06-01T00:00:00Z",
-  leaveType: { id: "lt-1", code: "CP", name: "Congé payé", color: "#3B82F6", icon: "🌴" },
+  leaveType: {
+    id: "lt-1",
+    code: "CP",
+    name: "Congé payé",
+    color: "#3B82F6",
+    icon: "🌴",
+  },
   // API-computed flag — the only affordance the frontend should rely on
   canRequestCancel: true,
 } as unknown as Leave & { canRequestCancel: boolean };
@@ -334,7 +345,9 @@ describe("SEC-029 — cancel-request button uses API canRequestCancel flag", () 
   });
 
   it("SEC-029 — shows cancel-request button when canRequestCancel=true (regardless of userId)", async () => {
-    mockedLeavesService.getMyLeaves.mockResolvedValueOnce([approvedLeaveWithFlag]);
+    mockedLeavesService.getMyLeaves.mockResolvedValueOnce([
+      approvedLeaveWithFlag,
+    ]);
 
     await act(async () => {
       render(<LeavesPage />);
@@ -343,9 +356,7 @@ describe("SEC-029 — cancel-request button uses API canRequestCancel flag", () 
     await waitFor(
       () => {
         // Title attribute of the cancel-request button
-        expect(
-          screen.getByTitle("Demander l'annulation"),
-        ).toBeInTheDocument();
+        expect(screen.getByTitle("Demander l'annulation")).toBeInTheDocument();
       },
       { timeout: 10000 },
     );
@@ -358,7 +369,9 @@ describe("SEC-029 — cancel-request button uses API canRequestCancel flag", () 
       userId: "user-1",
       canRequestCancel: false,
     };
-    mockedLeavesService.getMyLeaves.mockResolvedValueOnce([approvedLeaveNoFlag]);
+    mockedLeavesService.getMyLeaves.mockResolvedValueOnce([
+      approvedLeaveNoFlag,
+    ]);
 
     await act(async () => {
       render(<LeavesPage />);

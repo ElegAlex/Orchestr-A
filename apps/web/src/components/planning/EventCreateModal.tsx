@@ -12,7 +12,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface EventCreateModalProps {
   isOpen: boolean;

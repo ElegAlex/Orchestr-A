@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { thirdPartiesService } from "@/services/third-parties.service";
 import { ThirdParty, ThirdPartyDeletionImpact } from "@/types";
-import { logger } from '@/lib/logger';
+import { logger } from "@/lib/logger";
 
 interface ThirdPartyDeleteConfirmModalProps {
   isOpen: boolean;

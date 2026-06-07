@@ -115,7 +115,8 @@ jest.mock("@/components/MainLayout", () => ({
 }));
 
 jest.mock("@/components/planning/PlanningView", () => ({
-  PlanningView: () => React.createElement("div", { "data-testid": "planning-view" }),
+  PlanningView: () =>
+    React.createElement("div", { "data-testid": "planning-view" }),
 }));
 
 jest.mock("@/components/ProjectIcon", () => ({
@@ -127,7 +128,8 @@ jest.mock("@/components/PresenceDialog", () => ({
 }));
 
 jest.mock("@/components/dashboard/MyTasksSection", () => ({
-  MyTasksSection: () => React.createElement("div", { "data-testid": "my-tasks-section" }),
+  MyTasksSection: () =>
+    React.createElement("div", { "data-testid": "my-tasks-section" }),
 }));
 
 jest.mock("@/components/time-tracking/TimeEntryModal", () => ({
@@ -149,9 +151,7 @@ describe("PER-017 — fetchData must fire all 3 service calls in parallel (not s
     personalTodosService.getAll.mockReturnValue(new Promise(() => {}));
 
     // Dynamic import to ensure mocks are in place before module executes
-    const { default: DashboardPage } = await import(
-      "../page"
-    );
+    const { default: DashboardPage } = await import("../page");
 
     await act(async () => {
       render(React.createElement(DashboardPage));
