@@ -225,7 +225,11 @@ describe('AuthController', () => {
       });
     });
 
-    it('still resolves the legacy cookie name during the rename transition window', async () => {
+    // SEC-014-CLEANUP — the transition shim that also accepted the pre-rename
+    // legacy name in production is removed; production resolves ONLY the __Host-
+    // name. (Inverts the former "still resolves the legacy cookie name during
+    // the rename transition window" test.)
+    it('rejects the legacy (non-__Host-) cookie name in production', async () => {
       await withNodeEnv('production', async () => {
         mockRefreshTokenService.rotate.mockResolvedValue({
           userId: 'user-id-1',
@@ -243,8 +247,40 @@ describe('AuthController', () => {
 
         await controller.refresh({} as any, req as any, reply as any);
 
+        // The legacy name is no longer resolved in production: nothing is
+        // extracted from the cookie, so rotate sees the empty fallback — never
+        // 'legacy-token'.
         expect(mockRefreshTokenService.rotate).toHaveBeenCalledWith(
-          'legacy-token',
+          '',
+          expect.any(Object),
+        );
+      });
+    });
+
+    // Regression guard (green before and after the cleanup): dev/localhost
+    // WRITES and must therefore still READ the non-__Host- name — http://localhost
+    // can't carry Secure (__Host-) cookies. Guards against a naive fix that reads
+    // only __Host- and silently kills dev/e2e refresh.
+    it('still resolves the dev/localhost cookie name on the read path (refresh)', async () => {
+      await withNodeEnv('development', async () => {
+        mockRefreshTokenService.rotate.mockResolvedValue({
+          userId: 'user-id-1',
+          newRefreshToken: 'rotated',
+        });
+        mockAuthService.issueAccessTokenForUser = vi
+          .fn()
+          .mockResolvedValue('new-at');
+        const { reply } = captureSetCookie();
+        const req = {
+          headers: { cookie: 'orchestr_a_refresh_token=dev-token' },
+          ip: '127.0.0.1',
+          ips: [],
+        };
+
+        await controller.refresh({} as any, req as any, reply as any);
+
+        expect(mockRefreshTokenService.rotate).toHaveBeenCalledWith(
+          'dev-token',
           expect.any(Object),
         );
       });

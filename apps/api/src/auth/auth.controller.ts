@@ -37,19 +37,22 @@ type RequestMeta = { userAgent?: string; ip?: string };
 // Production uses the __Host- prefix, which the browser only accepts with
 // Secure + Path=/ + no Domain — closing the shared-domain / sibling-subdomain
 // plant-or-read vector and (via SameSite=Strict) top-level-nav CSRF.
-// http://localhost (dev + e2e) cannot carry Secure cookies, so dev/test fall
-// back to the non-prefixed name. The read path resolves BOTH names so existing
-// production sessions (legacy name, Path=/api/auth) survive the rename until
-// their refresh cookie next rotates — see deploy note / SEC-014 transition.
-const REFRESH_COOKIE_LEGACY = 'orchestr_a_refresh_token';
-const REFRESH_COOKIE_HOST = `__Host-${REFRESH_COOKIE_LEGACY}`;
+// http://localhost (dev + e2e) cannot carry Secure cookies, so dev/test use the
+// non-prefixed name instead. Read and write are env-symmetric: each environment
+// reads exactly the name it writes (see refreshCookieName / readRefreshCookie).
+// REFRESH_COOKIE_BASE is the non-prefixed name — the active dev/localhost name
+// AND the suffix of the production __Host- name; it is NOT a transition remnant.
+// (The SEC-014-CLEANUP rename-transition shim that also accepted this name in
+// production has been removed now that all pre-rename cookies have expired.)
+const REFRESH_COOKIE_BASE = 'orchestr_a_refresh_token';
+const REFRESH_COOKIE_HOST = `__Host-${REFRESH_COOKIE_BASE}`;
 
 function isProdCookie(): boolean {
   return process.env.NODE_ENV === 'production';
 }
 
 function refreshCookieName(): string {
-  return isProdCookie() ? REFRESH_COOKIE_HOST : REFRESH_COOKIE_LEGACY;
+  return isProdCookie() ? REFRESH_COOKIE_HOST : REFRESH_COOKIE_BASE;
 }
 
 function extractMeta(req: {
@@ -108,17 +111,16 @@ function clearRefreshCookie(reply: FastifyReply | undefined) {
   reply?.header('Set-Cookie', buildRefreshCookie('', 0));
 }
 
-// Dual-name read for the SEC-014 rename transition: prefer the production
-// __Host- name, fall back to the legacy/dev name. Safe in every env — the
-// __Host- name simply won't be present in dev. Remove the legacy fallback once
-// one JWT_REFRESH_TTL window (7d default) has elapsed post-deploy.
+// Env-symmetric read (SEC-014-CLEANUP): resolve exactly the name this
+// environment writes — the __Host- name in production, the non-prefixed name in
+// dev/localhost. The pre-rename SEC-014 transition shim (which also accepted the
+// non-prefixed name in production) is gone: all such cookies have expired one
+// JWT_REFRESH_TTL window after the rename deploy, so production now applies the
+// __Host- guarantee in full and rejects the unprefixed name.
 function readRefreshCookie(req: {
   headers?: Record<string, unknown>;
 }): string | undefined {
-  return (
-    cookieValue(req, REFRESH_COOKIE_HOST) ??
-    cookieValue(req, REFRESH_COOKIE_LEGACY)
-  );
+  return cookieValue(req, refreshCookieName());
 }
 
 @ApiTags('auth')
