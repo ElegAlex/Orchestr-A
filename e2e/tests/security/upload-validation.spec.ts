@@ -21,7 +21,10 @@ import { runOnceUnderAdmin } from "../../fixtures/run-once";
 // projects piles uploads onto the shared 5/60s avatar-upload throttle bucket →
 // the validation request returns 429 before reaching the 400 magic-bytes check.
 // Run once.
-runOnceUnderAdmin(test, "avatar upload magic-bytes validation (explicit token)");
+runOnceUnderAdmin(
+  test,
+  "avatar upload magic-bytes validation (explicit token)",
+);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
