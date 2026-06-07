@@ -277,6 +277,13 @@ jobs:
           # response so the E2E flow can complete it. main.ts hard-refuses this
           # in production; here NODE_ENV is not production.
           AUTH_EXPOSE_RESET_TOKEN: "true"
+          # The storage-state access tokens are minted once by auth.setup at the
+          # start of the run. The full @smoke/e2e suite can run well past the
+          # default 15m access-token TTL, after which every storage-state token
+          # expires mid-run → cascading 401s (creation-in-beforeAll null, 403
+          # checks collapsing to 401). Widen the access TTL so tokens outlive the
+          # whole run. E2E-only; production keeps the 15m default.
+          JWT_ACCESS_TTL: 2h
           TZ: Europe/Paris
 
       - name: Start Frontend
@@ -423,6 +430,13 @@ jobs:
           # response so the E2E flow can complete it. main.ts hard-refuses this
           # in production; here NODE_ENV is not production.
           AUTH_EXPOSE_RESET_TOKEN: "true"
+          # The storage-state access tokens are minted once by auth.setup at the
+          # start of the run. The full @smoke/e2e suite can run well past the
+          # default 15m access-token TTL, after which every storage-state token
+          # expires mid-run → cascading 401s (creation-in-beforeAll null, 403
+          # checks collapsing to 401). Widen the access TTL so tokens outlive the
+          # whole run. E2E-only; production keeps the 15m default.
+          JWT_ACCESS_TTL: 2h
           TZ: Europe/Paris
 
       - name: Start Frontend
