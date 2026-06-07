@@ -45,6 +45,24 @@ function authHeaders(token: string) {
   };
 }
 
+// The API has no GET /api/users/me route; read the authenticated user's id from
+// the role's storage state (auth.setup persists the full login `user` payload,
+// which includes `id`, under the localStorage "user" key).
+function getUserId(role: Role): string {
+  const storagePath = ROLE_STORAGE_PATHS[role];
+  const storage = JSON.parse(fs.readFileSync(storagePath, "utf-8"));
+  const origin = storage.origins?.[0];
+  const userEntry = origin?.localStorage?.find(
+    (item: { name: string; value: string }) => item.name === "user",
+  );
+  if (!userEntry?.value) {
+    throw new Error(`No user payload in storage state for role "${role}"`);
+  }
+  const id = JSON.parse(userEntry.value)?.id as string | undefined;
+  if (!id) throw new Error(`No user.id in storage state for role "${role}"`);
+  return id;
+}
+
 test.describe("Leave Lifecycle", () => {
   test.describe.configure({ mode: "serial" });
 
@@ -400,16 +418,8 @@ test.describe("Leave Lifecycle", () => {
     const contributeurToken = getToken("contributeur");
 
     // ─── Identifier l'admin pour la délégation ───────────────────────────
-    // GET /api/users/me avec le token admin pour obtenir son id
-    const adminMeRes = await request.get(`${baseURL}/api/users/me`, {
-      headers: authHeaders(adminToken),
-    });
-    expect(
-      adminMeRes.ok(),
-      `GET /api/users/me (admin) échoué: ${adminMeRes.status()}`,
-    ).toBe(true);
-    const adminUser = await adminMeRes.json();
-    const adminId: string = adminUser.id;
+    // L'id admin provient du storage state (pas de route GET /api/users/me).
+    const adminId: string = getUserId("admin");
     expect(adminId, "id admin manquant").toBeTruthy();
 
     // ─── MANAGER crée une délégation vers l'admin (aujourd'hui + 7j) ─────
@@ -524,18 +534,10 @@ test.describe("Leave Lifecycle", () => {
 
     const adminToken = getToken("admin");
     const contributeurToken = getToken("contributeur");
-    const managerToken = getToken("manager");
 
     // ─── Identifier l'id du manager (qui sera rendu inactif) ─────────────
-    const managerMeRes = await request.get(`${baseURL}/api/users/me`, {
-      headers: authHeaders(managerToken),
-    });
-    expect(
-      managerMeRes.ok(),
-      `GET /api/users/me (manager) échoué: ${managerMeRes.status()}`,
-    ).toBe(true);
-    const managerUser = await managerMeRes.json();
-    const managerId: string = managerUser.id;
+    // L'id manager provient du storage state (pas de route GET /api/users/me).
+    const managerId: string = getUserId("manager");
     expect(managerId, "id manager manquant").toBeTruthy();
 
     // ─── ADMIN désactive le manager (simule un manager dormant) ──────────

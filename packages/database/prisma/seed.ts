@@ -1847,16 +1847,39 @@ async function main() {
 
     console.log("✅ E2E project + 3 tasks ready");
 
-    // LeaveTypeConfig CP (nécessaire pour créer un congé)
+    // LeaveTypeConfig CP — code "CP" (the E2E specs resolve leave types by code:
+    // leave-lifecycle/leave-balance-gating look up "CP"). requiresApproval=true
+    // drives the self-approval vs PENDING split. No LeaveBalance is seeded, so
+    // CP leaves are accepted without a balance gate (hasConfiguredBalance=false)
+    // while still surfacing in byType (used is derived from leaves).
     const cpLeaveType = await prisma.leaveTypeConfig.upsert({
-      where: { code: "CP_E2E" },
+      where: { code: "CP" },
       update: {},
       create: {
-        code: "CP_E2E",
+        code: "CP",
         name: "Congés payés (E2E)",
         icon: "🏖️",
         color: "#3B82F6",
         isPaid: true,
+        requiresApproval: true,
+        isActive: true,
+        isSystem: false,
+      },
+    });
+
+    // LeaveTypeConfig OTHER — a type with NO configured balance. The balance
+    // gate skips types without a LeaveBalance, so OTHER accepts arbitrary days
+    // (leave-balance-gating, leaves). requiresApproval=true so a contributeur's
+    // OTHER leave is PENDING until approved.
+    await prisma.leaveTypeConfig.upsert({
+      where: { code: "OTHER" },
+      update: {},
+      create: {
+        code: "OTHER",
+        name: "Autre (E2E)",
+        icon: "📋",
+        color: "#6B7280",
+        isPaid: false,
         requiresApproval: true,
         isActive: true,
         isSystem: false,
