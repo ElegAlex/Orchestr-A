@@ -17,6 +17,12 @@
  */
 
 import { test, expect } from "../../fixtures/test-fixtures";
+import { runOnceUnderAdmin } from "../../fixtures/run-once";
+
+// Provisions an external-intervention task/event then renders the planning via
+// the project-role `page`. Role-agnostic visual check; per-role re-runs re-create
+// the same fixture and contend — run once under admin.
+runOnceUnderAdmin(test, "external task red visual in planning");
 
 interface OverviewUser {
   id: string;

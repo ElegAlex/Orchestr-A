@@ -8,6 +8,12 @@
  */
 
 import { test, expect } from "../../fixtures/test-fixtures";
+import { runOnceUnderAdmin } from "../../fixtures/run-once";
+
+// Creates + approves a half-day leave then renders the planning via the
+// project-role `page`. Per-role re-runs collide on the approved leave (and
+// non-admin roles can't approve) — run once under admin.
+runOnceUnderAdmin(test, "half-day leave planning render");
 
 interface OverviewUser {
   id: string;

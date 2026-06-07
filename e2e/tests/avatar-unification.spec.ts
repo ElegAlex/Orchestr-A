@@ -14,7 +14,10 @@ test.describe("@smoke Avatar unification", () => {
 
   test("avatar visible in task kanban stack", async ({ page }) => {
     await page.goto("/fr/tasks");
-    // Kanban stack wrapper has `-space-x-1`; stacked avatars have the title attribute.
+    // TaskKanban (default view) shows assignee count as text, not UserAvatar.
+    // Avatar stacks with `-space-x-1` are rendered by TaskLineCard (list view).
+    // Switch to list view before asserting the avatar stack.
+    await page.getByRole("button", { name: /^liste$/i }).click();
     const stackedAvatar = page.locator(".-space-x-1 [title]").first();
     await expect(stackedAvatar).toBeVisible();
   });

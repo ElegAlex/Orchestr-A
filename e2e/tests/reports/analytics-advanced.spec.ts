@@ -16,6 +16,12 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { runOnceUnderAdmin } from "../../fixtures/run-once";
+
+// Uses the project-role default `page`. Under non-admin role projects the user
+// lacks reports access and /reports redirects, so the "Avancés" tab never
+// renders. The analytics view is role-agnostic here — run once under admin.
+runOnceUnderAdmin(test, "advanced analytics view (reports:view)");
 
 test.describe("Analytics Avancés tab", () => {
   test(

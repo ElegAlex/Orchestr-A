@@ -1923,8 +1923,26 @@ async function main() {
     });
 
     console.log("✅ E2E telework entry ready");
+
+    // 1 PredefinedTask active — required by activity-grid-add-users.spec.ts
+    // (ActivityGrid renders empty state instead of <table> when tasks.length === 0)
+    const existingPredefinedTask = await prisma.predefinedTask.findFirst({
+      where: { name: "Tâche E2E Prédéfinie" },
+    });
+    if (!existingPredefinedTask) {
+      await prisma.predefinedTask.create({
+        data: {
+          name: "Tâche E2E Prédéfinie",
+          defaultDuration: "HALF_DAY",
+          isActive: true,
+          createdById: adminTest.id,
+        },
+      });
+    }
+
+    console.log("✅ E2E predefined task ready");
     console.log(
-      "🧪 E2E seed complete — 6 users, 1 project, 3 tasks, 1 leave, 1 telework",
+      "🧪 E2E seed complete — 6 users, 1 project, 3 tasks, 1 leave, 1 telework, 1 predefined task",
     );
   }
 

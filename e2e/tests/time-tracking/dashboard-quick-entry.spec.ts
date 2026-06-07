@@ -123,6 +123,27 @@ async function createTaskAssignedTo(
   return (await res.json()) as { id: string; title: string };
 }
 
+async function addProjectMember(
+  request: APIRequestContext,
+  baseURL: string,
+  adminToken: string,
+  projectId: string,
+  userId: string,
+): Promise<void> {
+  const res = await request.post(
+    `${baseURL}/api/projects/${projectId}/members`,
+    {
+      headers: authHeaders(adminToken),
+      data: { userId },
+    },
+  );
+  // 201 = added, 409 = already member — both are acceptable
+  expect(
+    res.status() === 201 || res.status() === 409,
+    `addProjectMember ${userId} status ${res.status()}`,
+  ).toBe(true);
+}
+
 async function deleteTask(
   request: APIRequestContext,
   baseURL: string,
@@ -186,6 +207,9 @@ test.describe("@smoke Dashboard - Quick time entry", () => {
       adminToken,
       `V6A-QuickEntry ${stamp}`,
     );
+    // Contributor must be a project member so assertCanAccessProject passes
+    // when TimeTrackingService.create() resolves effectiveProjectId from the task.
+    await addProjectMember(request, url, adminToken, project.id, contribUserId);
     const taskTitle = `e2e-quick-entry-${stamp}`;
     const task = await createTaskAssignedTo(
       request,
