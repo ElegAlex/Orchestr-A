@@ -65,8 +65,9 @@ test.beforeAll(async () => {
   const req = await newRequest.newContext({ baseURL });
 
   try {
-    // 1. Find the "Projet E2E"
-    const projectsRes = await req.get("/api/projects", { headers });
+    // 1. Find the "Projet E2E" — request a high limit so a paginated default
+    //    page can't hide it (clients.spec creates many projects in this run).
+    const projectsRes = await req.get("/api/projects?limit=1000", { headers });
     if (!projectsRes.ok()) {
       throw new Error(
         `GET /api/projects failed: ${projectsRes.status()} ${await projectsRes.text()}`,

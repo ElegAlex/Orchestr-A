@@ -25,6 +25,13 @@
 import * as fs from "fs";
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { ROLE_STORAGE_PATHS, type Role } from "../../fixtures/roles";
+import { runOnceUnderAdmin } from "../../fixtures/run-once";
+
+// Each describe's beforeAll creates resources (project/event/telework/leave) and
+// the tests exercise specific roles via explicit tokens (auth("referent") …),
+// not the project role. Per-role re-runs re-create the same fixtures → overlap
+// 409s / duplicate-attach 400s on the shared DB. Run once under admin.
+runOnceUnderAdmin(test, "ownership/IDOR guards; roles via explicit tokens");
 
 // ─── Token helpers ─────────────────────────────────────────────────────────
 

@@ -110,7 +110,9 @@ test.describe("Planning — congé demi-journée", () => {
 
     const approveRes = await page.request.post(
       `/api/leaves/${createdLeaveId}/approve`,
-      { headers: authHeaders },
+      // data:{} — approve takes no payload, but the JSON Content-Type in
+      // authHeaders makes Fastify reject an empty body (FST_ERR_CTP_EMPTY_JSON_BODY).
+      { headers: authHeaders, data: {} },
     );
     expect(approveRes.ok(), `approve OK (${approveRes.status()})`).toBeTruthy();
 

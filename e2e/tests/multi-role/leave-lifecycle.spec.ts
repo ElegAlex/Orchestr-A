@@ -24,6 +24,12 @@
 import * as fs from "fs";
 import { test, expect } from "../../fixtures/test-fixtures";
 import { ROLE_STORAGE_PATHS, type Role } from "../../fixtures/roles";
+import { runOnceUnderAdmin } from "../../fixtures/run-once";
+
+// Creates + approves leaves on the shared DB; roles come from storage-state
+// tokens, not the project. Per-role re-runs collide on the APPROVED no-overlap
+// constraint (same user + dates) → 409. Run once under admin.
+runOnceUnderAdmin(test, "leave lifecycle (create→approve→balance), delegation");
 
 function getToken(role: Role): string {
   const storagePath = ROLE_STORAGE_PATHS[role];
@@ -137,7 +143,7 @@ test.describe("Leave Lifecycle", () => {
       // ─── Étape 3 : ADMIN approuve la demande (leaves:manage_any) ─────────
       const approveRes = await request.post(
         `${baseURL}/api/leaves/${leaveId}/approve`,
-        { headers: authHeaders(adminToken) },
+        { headers: authHeaders(adminToken), data: {} },
       );
       expect(
         approveRes.ok(),
@@ -342,7 +348,7 @@ test.describe("Leave Lifecycle", () => {
     // ─── ADMIN approuve ────────────────────────────────────────────────────
     const approveRes = await request.post(
       `${baseURL}/api/leaves/${leaveId}/approve`,
-      { headers: authHeaders(adminToken) },
+      { headers: authHeaders(adminToken), data: {} },
     );
     expect(
       approveRes.ok(),
@@ -486,7 +492,7 @@ test.describe("Leave Lifecycle", () => {
     // de la délégation active ; le test vérifie que le flux complet fonctionne.
     const approveRes = await request.post(
       `${baseURL}/api/leaves/${leaveId}/approve`,
-      { headers: authHeaders(adminToken) },
+      { headers: authHeaders(adminToken), data: {} },
     );
     expect(
       approveRes.ok(),
@@ -599,7 +605,7 @@ test.describe("Leave Lifecycle", () => {
       // validateur MANAGE_ANY (admin). Vérifié en appelant l'admin directement.
       const approveRes = await request.post(
         `${baseURL}/api/leaves/${leaveId}/approve`,
-        { headers: authHeaders(adminToken) },
+        { headers: authHeaders(adminToken), data: {} },
       );
       expect(
         approveRes.ok(),

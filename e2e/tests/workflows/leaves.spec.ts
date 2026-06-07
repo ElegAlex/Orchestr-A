@@ -31,6 +31,12 @@
  */
 
 import { test, expect } from "../../fixtures/test-fixtures";
+import { runOnceUnderAdmin } from "../../fixtures/run-once";
+
+// Mutates leaves/balances on the once-seeded shared DB; roles are exercised
+// internally via asRole. Run once instead of 6× (per-role re-runs collide on the
+// APPROVED no-overlap constraint → 409, and trample cumulative balance state).
+runOnceUnderAdmin(test, "leave create/approve/reject + balance flows");
 
 // ─── Page congés accessible ───────────────────────────────────────────────────
 
@@ -164,11 +170,15 @@ test("@smoke CONTRIBUTEUR creates leave, ADMIN approves, balance reflects APPROV
     )?.used ?? 0;
 
   // CONTRIBUTEUR creates leave (far-future dates to avoid seeded data collision)
+  // Dates must fall in the CURRENT year: byType `used` is computed for the
+  // current year only (formatInTimeZone(now,'yyyy')), so a far-future leave
+  // would never move OTHER's `used` and the debit assertion below would fail.
+  const yr = new Date().getFullYear();
   const createRes = await contributeurPage.request.post("/api/leaves", {
     data: {
       leaveTypeId: otherType.id,
-      startDate: "2028-03-04",
-      endDate: "2028-03-06",
+      startDate: `${yr}-09-21`,
+      endDate: `${yr}-09-23`,
     },
   });
   expect(createRes.status()).toBe(201);
