@@ -3785,7 +3785,7 @@ In `readRefreshCookie`, drop the `?? cookieValue(req, REFRESH_COOKIE_LEGACY)` br
 pnpm test apps/api/src/auth/auth.controller.spec.ts
 ```
 
-**Closed_by:** (empty — fill with commit SHA when status moves to DONE)
+**Closed_by:** 8ec3e0d5 (`[closes SEC-014-CLEANUP]`)
 **Learnings:** The literal Suggested-fix wording ("drop the `?? cookieValue(req, REFRESH_COOKIE_LEGACY)` branch", leaving `return cookieValue(req, REFRESH_COOKIE_HOST)`) would have broken dev/e2e: dev WRITES the non-prefixed name (`refreshCookieName()`=non-`__Host-` in dev, since localhost can't carry `Secure`/`__Host-` cookies) but would then READ only `__Host-` → silent dev refresh death. Implemented the env-symmetric read instead — `readRefreshCookie` now returns `cookieValue(req, refreshCookieName())`, so each env reads exactly the name it writes (prod `__Host-` only, dev non-prefixed only). This satisfies AC#1 (prod rejects the unprefixed name) AND preserves the dev env fallback. Added a dev-read regression guard test that distinguishes the correct fix from the naive one. Also renamed the misleading `REFRESH_COOKIE_LEGACY` const → `REFRESH_COOKIE_BASE` (in-file, same fix scope): post-cleanup the unprefixed name is the active dev/localhost name, not a transition remnant. e2e unaffected (NODE_ENV≠production → dev path, unchanged; the e2e regex already tolerates both names) — not re-run locally; covered by the dev-read unit guard.
 
 ---
