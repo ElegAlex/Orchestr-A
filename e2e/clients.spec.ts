@@ -295,9 +295,12 @@ test.describe("Clients — Assignation client ↔ projet (manager) @smoke", () =
   }) => {
     const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
 
+    // Read the assignment back as admin: the manager has clients:assign_to_project
+    // (so the POST above succeeds) but reading a project's clients requires
+    // project perimeter, which the manager lacks for this admin-owned project.
     const res = await request.get(
       `${baseURL}/api/projects/${projectId}/clients`,
-      { headers: authHeadersNoBody(managerToken()) },
+      { headers: authHeadersNoBody(adminToken()) },
     );
 
     expect(res.status()).toBe(200);

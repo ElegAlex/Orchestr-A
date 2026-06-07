@@ -112,15 +112,30 @@ test.describe("Planning — congé demi-journée", () => {
       leaveRes.ok(),
       `POST /leaves OK (${leaveRes.status()})`,
     ).toBeTruthy();
-    createdLeaveId = (await leaveRes.json()).id as string;
+    const createdLeave = (await leaveRes.json()) as {
+      id: string;
+      status: string;
+    };
+    createdLeaveId = createdLeave.id;
 
-    const approveRes = await page.request.post(
-      `/api/leaves/${createdLeaveId}/approve`,
-      // data:{} — approve takes no payload, but the JSON Content-Type in
-      // authHeaders makes Fastify reject an empty body (FST_ERR_CTP_EMPTY_JSON_BODY).
-      { headers: authHeaders, data: {} },
-    );
-    expect(approveRes.ok(), `approve OK (${approveRes.status()})`).toBeTruthy();
+    // An admin creating a leave FOR another user (targetUserId) with
+    // leaves:manage_any lands it APPROVED directly — approving it again would be
+    // 400 (not PENDING). Only approve when it's still pending.
+    const approveRes =
+      createdLeave.status === "APPROVED"
+        ? null
+        : await page.request.post(
+            `/api/leaves/${createdLeaveId}/approve`,
+            // data:{} — approve takes no payload, but the JSON Content-Type in
+            // authHeaders makes Fastify reject an empty body.
+            { headers: authHeaders, data: {} },
+          );
+    if (approveRes) {
+      expect(
+        approveRes.ok(),
+        `approve OK (${approveRes.status()})`,
+      ).toBeTruthy();
+    }
 
     // 4. Une tâche le même jour, assignée au même utilisateur.
     const title = `E2E-HALF-${Date.now()}`;
