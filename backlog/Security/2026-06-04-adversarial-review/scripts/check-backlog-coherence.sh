@@ -11,9 +11,11 @@
 #     resolves to backlog/Security/2026-05-24-review-payloads/BACKLOG.md.
 # Exit codes: 0 if all DONE/VERIFIED tasks are coherent, 1 if any violation.
 #
-# Task-ID regex: `[A-Z]+(?:-[A-Z]+)*-\d+` matches both single-segment IDs (SEC-001,
-# DAT-002, OBS-001, PERF-001, TST-011) and multi-segment IDs (AUD-EMIT-001, TOOL-COH-001,
-# USR-DEL-001, AUD-READ-001, TST-DB-001, TOOL-DEPLOY-001, CLAUDE-CFG-001). It subsumes the
+# Task-ID regex: `[A-Z]+(?:-[A-Z]+)*-\d+(?:-[A-Z]+)*` matches single-segment IDs (SEC-001,
+# DAT-002, OBS-001, PERF-001, TST-011), multi-segment IDs (AUD-EMIT-001, TOOL-COH-001,
+# USR-DEL-001, AUD-READ-001, TST-DB-001, TOOL-DEPLOY-001, CLAUDE-CFG-001), and IDs with a
+# trailing letter suffix AFTER the number (SEC-014-CLEANUP) via the `(?:-[A-Z]+)*` tail.
+# Without that tail the gate silently skipped letter-suffix DONE entries. It subsumes the
 # former `[A-Z]+-\d+|CLAUDE-CFG-\d+` alternation (TOOL-COH-001).
 #
 # ──────────────────────────────────────────────────────────────────────────────────────
@@ -68,9 +70,10 @@ content = backlog_path.read_text()
 git_cwd = str(backlog_path.resolve().parent)
 
 # Split into task blocks.
-# `[A-Z]+(?:-[A-Z]+)*-\d+` matches single-segment (SEC-001) AND multi-segment
-# (AUD-EMIT-001, TOOL-COH-001, CLAUDE-CFG-001) IDs — see header (TOOL-COH-001).
-task_pattern = re.compile(r'^### ([A-Z]+(?:-[A-Z]+)*-\d+) — (.+)$', re.MULTILINE)
+# `[A-Z]+(?:-[A-Z]+)*-\d+(?:-[A-Z]+)*` matches single-segment (SEC-001) AND multi-segment
+# (AUD-EMIT-001, TOOL-COH-001, CLAUDE-CFG-001) IDs, plus a trailing letter suffix AFTER the
+# number (SEC-014-CLEANUP) via the `(?:-[A-Z]+)*` tail — see header (TOOL-COH-001).
+task_pattern = re.compile(r'^### ([A-Z]+(?:-[A-Z]+)*-\d+(?:-[A-Z]+)*) — (.+)$', re.MULTILINE)
 matches = list(task_pattern.finditer(content))
 
 violations = []
