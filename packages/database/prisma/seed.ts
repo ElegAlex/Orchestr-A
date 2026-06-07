@@ -1840,6 +1840,11 @@ async function main() {
             priority: "NORMAL",
             projectId: e2eProject.id,
             assigneeId: taskData.assigneeId,
+            // Populate the multi-assignee relation too: the task cards render the
+            // avatar stack from `assignees[]` (TaskAssignee), not the legacy
+            // single `assigneeId` — without this the kanban/list avatar stack is
+            // empty (avatar-unification spec).
+            assignees: { create: { userId: taskData.assigneeId } },
           },
         });
       }
