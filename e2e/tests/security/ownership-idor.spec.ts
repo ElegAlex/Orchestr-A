@@ -108,6 +108,9 @@ test.describe("Ownership IDOR — projects (BUG-04/08)", () => {
         name: `IDOR Project ${Date.now()}`,
         description: "Created by W5.1 ownership IDOR spec",
         status: "ACTIVE",
+        // CreateProjectDto requires startDate/endDate (ISO 8601).
+        startDate: "2027-01-01T00:00:00Z",
+        endDate: "2027-12-31T00:00:00Z",
       },
     });
     if (!res.ok()) {
@@ -359,22 +362,67 @@ test.describe("Ownership IDOR — telework (BUG-01)", () => {
 
 test.describe("Ownership IDOR — time-tracking (SEC-06)", () => {
   let timeEntryId: string | null = null;
+  let ttProjectId: string | null = null;
+  let ttTaskId: string | null = null;
 
   test.beforeAll(async ({ request }) => {
-    // Owned by contributeur
+    // POST /time-tracking requires a task or project (service-level check), and
+    // the access-scope gate (time-tracking-scope spec) forbids a contributeur
+    // logging against a project they don't belong to. So the owner is ADMIN
+    // (manage_any): referent stays a non-owner either way, which is all the IDOR
+    // assertions below need.
+    const stamp = Date.now();
+    const projRes = await request.post(`${baseUrl()}/api/projects`, {
+      headers: auth("admin", true),
+      data: {
+        name: `IDOR TT Project ${stamp}`,
+        description: "Owner project for time-tracking IDOR entry",
+        status: "ACTIVE",
+        startDate: "2027-01-01T00:00:00Z",
+        endDate: "2027-12-31T00:00:00Z",
+      },
+    });
+    if (!projRes.ok()) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[IDOR time-tracking] Skipping module: project create failed ${projRes.status()} — ${await projRes.text()}`,
+      );
+      return;
+    }
+    ttProjectId = (await projRes.json()).id ?? null;
+
+    const taskRes = await request.post(`${baseUrl()}/api/tasks`, {
+      headers: auth("admin", true),
+      data: {
+        title: `IDOR TT Task ${stamp}`,
+        status: "TODO",
+        priority: "NORMAL",
+        projectId: ttProjectId,
+      },
+    });
+    if (!taskRes.ok()) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[IDOR time-tracking] Skipping module: task create failed ${taskRes.status()} — ${await taskRes.text()}`,
+      );
+      return;
+    }
+    ttTaskId = (await taskRes.json()).id ?? null;
+
     const res = await request.post(`${baseUrl()}/api/time-tracking`, {
-      headers: auth("contributeur", true),
+      headers: auth("admin", true),
       data: {
         date: "2027-07-20T00:00:00Z",
         hours: 2,
         activityType: "DEVELOPMENT",
+        taskId: ttTaskId,
         description: "IDOR E2E entry",
       },
     });
     if (!res.ok()) {
       // eslint-disable-next-line no-console
       console.warn(
-        `[IDOR time-tracking] Skipping module: create failed ${res.status()} — ${await res.text()}`,
+        `[IDOR time-tracking] Skipping module: entry create failed ${res.status()} — ${await res.text()}`,
       );
       return;
     }
@@ -383,10 +431,21 @@ test.describe("Ownership IDOR — time-tracking (SEC-06)", () => {
   });
 
   test.afterAll(async ({ request }) => {
-    if (!timeEntryId) return;
-    await request.delete(`${baseUrl()}/api/time-tracking/${timeEntryId}`, {
-      headers: auth("admin"),
-    });
+    if (timeEntryId) {
+      await request.delete(`${baseUrl()}/api/time-tracking/${timeEntryId}`, {
+        headers: auth("admin"),
+      });
+    }
+    if (ttTaskId) {
+      await request.delete(`${baseUrl()}/api/tasks/${ttTaskId}`, {
+        headers: auth("admin"),
+      });
+    }
+    if (ttProjectId) {
+      await request.delete(`${baseUrl()}/api/projects/${ttProjectId}`, {
+        headers: auth("admin"),
+      });
+    }
   });
 
   test(
@@ -468,11 +527,29 @@ test.describe("Ownership IDOR — leaves (cancel / reject-cancellation)", () => 
   let leaveId: string | null = null;
 
   test.beforeAll(async ({ request }) => {
+    // leaveTypeId must be a real UUID (the old "lt-cp-001" string is rejected).
+    // Use OTHER: it has no configured balance, so creation skips the balance gate
+    // (see leave-balance-gating spec) — no per-user provisioning needed. The leave
+    // type is irrelevant to the cancel/reject IDOR assertions below.
+    const typesRes = await request.get(`${baseUrl()}/api/leave-types`, {
+      headers: auth("admin"),
+    });
+    const types = typesRes.ok() ? await typesRes.json() : [];
+    const list: Array<{ id: string; code: string }> = Array.isArray(types)
+      ? types
+      : (types.data ?? []);
+    const lt = list.find((t) => t.code === "OTHER") ?? list[0];
+    if (!lt) {
+      // eslint-disable-next-line no-console
+      console.warn(`[IDOR leaves] Skipping module: no leave type available`);
+      return;
+    }
+
     // Owned by contributeur
     const res = await request.post(`${baseUrl()}/api/leaves`, {
       headers: auth("contributeur", true),
       data: {
-        leaveTypeId: "lt-cp-001",
+        leaveTypeId: lt.id,
         startDate: "2027-09-01T00:00:00Z",
         endDate: "2027-09-03T00:00:00Z",
         reason: "IDOR E2E leave",
@@ -548,6 +625,9 @@ test.describe("Ownership IDOR — full 6-role smoke matrix", () => {
         name: `IDOR Matrix Project ${Date.now()}`,
         description: "6-role smoke matrix",
         status: "ACTIVE",
+        // CreateProjectDto requires startDate/endDate (ISO 8601).
+        startDate: "2027-01-01T00:00:00Z",
+        endDate: "2027-12-31T00:00:00Z",
       },
     });
     if (res.ok()) {
