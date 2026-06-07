@@ -33,7 +33,7 @@ test.describe("Dashboard KPI CTA", () => {
 
     await page.goto("/fr/dashboard");
     await expect(page.getByText("Projets actifs")).toBeVisible();
-    await page.locator('a[href$="/projects?status=ACTIVE"]').click();
+    await page.locator('a[href*="/projects?status=ACTIVE"]').click();
 
     await expect(page).toHaveURL(/\/projects\?status=ACTIVE/);
     const statusSelect = page.locator("select").first();
@@ -50,7 +50,7 @@ test.describe("Dashboard KPI CTA", () => {
 
     await page.goto("/fr/dashboard");
     await expect(page.getByText("Tâches en cours")).toBeVisible();
-    await page.locator('a[href$="/tasks?status=IN_PROGRESS"]').click();
+    await page.locator('a[href*="/tasks?status=IN_PROGRESS"]').click();
 
     await expect(page).toHaveURL(/\/tasks\?status=IN_PROGRESS/);
   });
@@ -65,7 +65,7 @@ test.describe("Dashboard KPI CTA", () => {
 
     await page.goto("/fr/dashboard");
     await expect(page.getByText("Tâches terminées")).toBeVisible();
-    await page.locator('a[href$="/tasks?status=DONE"]').click();
+    await page.locator('a[href*="/tasks?status=DONE"]').click();
 
     await expect(page).toHaveURL(/\/tasks\?status=DONE/);
   });
@@ -80,7 +80,7 @@ test.describe("Dashboard KPI CTA", () => {
 
     await page.goto("/fr/dashboard");
     await expect(page.getByText("Tâches bloquées")).toBeVisible();
-    await page.locator('a[href$="/tasks?status=BLOCKED"]').click();
+    await page.locator('a[href*="/tasks?status=BLOCKED"]').click();
 
     await expect(page).toHaveURL(/\/tasks\?status=BLOCKED/);
   });
