@@ -7,6 +7,7 @@
  */
 
 import { test, expect } from "../../fixtures/test-fixtures";
+import { expectBlockedFromAdminRoles } from "../../fixtures/admin-roles-gate";
 
 // Chemins possibles pour la page admin des tâches prédéfinies
 const ADMIN_PREDEFINED_TASKS_PATHS = [
@@ -88,26 +89,7 @@ test.describe("Predefined Task Assignment — Admin Access Control", () => {
     async ({ asRole }) => {
       const contributeurPage = await asRole("contributeur");
       await contributeurPage.goto("/admin/roles");
-      await contributeurPage.waitForLoadState("domcontentloaded");
-
-      // Le contributeur doit être bloqué : redirection ou message d'accès restreint
-      const url = contributeurPage.url();
-
-      const isRedirected =
-        url.includes("/login") ||
-        url.includes("/403") ||
-        url.includes("/unauthorized") ||
-        url.includes("/dashboard");
-
-      // Vérifier le message "Accès restreint" affiché par le composant
-      // (La page /admin/roles affiche ce message côté client si non-ADMIN)
-      const hasRestrictedMessage = await contributeurPage
-        .locator("text=/accès restreint|non autorisé|interdit|forbidden/i")
-        .isVisible({ timeout: 8000 })
-        .catch(() => false);
-
-      // L'accès doit être bloqué : soit par redirection, soit par message UI
-      expect(isRedirected || hasRestrictedMessage).toBeTruthy();
+      await expectBlockedFromAdminRoles(contributeurPage);
     },
   );
 
@@ -116,22 +98,7 @@ test.describe("Predefined Task Assignment — Admin Access Control", () => {
   }) => {
     const observateurPage = await asRole("observateur");
     await observateurPage.goto("/admin/roles");
-    await observateurPage.waitForLoadState("domcontentloaded");
-
-    const url = observateurPage.url();
-
-    const isRedirected =
-      url.includes("/login") ||
-      url.includes("/403") ||
-      url.includes("/unauthorized") ||
-      url.includes("/dashboard");
-
-    const hasRestrictedMessage = await observateurPage
-      .locator("text=/accès restreint|non autorisé|interdit|forbidden/i")
-      .isVisible({ timeout: 8000 })
-      .catch(() => false);
-
-    expect(isRedirected || hasRestrictedMessage).toBeTruthy();
+    await expectBlockedFromAdminRoles(observateurPage);
   });
 
   test("CONTRIBUTEUR ne peut pas accéder à la page /settings", async ({

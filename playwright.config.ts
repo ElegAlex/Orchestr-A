@@ -49,6 +49,10 @@ export default defineConfig({
       name: "chromium",
       testDir: "./e2e",
       testMatch: /[/\\]e2e[/\\][^/\\]+\.spec\.[jt]s$/,
+      // These root specs (e.g. clients.spec.ts) read the role storage states
+      // from disk via getToken(); without depending on `setup` they race the
+      // serial login project under workers>1 → ENOENT on the .auth/*.json files.
+      dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"] },
     },
 

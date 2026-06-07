@@ -54,11 +54,15 @@ function authHeaders(token: string) {
 let provisionedProjectId: string | null = null;
 
 test.beforeAll(async () => {
-  const apiURL = "http://localhost:3001";
+  // Route API calls through the app baseURL (web proxy → API). The API does not
+  // listen on a fixed :3001 in CI (it is on :4000, reached via the :3000 web
+  // proxy), so a hardcoded :3001 → ECONNREFUSED. baseURL resolves to :3000 in
+  // CI and :4001 locally.
+  const baseURL = test.info().project.use.baseURL ?? "http://localhost:4001";
   const token = getToken("admin");
   const headers = authHeaders(token);
 
-  const req = await newRequest.newContext({ baseURL: apiURL });
+  const req = await newRequest.newContext({ baseURL });
 
   try {
     // 1. Find the "Projet E2E"

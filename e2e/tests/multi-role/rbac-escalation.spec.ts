@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from "../../fixtures/test-fixtures";
+import { expectBlockedFromAdminRoles } from "../../fixtures/admin-roles-gate";
 
 // ID fictif pour les tentatives DELETE — n'existe pas, mais la 403 doit
 // être retournée AVANT toute vérification d'existence de ressource.
@@ -26,23 +27,7 @@ test.describe("RBAC — Protection contre l'escalade de privilèges", () => {
       async ({ asRole }) => {
         const contributeurPage = await asRole("contributeur");
         await contributeurPage.goto("/admin/roles");
-        await contributeurPage.waitForLoadState("domcontentloaded");
-
-        const url = contributeurPage.url();
-
-        const isRedirected =
-          url.includes("/login") ||
-          url.includes("/403") ||
-          url.includes("/unauthorized") ||
-          url.includes("/dashboard");
-
-        // La page affiche "Accès restreint" (comportement actuel du composant RolesPage)
-        const hasRestrictedMessage = await contributeurPage
-          .locator("text=/accès restreint|réservé aux administrateurs/i")
-          .isVisible({ timeout: 8000 })
-          .catch(() => false);
-
-        expect(isRedirected || hasRestrictedMessage).toBeTruthy();
+        await expectBlockedFromAdminRoles(contributeurPage);
       },
     );
 
@@ -52,44 +37,14 @@ test.describe("RBAC — Protection contre l'escalade de privilèges", () => {
       async ({ asRole }) => {
         const observateurPage = await asRole("observateur");
         await observateurPage.goto("/admin/roles");
-        await observateurPage.waitForLoadState("domcontentloaded");
-
-        const url = observateurPage.url();
-
-        const isRedirected =
-          url.includes("/login") ||
-          url.includes("/403") ||
-          url.includes("/unauthorized") ||
-          url.includes("/dashboard");
-
-        const hasRestrictedMessage = await observateurPage
-          .locator("text=/accès restreint|réservé aux administrateurs/i")
-          .isVisible({ timeout: 8000 })
-          .catch(() => false);
-
-        expect(isRedirected || hasRestrictedMessage).toBeTruthy();
+        await expectBlockedFromAdminRoles(observateurPage);
       },
     );
 
     test("REFERENT est bloqué sur /admin/roles", async ({ asRole }) => {
       const referentPage = await asRole("referent");
       await referentPage.goto("/admin/roles");
-      await referentPage.waitForLoadState("domcontentloaded");
-
-      const url = referentPage.url();
-
-      const isRedirected =
-        url.includes("/login") ||
-        url.includes("/403") ||
-        url.includes("/unauthorized") ||
-        url.includes("/dashboard");
-
-      const hasRestrictedMessage = await referentPage
-        .locator("text=/accès restreint|réservé aux administrateurs/i")
-        .isVisible({ timeout: 8000 })
-        .catch(() => false);
-
-      expect(isRedirected || hasRestrictedMessage).toBeTruthy();
+      await expectBlockedFromAdminRoles(referentPage);
     });
   });
 

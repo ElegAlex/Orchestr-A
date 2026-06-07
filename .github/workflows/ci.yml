@@ -273,6 +273,10 @@ jobs:
           # OBS-028: main.ts hard-refuses to boot without AUDIT_HASH_KEY (>=32 chars).
           # Non-secret CI-only value (mirrors the JWT_SECRET test placeholder above).
           AUDIT_HASH_KEY: ci-e2e-audit-hash-key-not-a-secret-0123456789
+          # SEC-018: dev/E2E-only — exposes the password-reset token in the API
+          # response so the E2E flow can complete it. main.ts hard-refuses this
+          # in production; here NODE_ENV is not production.
+          AUTH_EXPOSE_RESET_TOKEN: "true"
           TZ: Europe/Paris
 
       - name: Start Frontend
@@ -415,6 +419,10 @@ jobs:
           # OBS-028: main.ts hard-refuses to boot without AUDIT_HASH_KEY (>=32 chars).
           # Non-secret CI-only value (mirrors the JWT_SECRET test placeholder above).
           AUDIT_HASH_KEY: ci-e2e-audit-hash-key-not-a-secret-0123456789
+          # SEC-018: dev/E2E-only — exposes the password-reset token in the API
+          # response so the E2E flow can complete it. main.ts hard-refuses this
+          # in production; here NODE_ENV is not production.
+          AUTH_EXPOSE_RESET_TOKEN: "true"
           TZ: Europe/Paris
 
       - name: Start Frontend
