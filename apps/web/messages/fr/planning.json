@@ -47,6 +47,11 @@
     "tasks": "tâches",
     "collapsed": "(replié)"
   },
+  "absenceSummary": {
+    "label": "Absents",
+    "tooltipHeader": "{count}/{total} absent(s) ({percent}%)",
+    "cellAria": "{count} absent(s) sur {total} ({percent}%)"
+  },
   "legend": {
     "title": "Légende",
     "task": "Tâche",

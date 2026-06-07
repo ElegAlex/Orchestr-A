@@ -47,6 +47,11 @@
     "tasks": "tasks",
     "collapsed": "(collapsed)"
   },
+  "absenceSummary": {
+    "label": "Away",
+    "tooltipHeader": "{count}/{total} away ({percent}%)",
+    "cellAria": "{count} of {total} away ({percent}%)"
+  },
   "legend": {
     "title": "Legend",
     "task": "Task",

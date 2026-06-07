@@ -17,6 +17,7 @@ import {
   DisplayFilters,
 } from "@/hooks/usePlanningData";
 import { GroupHeader } from "./GroupHeader";
+import { ServiceAbsenceSummaryRow } from "./ServiceAbsenceSummaryRow";
 import { UserRow } from "./UserRow";
 import { TaskModal } from "./TaskModal";
 import { EventModal } from "./EventModal";
@@ -85,6 +86,16 @@ const CollapsibleServiceSection = ({
     <div>
       {/* Group Header — sticky inside this section div = push-out behavior */}
       {showGroupHeaders && <GroupHeader group={group} taskCount={taskCount} />}
+      {/* Per-service daily absence summary — always visible, even when collapsed */}
+      {showGroupHeaders && (
+        <ServiceAbsenceSummaryRow
+          group={group}
+          displayDays={displayDays}
+          viewMode={viewMode}
+          gridTemplateColumns={gridTemplateColumns}
+          getDayCell={getDayCell}
+        />
+      )}
       {/* User Rows - masquées si le groupe est replié */}
       {!isCollapsed &&
         group.users.map((user) => (
