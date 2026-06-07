@@ -140,7 +140,7 @@ async function navigateToProjectGantt(
     await page.goto(`/fr/projects/${provisionedProjectId}`);
   } else {
     await page.goto("/fr/projects");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     await expect(
       page.getByRole("heading", { name: "Projets", level: 1 }),
     ).toBeVisible({ timeout: 10000 });
@@ -152,9 +152,18 @@ async function navigateToProjectGantt(
   // Wait for the project detail page to load
   await page.waitForURL(/\/projects\//, { timeout: 10000 });
 
+  // The detail page renders a row of tabs once the project query resolves; wait
+  // for the tab strip to exist (any tab) before targeting the Gantt tab, so a
+  // slow project fetch under CI load doesn't fail the Gantt-tab lookup. Use a
+  // deterministic element wait (NOT networkidle, which hangs on background
+  // polling and is the suite's main flake source).
+  await expect(
+    page.getByRole("button", { name: /tâches|gantt|jalons|équipe/i }).first(),
+  ).toBeVisible({ timeout: 25000 });
+
   // Click the Gantt tab
   const ganttTab = page.getByRole("button", { name: /gantt/i });
-  await expect(ganttTab).toBeVisible({ timeout: 10000 });
+  await expect(ganttTab).toBeVisible({ timeout: 20000 });
   await ganttTab.click();
 
   // Wait for the Gantt to render

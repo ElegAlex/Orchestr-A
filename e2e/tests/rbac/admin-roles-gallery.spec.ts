@@ -18,7 +18,7 @@ const BASE = process.env.CI ? "http://localhost:3000" : "http://localhost:4001";
 
 async function gotoRolesAdmin(page: Page) {
   await page.goto(`${BASE}/fr/admin/roles`);
-  await page.waitForLoadState("networkidle", { timeout: 20000 });
+  await page.waitForLoadState("domcontentloaded");
 }
 
 async function gotoTemplatesTab(page: Page) {

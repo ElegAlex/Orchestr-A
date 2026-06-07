@@ -25,8 +25,11 @@ const LABEL_ALL_LEAVES = "Toutes les demandes";
 const LABEL_CREATE_PROJECT = "Créer un projet";
 
 async function gotoAndWait(page: Page, path: string) {
-  await page.goto(`${BASE}${path}`);
-  await page.waitForLoadState("networkidle", { timeout: 20000 });
+  // domcontentloaded, NOT networkidle: the app keeps background requests in
+  // flight (polling), so networkidle never settles and times out under CI load.
+  // Each test below already waits for its specific element, which is the real
+  // readiness signal.
+  await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded" });
 }
 
 // ─── /fr/leaves — validation & all-leaves ────────────────────────────────────

@@ -26,7 +26,7 @@ const ROLES_WITH_REPORTS_ACCESS = ["admin", "responsable", "manager"];
  */
 async function navigateToGanttPortfolio(page: import("@playwright/test").Page) {
   await page.goto("/fr/reports");
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
 
   // Click the Gantt Portfolio tab (3rd tab button in the header)
   const ganttTab = page.getByRole("button", { name: /gantt/i });
@@ -271,7 +271,7 @@ test.describe("Gantt Portfolio", () => {
     );
 
     await page.goto("/fr/reports");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     const isRedirected = page
       .url()

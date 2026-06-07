@@ -26,7 +26,7 @@ test.describe("Project Collaboration", () => {
       expect(adminPage.url()).not.toContain("/403");
 
       // Attendre le chargement des données
-      await adminPage.waitForLoadState("networkidle").catch(() => {});
+      await adminPage.waitForLoadState("domcontentloaded").catch(() => {});
 
       // Le projet "Projet E2E" doit apparaître dans la liste
       const projectItem = adminPage
@@ -70,7 +70,7 @@ test.describe("Project Collaboration", () => {
       expect(managerPage.url()).not.toContain("/login");
       expect(managerPage.url()).not.toContain("/403");
 
-      await managerPage.waitForLoadState("networkidle").catch(() => {});
+      await managerPage.waitForLoadState("domcontentloaded").catch(() => {});
 
       // Vérifier qu'au moins un projet est visible (ou la page elle-même)
       const hasProjectsContent = await managerPage
@@ -98,7 +98,9 @@ test.describe("Project Collaboration", () => {
       expect(contributeurPage.url()).not.toContain("/login");
       expect(contributeurPage.url()).not.toContain("/403");
 
-      await contributeurPage.waitForLoadState("networkidle").catch(() => {});
+      await contributeurPage
+        .waitForLoadState("domcontentloaded")
+        .catch(() => {});
 
       // Le contributeur doit voir la page projets et potentiellement le projet E2E
       const projectItem = contributeurPage
@@ -130,7 +132,9 @@ test.describe("Project Collaboration", () => {
       expect(observateurPage.url()).not.toContain("/login");
       expect(observateurPage.url()).not.toContain("/403");
 
-      await observateurPage.waitForLoadState("networkidle").catch(() => {});
+      await observateurPage
+        .waitForLoadState("domcontentloaded")
+        .catch(() => {});
 
       // Vérifier l'absence de boutons d'édition / suppression
       const editBtn = observateurPage
@@ -206,8 +210,8 @@ test.describe("Project Collaboration", () => {
 
     // Vérifier que l'admin a accès à des actions supplémentaires
     // par rapport au contributeur (bouton de création de projet)
-    await adminPage.waitForLoadState("networkidle").catch(() => {});
-    await contributeurPage.waitForLoadState("networkidle").catch(() => {});
+    await adminPage.waitForLoadState("domcontentloaded").catch(() => {});
+    await contributeurPage.waitForLoadState("domcontentloaded").catch(() => {});
 
     const adminCreateBtn = adminPage
       .getByRole("button", { name: /nouveau projet|créer|ajouter/i })

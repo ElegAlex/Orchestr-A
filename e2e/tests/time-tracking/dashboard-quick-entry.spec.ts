@@ -75,6 +75,7 @@ async function createProjectViaAdmin(
   baseURL: string,
   adminToken: string,
   name: string,
+  managerId?: string,
 ): Promise<{ id: string; name: string }> {
   const res = await request.post(`${baseURL}/api/projects`, {
     headers: authHeaders(adminToken),
@@ -84,6 +85,12 @@ async function createProjectViaAdmin(
       status: "ACTIVE",
       startDate: "2026-04-01T00:00:00Z",
       endDate: "2026-12-31T00:00:00Z",
+      // Make the contributor the project manager so they have unambiguous
+      // project access (projectAccessWhere.managerId) for the time-tracking
+      // create — independent of the ProjectMember relation. assertCanAccessProject
+      // requires project membership (not task assignment alone), and a member can
+      // log time (verified against the real API: member → 201).
+      ...(managerId ? { managerId } : {}),
     },
   });
   expect(res.status(), `createProject ${name}`).toBe(201);
@@ -206,9 +213,11 @@ test.describe("@smoke Dashboard - Quick time entry", () => {
       url,
       adminToken,
       `V6A-QuickEntry ${stamp}`,
+      contribUserId,
     );
-    // Contributor must be a project member so assertCanAccessProject passes
-    // when TimeTrackingService.create() resolves effectiveProjectId from the task.
+    // Belt-and-suspenders: also add the contributor as a member (the manager
+    // grant above already satisfies assertCanAccessProject when
+    // TimeTrackingService.create() resolves effectiveProjectId from the task).
     await addProjectMember(request, url, adminToken, project.id, contribUserId);
     const taskTitle = `e2e-quick-entry-${stamp}`;
     const task = await createTaskAssignedTo(

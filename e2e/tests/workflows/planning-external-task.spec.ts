@@ -127,8 +127,11 @@ test.describe("Planning — visuel tâche externe", () => {
       page.getByRole("heading", { name: "Planning des Ressources", level: 1 }),
     ).toBeVisible({ timeout: 15000 });
 
+    // Deterministic wait for the just-created external task card (NOT
+    // networkidle, which hangs on background polling). A generous timeout
+    // absorbs the planning grid's follow-up hydration query under CI load.
     const card = page.locator("div.cursor-move").filter({ hasText: title });
-    await expect(card.first()).toBeVisible({ timeout: 15000 });
+    await expect(card.first()).toBeVisible({ timeout: 25000 });
 
     // 5. Assertion clé : la carte porte le visuel externe rouge (régression).
     await expect(card.first()).toHaveClass(/border-red-400/);

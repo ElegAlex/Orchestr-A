@@ -111,7 +111,7 @@ test.describe("Project archive", () => {
       try {
         // ── 4. /fr/projects — default view (toggle OFF): project not visible ──
         await page.goto("/fr/projects");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
 
         // Give the page a moment for hydration / query fetch
         await page.waitForTimeout(800);
@@ -150,7 +150,7 @@ test.describe("Project archive", () => {
 
         // ── 6. Navigate directly to /fr/projects/:id — banner visible ───────
         await page.goto(`/fr/projects/${projectId}`);
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
         await expect(
           page.getByRole("heading", { name: /Projet archivé/i }),
         ).toBeVisible({ timeout: 15000 });
@@ -185,7 +185,7 @@ test.describe("Project archive", () => {
 
         // Navigate back to /fr/projects with toggle OFF (default) — project visible
         await page.goto("/fr/projects");
-        await page.waitForLoadState("networkidle");
+        await page.waitForLoadState("domcontentloaded");
         await page.waitForTimeout(800);
 
         await expect(
