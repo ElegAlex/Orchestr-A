@@ -260,6 +260,8 @@ test.describe("Clients — Assignation client ↔ projet (manager) @smoke", () =
         name: uniqueLabel("E2E-Project-ForClientAssign"),
         description: "Test assignation client E2E",
         status: "ACTIVE",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
       },
     });
     expect(projectRes.status()).toBe(201);
@@ -378,6 +380,8 @@ test.describe("Clients — Filtre projets par client @smoke", () => {
         data: {
           name: uniqueLabel("E2E-ProjectA-WithClient"),
           status: "ACTIVE",
+          startDate: "2026-01-01",
+          endDate: "2026-12-31",
         },
       });
       expect(projectARes.status()).toBe(201);
@@ -389,6 +393,8 @@ test.describe("Clients — Filtre projets par client @smoke", () => {
         data: {
           name: uniqueLabel("E2E-ProjectB-NoClient"),
           status: "ACTIVE",
+          startDate: "2026-01-01",
+          endDate: "2026-12-31",
         },
       });
       expect(projectBRes.status()).toBe(201);
@@ -558,6 +564,8 @@ test.describe("Clients — Refus 403 par rôle @smoke", () => {
       data: {
         name: uniqueLabel("E2E-Project-ContribAssign"),
         status: "ACTIVE",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
       },
     });
     expect(projectRes.status()).toBe(201);
@@ -609,6 +617,8 @@ test.describe("Clients — Refus 403 par rôle @smoke", () => {
       data: {
         name: uniqueLabel("E2E-Project-RefAssign"),
         status: "ACTIVE",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
       },
     });
     expect(projectRes.status()).toBe(201);
