@@ -158,8 +158,15 @@ async function runConcurrentInserts(
       .then(() => undefined)
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        // P2034 / SQLSTATE 40001 = serialization failure → expected under SSI
+        // P2034 = serialization/write-conflict abort → expected under SSI.
+        // Prisma wraps SQLSTATE 40001/40P01 as PrismaClientKnownRequestError
+        // with code 'P2034' and a GENERIC message ("Transaction failed due to a
+        // write conflict or a deadlock") that contains neither '40001' nor
+        // 'could not serialize' — so match on the error CODE first, with the
+        // message substrings kept only as a defensive fallback.
+        const code = (err as { code?: string } | null)?.code;
         if (
+          code === 'P2034' ||
           msg.includes('P2034') ||
           msg.includes('40001') ||
           msg.includes('could not serialize')

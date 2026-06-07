@@ -9,12 +9,6 @@ import {
   type Role,
 } from "./fixtures/roles";
 
-// S'assurer que le répertoire playwright/.auth/ existe
-const authDir = path.join("playwright", ".auth");
-if (!fs.existsSync(authDir)) {
-  fs.mkdirSync(authDir, { recursive: true });
-}
-
 // Sérialiser les logins pour éviter le rate limiter
 setup.describe.configure({ mode: "serial" });
 
@@ -72,7 +66,12 @@ for (const role of ROLES) {
       ],
     };
 
+    // Anchor the directory on the ACTUAL write target (repo-root-anchored via
+    // ROLE_STORAGE_PATHS), not the process cwd. Under `pnpm --filter web exec`
+    // (cwd = apps/web) a cwd-relative mkdir created apps/web/playwright/.auth/
+    // while the write targeted <root>/playwright/.auth/ → ENOENT in CI.
     const storagePath = ROLE_STORAGE_PATHS[role as Role];
+    fs.mkdirSync(path.dirname(storagePath), { recursive: true });
     fs.writeFileSync(storagePath, JSON.stringify(storageState, null, 2));
 
     console.log(
