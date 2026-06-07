@@ -14,6 +14,11 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { runOnceUnderAdmin } from "../../fixtures/run-once";
+
+// Admin-only API flow (creates recurrence rules + generates occurrences) with no
+// project gate, so it ran 6× and failed under non-admin roles. Run once.
+runOnceUnderAdmin(test, "admin monthly-recurrence rule/generation flow");
 
 const TASK_NAME_PREFIX = "Test MONTHLY_DAY W2";
 

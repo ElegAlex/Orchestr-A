@@ -12,6 +12,11 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { runOnceUnderAdmin } from "../../fixtures/run-once";
+
+// Admin-only flow (creates predefined tasks) that had no project gate, so it ran
+// 6× and failed under the non-admin roles. Run once under admin.
+runOnceUnderAdmin(test, "admin predefined-task weight create/render flow");
 
 const TASK_NAME = "Tâche test W1 weight";
 

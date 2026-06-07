@@ -13,6 +13,12 @@
  */
 
 import { test, expect } from "../../fixtures/test-fixtures";
+import { runOnceUnderAdmin } from "../../fixtures/run-once";
+
+// Mutates leaves + balances against the once-seeded shared DB; roles are
+// exercised internally via asRole. Run once instead of 6× to avoid cumulative
+// seed mutation across the per-role re-runs.
+runOnceUnderAdmin(test, "leave self-approval / balance-gating flow");
 
 test.describe("Leave balance gating + self-approval", () => {
   test("@smoke type without configured balance allows arbitrary leave", async ({
