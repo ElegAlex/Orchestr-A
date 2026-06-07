@@ -129,9 +129,12 @@ test.describe("Project archive", () => {
         // Wait for the list to reload
         await page.waitForTimeout(800);
 
-        // Project name must now appear
+        // Project name must now appear. Archived rows render the name with an
+        // " Archivée" badge appended inside the same <h3>, so an exact-text match
+        // misses it — use the heading's accessible name (substring match), the
+        // same locator the badge assertion below relies on.
         await expect(
-          page.getByText(projectName, { exact: true }).first(),
+          page.getByRole("heading", { name: projectName }).first(),
         ).toBeVisible({ timeout: 10000 });
 
         // "Archivée" badge must appear on the row that carries the project name.

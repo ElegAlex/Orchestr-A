@@ -187,8 +187,11 @@ test.describe("Time Tracking — declare for third party", () => {
     expect(report.totals).toBeDefined();
     expect(report.totals.userHours).toBe(0);
     expect(report.totals.thirdPartyHours).toBe(4);
-    expect(report.userEntries).toHaveLength(0);
-    expect(report.thirdPartyEntries).toHaveLength(1);
+    // The report returns segregated COUNTS (totalEntries), not the raw entry
+    // arrays — those were intentionally dropped (perf: returning all rows was
+    // the bug). Assert the counts + the byThirdParty aggregate instead.
+    expect(report.totalEntries.user).toBe(0);
+    expect(report.totalEntries.thirdParty).toBe(1);
     expect(report.byThirdParty).toHaveLength(1);
     expect(report.byThirdParty[0].thirdPartyId).toBe(tp.id);
 

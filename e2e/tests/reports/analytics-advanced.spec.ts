@@ -19,7 +19,7 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Analytics Avancés tab", () => {
   test(
-    "loads, switches to Avancés, renders 7 blocks, period & project filter work",
+    "loads, switches to Avancés, renders the 3 advanced blocks",
     { tag: "@smoke" },
     async ({ page }) => {
       // ── 1. Naviguer sur /reports ────────────────────────────────────────────
@@ -31,16 +31,14 @@ test.describe("Analytics Avancés tab", () => {
       await expect(advancedTab).toBeVisible({ timeout: 15000 });
       await advancedTab.click();
 
-      // ── 3. Vérifier les 7 titres de blocs (FR) ──────────────────────────────
-      // Chacun monté dans une carte distincte ; on cherche le texte du h3.
+      // ── 3. Vérifier les titres des blocs (FR) ───────────────────────────────
+      // Le tab Avancés a été simplifié à 3 blocs (RecentActivity, WorkloadChart,
+      // MilestonesCompletion) — voir AdvancedAnalyticsTab.tsx. Chacun monté dans
+      // une carte distincte ; on cherche le texte du h3.
       const blockTitles = [
-        /Progression des projets/i, // bloc 1
-        /Tendance de progression/i, // bloc 2
-        /Répartition de charge/i, // bloc 3
-        /Santé des projets/i, // bloc 4
-        /Complétion des jalons/i, // bloc 5
-        /Répartition par priorité/i, // bloc 6
-        /Activité récente/i, // bloc 7
+        /Activité récente/i, // RecentActivity
+        /Répartition de charge/i, // WorkloadChart
+        /Complétion des jalons/i, // MilestonesCompletion
       ];
 
       for (const title of blockTitles) {
@@ -49,24 +47,11 @@ test.describe("Analytics Avancés tab", () => {
         ).toBeVisible({ timeout: 20000 });
       }
 
-      // ── 4. Filtre période 30j → 90j ─────────────────────────────────────────
-      // Sélecteur scoped au tab Avancés (le parent page.tsx a aussi des selects).
-      const periodSelect = page.getByTestId("advanced-period-select");
-      await expect(periodSelect).toBeVisible();
-      await expect(periodSelect).toHaveValue("30d");
-      await periodSelect.selectOption("90d");
-      await expect(periodSelect).toHaveValue("90d");
+      // NOTE: the per-tab period select + "Actualiser" button were removed when
+      // AdvancedAnalyticsTab was simplified (no toolbar in the current source),
+      // so the former steps 4–5 are dropped — there is nothing to drive.
 
-      // Laisse le temps aux requêtes TanStack Query de se relancer.
-      await page.waitForTimeout(500);
-
-      // ── 5. Vérifier que le bouton "Actualiser" du tab Avancés est cliquable ─
-      const refreshBtn = page.getByTestId("advanced-refresh-btn");
-      await expect(refreshBtn).toBeVisible();
-      await refreshBtn.click();
-      await page.waitForTimeout(300);
-
-      // ── 6. Multi-select projets : ouvrir, décocher (smoke best-effort) ─────
+      // ── 4. Multi-select projets : ouvrir, décocher (smoke best-effort) ─────
       // Le dropdown affiche par défaut "Tous les projets" ou similaire.
       const multiSelectBtn = page
         .locator("button:has(svg.lucide-chevron-down)")
