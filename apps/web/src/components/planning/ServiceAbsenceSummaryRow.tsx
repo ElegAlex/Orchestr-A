@@ -28,10 +28,10 @@ const LEVEL_STYLES: Record<
   { dot: string; monthBg: string; weekText: string; monthText: string }
 > = {
   neutral: {
-    dot: "bg-gray-300",
-    monthBg: "bg-gray-100",
-    weekText: "text-gray-500",
-    monthText: "text-gray-600",
+    dot: "bg-slate-400",
+    monthBg: "bg-slate-200",
+    weekText: "text-slate-600",
+    monthText: "text-slate-700",
   },
   orange: {
     dot: "bg-amber-500",
@@ -123,14 +123,14 @@ export const ServiceAbsenceSummaryRow = React.memo(
 
     return (
       <div
-        className="bg-gray-50/70 border-b border-gray-200"
+        className="bg-slate-100 border-y border-slate-200"
         style={{ display: "grid", gridTemplateColumns }}
         role="row"
         aria-label={t("absenceSummary.label")}
       >
         {/* Resource column — caption */}
-        <div className="sticky left-0 bg-gray-50/70 z-10 px-3 py-1 flex items-center">
-          <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+        <div className="sticky left-0 bg-slate-100 z-10 px-3 py-1 flex items-center">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
             {t("absenceSummary.label")}
           </span>
         </div>
@@ -188,7 +188,7 @@ export const ServiceAbsenceSummaryRow = React.memo(
                   </span>
                 </>
               ) : (
-                <span className="text-gray-300" aria-hidden="true">
+                <span className="text-slate-300" aria-hidden="true">
                   –
                 </span>
               )}
