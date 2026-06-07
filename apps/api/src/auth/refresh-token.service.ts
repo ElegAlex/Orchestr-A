@@ -89,8 +89,14 @@ export class RefreshTokenService {
     }
     const tokenHash = this.hash(refreshToken);
 
-    // Wrap find + revoke + create in a serializable transaction to prevent TOCTOU races
-    return this.prisma.$transaction(
+    // Wrap find + revoke + create in a serializable transaction to prevent TOCTOU races.
+    // Reuse detection does NOT mutate inside this transaction: throwing inside a
+    // Prisma interactive transaction rolls the whole callback back, so a revoke-all
+    // performed here would be undone by the subsequent throw — the token family
+    // would stay valid and reuse detection would be a silent no-op (SEC-014-REUSE).
+    // Instead we surface the reuse signal and run the family-wide revocation in its
+    // own committed statement below.
+    const result = await this.prisma.$transaction(
       async (tx) => {
         const existing = await tx.refreshToken.findUnique({
           where: { tokenHash },
@@ -100,16 +106,10 @@ export class RefreshTokenService {
           throw new UnauthorizedException('Refresh token inconnu');
         }
 
-        // Reuse detection: revoked token presented again => revoke everything.
+        // Reuse detection: a revoked token presented again => the family may be
+        // compromised. Signal it; the committed revoke-all happens after the tx.
         if (existing.revokedAt) {
-          this.logger.warn(
-            `Refresh token reuse detected for user ${existing.userId} — revoking all tokens`,
-          );
-          await tx.refreshToken.updateMany({
-            where: { userId: existing.userId, revokedAt: null },
-            data: { revokedAt: new Date() },
-          });
-          throw new UnauthorizedException('Refresh token déjà utilisé');
+          return { kind: 'reuse' as const, userId: existing.userId };
         }
 
         if (existing.expiresAt.getTime() < Date.now()) {
@@ -137,10 +137,31 @@ export class RefreshTokenService {
           },
         });
 
-        return { userId: existing.userId, newRefreshToken: plaintext };
+        return {
+          kind: 'rotated' as const,
+          userId: existing.userId,
+          newRefreshToken: plaintext,
+        };
       },
       { isolationLevel: 'Serializable' },
     );
+
+    if (result.kind === 'reuse') {
+      this.logger.warn(
+        `Refresh token reuse detected for user ${result.userId} — revoking all tokens`,
+      );
+      // Committed family-wide revocation (outside the rolled-back transaction).
+      await this.prisma.refreshToken.updateMany({
+        where: { userId: result.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      throw new UnauthorizedException('Refresh token déjà utilisé');
+    }
+
+    return {
+      userId: result.userId,
+      newRefreshToken: result.newRefreshToken,
+    };
   }
 
   async revoke(refreshToken: string): Promise<void> {
