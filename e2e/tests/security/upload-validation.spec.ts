@@ -15,6 +15,13 @@
 import * as fs from "fs";
 import { test, expect } from "@playwright/test";
 import { ROLE_STORAGE_PATHS, type Role } from "../../fixtures/roles";
+import { runOnceUnderAdmin } from "../../fixtures/run-once";
+
+// Uses an explicit contributeur token and is role-agnostic. Running ×6 role
+// projects piles uploads onto the shared 5/60s avatar-upload throttle bucket →
+// the validation request returns 429 before reaching the 400 magic-bytes check.
+// Run once.
+runOnceUnderAdmin(test, "avatar upload magic-bytes validation (explicit token)");
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
