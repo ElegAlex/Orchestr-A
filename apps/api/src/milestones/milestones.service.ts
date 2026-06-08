@@ -43,11 +43,26 @@ export class MilestonesService {
     private readonly auditPersistence: AuditPersistenceService,
   ) {}
 
-  async create(createMilestoneDto: CreateMilestoneDto) {
+  async create(
+    createMilestoneDto: CreateMilestoneDto,
+    currentUserId?: string,
+    currentUserRole?: string | null,
+  ) {
     const project = await this.prisma.project.findUnique({
       where: { id: createMilestoneDto.projectId },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
+
+    // SEC-005: milestones:create alone is not enough — the caller must be a
+    // member of the target project (or hold projects:manage_any), mirroring the
+    // membership gate already enforced on update()/remove()/complete().
+    if (currentUserId) {
+      await this.assertProjectMembershipByProjectId(
+        createMilestoneDto.projectId,
+        currentUserId,
+        currentUserRole,
+      );
+    }
 
     const { dueDate, ...data } = createMilestoneDto;
 
@@ -66,12 +81,28 @@ export class MilestonesService {
     limit = 1000,
     projectId?: string,
     status?: MilestoneStatus,
+    userId?: string,
+    userRole?: string | null,
   ) {
     const safeLimit = Math.min(limit || 1000, 1000);
     const skip = (page - 1) * safeLimit;
+
+    // SEC-006: scope the list to projects the caller is a member of, unless the
+    // caller holds projects:manage_any. Mirrors epics.findAll — without this,
+    // GET /milestones returned every project's milestones org-wide. Milestones
+    // are project-hierarchy entities, NOT one of the AB-001 org-wide-read
+    // domains (tasks/leaves/telework/directory), so they must be scoped.
+    const permissions = userRole
+      ? await this.permissionsService.getPermissionsForRole(userRole)
+      : [];
+    const hasFullVisibility = permissions.includes('projects:manage_any');
+
     const where: Prisma.MilestoneWhereInput = {};
     if (projectId) where.projectId = projectId;
     if (status) where.status = status;
+    if (!hasFullVisibility && userId) {
+      where.project = { members: { some: { userId } } };
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.milestone.findMany({
@@ -102,7 +133,10 @@ export class MilestonesService {
     const milestone = await this.prisma.milestone.findUnique({
       where: { id },
       include: {
-        project: true,
+        // SEC-007: do not leak the full parent project row (budget, dates,
+        // createdById, …) cross-project to any milestones:read holder. The
+        // milestone detail card only needs the project id + name.
+        project: { select: { id: true, name: true } },
         tasks: { select: { id: true, title: true, status: true } },
       },
     });
@@ -178,6 +212,28 @@ export class MilestonesService {
     }
   }
 
+  /**
+   * SEC-005 / SEC-009: membership gate keyed by projectId (used by create() and
+   * the import paths, where no milestone id exists yet). Holders of
+   * projects:manage_any bypass the check.
+   */
+  private async assertProjectMembershipByProjectId(
+    projectId: string,
+    userId: string,
+    userRole?: string | null,
+  ): Promise<void> {
+    const permissions =
+      await this.permissionsService.getPermissionsForRole(userRole);
+    if (permissions.includes('projects:manage_any')) return;
+
+    const memberCount = await this.prisma.projectMember.count({
+      where: { projectId, userId },
+    });
+    if (memberCount === 0) {
+      throw new ForbiddenException('Not a member of this project');
+    }
+  }
+
   async complete(
     id: string,
     currentUserId?: string,
@@ -199,6 +255,8 @@ export class MilestonesService {
   async importMilestones(
     projectId: string,
     milestones: ImportMilestoneDto[],
+    currentUserId?: string,
+    currentUserRole?: string | null,
   ): Promise<ImportMilestonesResultDto> {
     // Vérifier que le projet existe
     const project = await this.prisma.project.findUnique({
@@ -207,6 +265,17 @@ export class MilestonesService {
 
     if (!project) {
       throw new NotFoundException('Projet introuvable');
+    }
+
+    // SEC-009: bulk-creating milestones into a project requires membership
+    // (or projects:manage_any) — the import path must not bypass the gate that
+    // the single-create path now enforces.
+    if (currentUserId) {
+      await this.assertProjectMembershipByProjectId(
+        projectId,
+        currentUserId,
+        currentUserRole,
+      );
     }
 
     const result: ImportMilestonesResultDto = {
@@ -279,6 +348,8 @@ export class MilestonesService {
   async validateImport(
     projectId: string,
     milestones: ImportMilestoneDto[],
+    currentUserId?: string,
+    currentUserRole?: string | null,
   ): Promise<MilestonesValidationPreviewDto> {
     // Vérifier que le projet existe
     const project = await this.prisma.project.findUnique({
@@ -287,6 +358,16 @@ export class MilestonesService {
 
     if (!project) {
       throw new NotFoundException('Projet introuvable');
+    }
+
+    // SEC-009: the dry-run preview also reads project state — gate it on the
+    // same membership check as the actual import.
+    if (currentUserId) {
+      await this.assertProjectMembershipByProjectId(
+        projectId,
+        currentUserId,
+        currentUserRole,
+      );
     }
 
     const result: MilestonesValidationPreviewDto = {

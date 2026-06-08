@@ -66,11 +66,18 @@ describe('MilestonesController', () => {
     it('should create a milestone successfully', async () => {
       mockMilestonesService.create.mockResolvedValue(mockMilestone);
 
-      const result = await controller.create(createMilestoneDto);
+      const result = await controller.create(
+        createMilestoneDto,
+        'user-1',
+        'CONTRIBUTEUR',
+      );
 
       expect(result).toEqual(mockMilestone);
+      // SEC-005: caller identity threaded for the project-membership gate.
       expect(mockMilestonesService.create).toHaveBeenCalledWith(
         createMilestoneDto,
+        'user-1',
+        'CONTRIBUTEUR',
       );
       expect(mockMilestonesService.create).toHaveBeenCalledTimes(1);
     });
@@ -100,14 +107,24 @@ describe('MilestonesController', () => {
 
       mockMilestonesService.findAll.mockResolvedValue(paginatedResult);
 
-      const result = await controller.findAll(1, 10);
+      const result = await controller.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        'user-1',
+        'CONTRIBUTEUR',
+      );
 
       expect(result).toEqual(paginatedResult);
+      // SEC-006: caller identity threaded so the service can scope to memberships.
       expect(mockMilestonesService.findAll).toHaveBeenCalledWith(
         1,
         10,
         undefined,
         undefined,
+        'user-1',
+        'CONTRIBUTEUR',
       );
     });
 
@@ -125,6 +142,8 @@ describe('MilestonesController', () => {
         1,
         10,
         'project-id-1',
+        undefined,
+        undefined,
         undefined,
       );
     });
@@ -144,6 +163,8 @@ describe('MilestonesController', () => {
         10,
         undefined,
         'PLANNED',
+        undefined,
+        undefined,
       );
     });
   });
@@ -285,13 +306,19 @@ describe('MilestonesController', () => {
       const preview = { valid: 2, errors: [] };
       mockMilestonesService.validateImport.mockResolvedValue(preview);
 
-      const result = await controller.validateImport('project-id-1', {
-        milestones: [],
-      } as any);
+      const result = await controller.validateImport(
+        'project-id-1',
+        { milestones: [] } as any,
+        'user-1',
+        'CONTRIBUTEUR',
+      );
 
+      // SEC-009: caller identity threaded for the import membership gate.
       expect(mockMilestonesService.validateImport).toHaveBeenCalledWith(
         'project-id-1',
         [],
+        'user-1',
+        'CONTRIBUTEUR',
       );
       expect(result).toEqual(preview);
     });
@@ -302,13 +329,19 @@ describe('MilestonesController', () => {
       const importResult = { created: 3, errors: [] };
       mockMilestonesService.importMilestones.mockResolvedValue(importResult);
 
-      const result = await controller.importMilestones('project-id-1', {
-        milestones: [],
-      } as any);
+      const result = await controller.importMilestones(
+        'project-id-1',
+        { milestones: [] } as any,
+        'user-1',
+        'CONTRIBUTEUR',
+      );
 
+      // SEC-009: caller identity threaded for the import membership gate.
       expect(mockMilestonesService.importMilestones).toHaveBeenCalledWith(
         'project-id-1',
         [],
+        'user-1',
+        'CONTRIBUTEUR',
       );
       expect(result).toEqual(importResult);
     });

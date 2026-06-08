@@ -24,6 +24,9 @@ describe('MilestonesService', () => {
     project: {
       findUnique: vi.fn(),
     },
+    projectMember: {
+      count: vi.fn(),
+    },
   };
 
   // OBS-026 — the CSV export emits a fire-and-forget DATA_EXPORTED audit row.
@@ -104,6 +107,36 @@ describe('MilestonesService', () => {
         'Projet introuvable',
       );
     });
+
+    it('SEC-005 — non-member without projects:manage_any cannot create a milestone', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Test Project',
+      });
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+      mockPrismaService.projectMember.count.mockResolvedValue(0); // not a member
+
+      await expect(
+        service.create(createMilestoneDto, 'user-nonmember', 'CONTRIBUTEUR'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockPrismaService.milestone.create).not.toHaveBeenCalled();
+    });
+
+    it('SEC-005 — a project member can create a milestone', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Test Project',
+      });
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+      mockPrismaService.projectMember.count.mockResolvedValue(1); // is a member
+      mockPrismaService.milestone.create.mockResolvedValue({ id: '1' });
+
+      await service.create(createMilestoneDto, 'user-member', 'CONTRIBUTEUR');
+      expect(mockPrismaService.projectMember.count).toHaveBeenCalledWith({
+        where: { projectId: 'project-1', userId: 'user-member' },
+      });
+      expect(mockPrismaService.milestone.create).toHaveBeenCalled();
+    });
   });
 
   describe('findAll', () => {
@@ -132,6 +165,32 @@ describe('MilestonesService', () => {
       expect(result).toHaveProperty('meta');
       expect(result.data).toHaveLength(2);
     });
+
+    it('SEC-006 — non-privileged caller only sees milestones from projects they are a member of', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.milestone.count.mockResolvedValue(0);
+
+      await service.findAll(1, 10, undefined, undefined, 'user-1', 'CONTRIBUTEUR');
+
+      const findManyCall = mockPrismaService.milestone.findMany.mock.calls[0][0];
+      expect(findManyCall.where.project).toEqual({
+        members: { some: { userId: 'user-1' } },
+      });
+    });
+
+    it('SEC-006 — projects:manage_any sees all milestones without a membership filter', async () => {
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+      ]);
+      mockPrismaService.milestone.findMany.mockResolvedValue([]);
+      mockPrismaService.milestone.count.mockResolvedValue(0);
+
+      await service.findAll(1, 10, undefined, undefined, 'admin-user', 'ADMIN');
+
+      const findManyCall = mockPrismaService.milestone.findMany.mock.calls[0][0];
+      expect(findManyCall.where.project).toBeUndefined();
+    });
   });
 
   describe('findOne', () => {
@@ -157,6 +216,22 @@ describe('MilestonesService', () => {
       await expect(service.findOne('nonexistent')).rejects.toThrow(
         'Milestone introuvable',
       );
+    });
+
+    it('SEC-007 — findOne does not leak the full parent project row (slim id+name select)', async () => {
+      mockPrismaService.milestone.findUnique.mockResolvedValue({
+        id: '1',
+        project: { id: 'p1', name: 'P' },
+        tasks: [],
+      });
+
+      await service.findOne('1');
+
+      const call = mockPrismaService.milestone.findUnique.mock.calls[0][0];
+      expect(call.include.project).toEqual({
+        select: { id: true, name: true },
+      });
+      expect(call.include.project).not.toBe(true);
     });
   });
 
@@ -330,6 +405,22 @@ describe('MilestonesService', () => {
   describe('importMilestones', () => {
     const projectId = 'project-1';
     const mockProject = { id: projectId, name: 'Test Project' };
+
+    it('SEC-009 — non-member without projects:manage_any cannot bulk-import milestones', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue(mockProject);
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+      mockPrismaService.projectMember.count.mockResolvedValue(0); // not a member
+
+      await expect(
+        service.importMilestones(
+          projectId,
+          [{ name: 'Alpha', dueDate: '2026-06-30' }],
+          'user-nonmember',
+          'CONTRIBUTEUR',
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockPrismaService.milestone.createMany).not.toHaveBeenCalled();
+    });
 
     it('should create new milestones successfully', async () => {
       const milestones = [

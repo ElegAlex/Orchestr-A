@@ -65,8 +65,16 @@ export class MilestonesController {
   @RequirePermissions('milestones:create')
   @ApiOperation({ summary: 'Créer un milestone' })
   @ApiResponse({ status: 201, description: 'Milestone créé' })
-  create(@Body() createMilestoneDto: CreateMilestoneDto) {
-    return this.milestonesService.create(createMilestoneDto);
+  create(
+    @Body() createMilestoneDto: CreateMilestoneDto,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
+  ) {
+    return this.milestonesService.create(
+      createMilestoneDto,
+      currentUserId,
+      currentUserRole,
+    );
   }
 
   @Get()
@@ -82,8 +90,17 @@ export class MilestonesController {
     @Query('projectId', new ParseUUIDPipe({ optional: true }))
     projectId?: string,
     @Query('status') status?: MilestoneStatus,
+    @CurrentUser('id') userId?: string,
+    @CurrentUserRoleCode() userRole?: string | null,
   ) {
-    return this.milestonesService.findAll(page, limit, projectId, status);
+    return this.milestonesService.findAll(
+      page,
+      limit,
+      projectId,
+      status,
+      userId,
+      userRole ?? undefined,
+    );
   }
 
   @Get(':id')
@@ -149,10 +166,14 @@ export class MilestonesController {
   validateImport(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Body() importMilestonesDto: ImportMilestonesDto,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.milestonesService.validateImport(
       projectId,
       importMilestonesDto.milestones,
+      currentUserId,
+      currentUserRole,
     );
   }
 
@@ -171,10 +192,14 @@ export class MilestonesController {
   importMilestones(
     @Param('projectId', ParseUUIDPipe) projectId: string,
     @Body() importMilestonesDto: ImportMilestonesDto,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.milestonesService.importMilestones(
       projectId,
       importMilestonesDto.milestones,
+      currentUserId,
+      currentUserRole,
     );
   }
 
