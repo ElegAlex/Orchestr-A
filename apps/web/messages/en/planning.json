@@ -48,9 +48,9 @@
     "collapsed": "(collapsed)"
   },
   "absenceSummary": {
-    "label": "Away",
-    "tooltipHeader": "{count}/{total} away ({percent}%)",
-    "cellAria": "{count} of {total} away ({percent}%)"
+    "label": "Off-site",
+    "tooltipHeader": "{count}/{total} off-site ({percent}%)",
+    "cellAria": "{count} of {total} off-site ({percent}%)"
   },
   "legend": {
     "title": "Legend",

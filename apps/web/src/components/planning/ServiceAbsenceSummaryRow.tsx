@@ -68,12 +68,14 @@ export const ServiceAbsenceSummaryRow = React.memo(
     const showLeavePending = usePlanningViewStore(
       (s) => s.legendFilters.leavePending,
     );
+    const showTelework = usePlanningViewStore((s) => s.legendFilters.telework);
     const leaveTypeFilters = usePlanningViewStore((s) => s.leaveTypeFilters);
 
     const headcount = group.users.length;
 
     const daySummaries = useMemo<DaySummary[]>(() => {
-      const filters = { leaveTypeFilters, showLeavePending };
+      const filters = { leaveTypeFilters, showLeavePending, showTelework };
+      const teleworkLabel = t("telework.label");
       const resolveName = (leave: Leave): string =>
         leave.leaveType?.name ?? t(`leaveTypes.${leave.type ?? "OTHER"}`);
 
@@ -97,6 +99,7 @@ export const ServiceAbsenceSummaryRow = React.memo(
             headcount,
             filters,
             resolveName,
+            teleworkLabel,
           ),
         };
       });
@@ -107,12 +110,13 @@ export const ServiceAbsenceSummaryRow = React.memo(
       getDayCell,
       leaveTypeFilters,
       showLeavePending,
+      showTelework,
       t,
     ]);
 
     const buildTooltip = (summary: DayAbsenceSummary): string => {
       const header = t("absenceSummary.tooltipHeader", {
-        count: summary.absentCount,
+        count: summary.offsiteCount,
         total: summary.total,
         percent: summary.percent,
       });
@@ -146,10 +150,10 @@ export const ServiceAbsenceSummaryRow = React.memo(
 
           const { summary } = entry;
           const styles = LEVEL_STYLES[summary.level];
-          const hasAbsence = summary.absentCount > 0;
+          const hasOffsite = summary.offsiteCount > 0;
           const tooltip = buildTooltip(summary);
           const ariaLabel = t("absenceSummary.cellAria", {
-            count: summary.absentCount,
+            count: summary.offsiteCount,
             total: summary.total,
             percent: summary.percent,
           });
@@ -159,12 +163,12 @@ export const ServiceAbsenceSummaryRow = React.memo(
               <div
                 key={key}
                 className={`flex items-center justify-center py-0.5 text-[10px] font-bold ${
-                  hasAbsence ? `${styles.monthBg} ${styles.monthText}` : ""
+                  hasOffsite ? `${styles.monthBg} ${styles.monthText}` : ""
                 }`}
                 title={tooltip}
                 aria-label={ariaLabel}
               >
-                {hasAbsence ? summary.absentCount : ""}
+                {hasOffsite ? summary.offsiteCount : ""}
               </div>
             );
           }
@@ -177,14 +181,14 @@ export const ServiceAbsenceSummaryRow = React.memo(
               title={tooltip}
               aria-label={ariaLabel}
             >
-              {hasAbsence ? (
+              {hasOffsite ? (
                 <>
                   <span
                     className={`inline-block h-2 w-2 rounded-full flex-shrink-0 ${styles.dot}`}
                     aria-hidden="true"
                   />
                   <span className={`font-semibold ${styles.weekText}`}>
-                    {summary.absentCount} · {summary.percent}%
+                    {summary.offsiteCount} · {summary.percent}%
                   </span>
                 </>
               ) : (

@@ -48,9 +48,9 @@
     "collapsed": "(replié)"
   },
   "absenceSummary": {
-    "label": "Absents",
-    "tooltipHeader": "{count}/{total} absent(s) ({percent}%)",
-    "cellAria": "{count} absent(s) sur {total} ({percent}%)"
+    "label": "Hors présentiel",
+    "tooltipHeader": "{count}/{total} hors présentiel ({percent}%)",
+    "cellAria": "{count} hors présentiel sur {total} ({percent}%)"
   },
   "legend": {
     "title": "Légende",
