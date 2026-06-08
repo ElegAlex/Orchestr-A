@@ -1,0 +1,41 @@
+# SEC-027 — docker-compose.prod.yml builds the api and web images with build
+# context '.', so anything not excluded here is copied into the build context
+# (and can leak into image layers). Keep secrets and host-side artifacts out.
+
+# Secrets — the actual finding: a root .env (mode 600) was reaching the context.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# VCS / CI metadata
+.git
+.gitignore
+.github
+
+# Host-side build artifacts (reinstalled / rebuilt inside the image)
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+
+# Local dev noise and large untracked artifacts
+*.log
+.playwright-mcp/
+playwright-report/
+test-results/
+playwright/.auth/
+uploads/
+*.png
+
+# Audit / backlog working data — not needed at runtime
+audits/
+backlog/
