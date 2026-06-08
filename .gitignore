@@ -173,3 +173,7 @@ playwright/.auth/
 
 # TS incremental build info (BUILD-001 emits tsconfig.build.tsbuildinfo)
 *.tsbuildinfo
+
+# OFS backup/restore mechanism — never commit prod data or live config/secrets
+backups-ofs/
+scripts/ofs/ofs.conf

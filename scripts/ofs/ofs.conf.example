@@ -1,0 +1,49 @@
+# =============================================================================
+# ofs.conf — Configuration du mécanisme de sauvegarde/restauration OFS Tracker
+# =============================================================================
+# Copier en `ofs.conf` et adapter. Le MÊME fichier paramètre backup ET restore,
+# pour aujourd'hui (préprod) ET le jour J (bascule réseau interne) : on ne change
+# que les valeurs, jamais les scripts.
+#
+#   cp ofs.conf.example ofs.conf && $EDITOR ofs.conf
+# =============================================================================
+
+# ─── SOURCE (ce que `ofs-backup.sh` sauvegarde) ─────────────────────────────
+# Par défaut : la prod multi-conteneurs actuelle.
+OFS_SRC_PG_CONTAINER="orchestr-a-postgres-prod"   # conteneur PostgreSQL source
+OFS_SRC_PG_DB="orchestr_a_prod"                    # base à sauvegarder
+OFS_SRC_PG_SUPERUSER="orchestr_a"                  # rôle propriétaire/superuser SOURCE (≠ "postgres" en prod !)
+# OFS_SRC_PG_PASSWORD=""                           # seulement si le socket local n'est PAS en trust
+OFS_SRC_UPLOADS_VOLUME="orchestr-a-api-uploads-prod"  # volume des fichiers uploadés
+OFS_SRC_API_CONTAINER="orchestr-a-api-prod"        # (facultatif) pour lire RELEASE_SHA
+
+# ─── CIBLE (ce dans quoi `ofs-restore.sh` restaure) ─────────────────────────
+# Par défaut : l'image all-in-one PG18.
+OFS_AIO_CONTAINER="orchestr-a"                      # conteneur all-in-one
+OFS_AIO_IMAGE="orchestr-a:local"                    # image all-in-one (PG18)
+OFS_AIO_DB="orchestr_a"                             # base dans l'all-in-one
+OFS_AIO_RUNTIME_ROLE="orchestr_a"                   # rôle runtime (Prisma)
+# Mot de passe du rôle runtime = POSTGRES_PASSWORD du .env de l'all-in-one.
+# Doit correspondre, sinon l'API ne se connectera pas après restauration.
+OFS_AIO_RUNTIME_PASSWORD="orchestr_a"
+
+# ─── Stockage des sauvegardes ───────────────────────────────────────────────
+OFS_OUTPUT_DIR="./backups-ofs"                     # répertoire de staging local
+# Destination HORS de la machine (NAS interne). Forme rsync/scp : user@hote:/chemin
+# Laisser vide pour ne pas pousser (staging local seulement).
+OFS_NAS_DEST=""                                     # ex: ofsbackup@nas-interne:/srv/ofs/backups
+OFS_RETENTION=14                                    # nb d'archives locales à conserver
+
+# ─── Secrets (fournis par l'OPÉRATEUR — jamais lus depuis .env.production) ───
+# Indispensables pour une restauration fidèle :
+#  - OFS_AUDIT_HASH_KEY : DOIT être la valeur de la SOURCE, sinon les nouvelles
+#    lignes d'audit après bascule deviennent incohérentes avec l'historique.
+#  - OFS_JWT_SECRET : conserver la même valeur évite d'invalider les sessions.
+# Laisser vide => les scripts NE capturent pas les secrets et le signalent ;
+# l'opérateur devra les renseigner manuellement dans le .env de l'all-in-one.
+OFS_AUDIT_HASH_KEY=""
+OFS_JWT_SECRET=""
+
+# ─── Garde-fous d'exécution ─────────────────────────────────────────────────
+# Mettre à 1 pour sauter la confirmation interactive (CI / jour J scripté).
+OFS_ASSUME_YES="0"
