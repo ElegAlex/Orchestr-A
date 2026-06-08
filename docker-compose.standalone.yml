@@ -65,6 +65,13 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required (min 32 characters)}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      # SEC-001 — these three are mandatory in docker-compose.prod.yml but were
+      # missing here. main.ts asserts AUDIT_HASH_KEY at boot (crash-loop without
+      # it), /api/metrics requires METRICS_TOKEN, and RBAC must run in enforce
+      # mode (the default is permissive — undecorated routes would be open).
+      AUDIT_HASH_KEY: ${AUDIT_HASH_KEY:?AUDIT_HASH_KEY is required}
+      METRICS_TOKEN: ${METRICS_TOKEN:?METRICS_TOKEN is required}
+      RBAC_GUARD_MODE: ${RBAC_GUARD_MODE:-enforce}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       API_PREFIX: ${API_PREFIX:-api}
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
