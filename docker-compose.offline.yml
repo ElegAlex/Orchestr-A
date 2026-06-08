@@ -21,6 +21,15 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required (min 32 characters)}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      # SEC-001 — REQUIRED or the API crash-loops at boot: supervisord.conf expands
+      # %(ENV_AUDIT_HASH_KEY)s / %(ENV_METRICS_TOKEN)s and fails to start the api
+      # program when they are unset; main.ts also asserts AUDIT_HASH_KEY (>=32 chars).
+      # On a RESTORE, AUDIT_HASH_KEY MUST equal the source environment's value so the
+      # audit HMAC stays consistent with the restored history (see scripts/ofs/).
+      AUDIT_HASH_KEY: ${AUDIT_HASH_KEY:?AUDIT_HASH_KEY is required (>=32 chars)}
+      METRICS_TOKEN: ${METRICS_TOKEN:?METRICS_TOKEN is required}
+      RBAC_GUARD_MODE: ${RBAC_GUARD_MODE:-enforce}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://127.0.0.1:80/api/health || exit 1"]
       interval: 30s

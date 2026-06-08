@@ -70,9 +70,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Build tools for native modules (bcrypt)
     build-essential \
     python3 \
-    # Database
-    postgresql \
-    postgresql-contrib \
     # Cache
     redis-server \
     # Reverse proxy
@@ -83,6 +80,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gosu \
     openssl \
     && rm -rf /var/lib/apt/lists/*
+
+# ----- PostgreSQL 18 from PGDG (NOT Ubuntu stock 16) -----
+# The source/prod database runs PostgreSQL 18. Ubuntu 24.04 ships PostgreSQL 16,
+# and a logical pg_dump taken from 18 CANNOT be restored into 16 (unsupported
+# downgrade) — a silent data-loss path on migration day that a same-version test
+# would never catch. We therefore install PG18 from the PostgreSQL APT repo (PGDG)
+# and ASSERT it is the only major present: the entrypoint and Dockerfile derive
+# PG_VERSION from `ls /usr/lib/postgresql/`, so two majors => corrupted paths.
+RUN install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+       -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
+       > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends postgresql-18 postgresql-contrib-18 \
+    && rm -rf /var/lib/apt/lists/* \
+    && INSTALLED="$(ls /usr/lib/postgresql/)" \
+    && [ "$INSTALLED" = "18" ] || { echo "FATAL: expected exactly PostgreSQL 18, found: [$INSTALLED]"; exit 1; }
 
 # Create non-root user for running application processes
 RUN groupadd --system orchestr-a && useradd --system --gid orchestr-a --create-home orchestr-a
@@ -113,12 +128,29 @@ COPY packages/database/prisma ./packages/database/prisma
 COPY packages/database/index.ts ./packages/database/
 COPY packages/database/tsconfig.json ./packages/database/
 
+# Copy the rbac workspace package (TS sources consumed at runtime via the pnpm
+# workspace link, exactly like `database`). apps/api depends on `rbac`
+# (workspace:*); without this, pnpm cannot link it and the API dies at boot with
+# `Cannot find module 'rbac'`. Mirrors the runtime stage of apps/api/Dockerfile.
+COPY packages/rbac/package.json ./packages/rbac/
+COPY packages/rbac/index.ts ./packages/rbac/
+COPY packages/rbac/atomic-permissions.ts ./packages/rbac/
+COPY packages/rbac/templates.ts ./packages/rbac/
+COPY packages/rbac/tsconfig.json ./packages/rbac/
+
 # Install production dependencies
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
-# Rebuild bcrypt native module for the current platform
-RUN cd node_modules/.pnpm/bcrypt@5.1.1/node_modules/bcrypt && npm run install
+# Rebuild bcrypt native module for the current platform. The pnpm store path is
+# version-specific (bcrypt@X.Y.Z), so resolve it dynamically instead of hardcoding
+# a version — a lockfile bump (e.g. 5.1.1 -> 6.0.0) must not break the build.
+RUN set -e; \
+    BCRYPT_DIR="$(find node_modules/.pnpm -maxdepth 1 -type d -name 'bcrypt@*' | head -1)/node_modules/bcrypt"; \
+    test -d "$BCRYPT_DIR" || { echo "FATAL: bcrypt introuvable dans le store pnpm"; exit 1; }; \
+    echo "Rebuild bcrypt: $BCRYPT_DIR"; \
+    cd "$BCRYPT_DIR"; \
+    npm run install
 
 # Install prisma CLI and generate client
 RUN npm install -g prisma@6.19.1 && cd packages/database && prisma generate

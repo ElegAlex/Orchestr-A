@@ -107,6 +107,12 @@ fi
 # ─── Sauvegarde pré-migration (uniquement en mise à jour) ────────
 
 export DATABASE_URL="postgresql://orchestr_a:${POSTGRES_PASSWORD:-orchestr_a}@localhost:5432/orchestr_a"
+# TOOL-DEPLOY-001 — schema.prisma declares `directUrl = env("DATABASE_MIGRATION_URL")`
+# for the prod two-role split (separate migration role). The all-in-one runs a
+# SINGLE role (orchestr_a is owner + superuser), so migration and runtime URLs are
+# identical. Without this, `prisma migrate deploy` fails P1012 (env var not found)
+# and the container crash-loops before any service starts.
+export DATABASE_MIGRATION_URL="${DATABASE_MIGRATION_URL:-$DATABASE_URL}"
 
 if [ "$IS_UPGRADE" = true ]; then
     log_step "Sauvegarde pré-migration..."

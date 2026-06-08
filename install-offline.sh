@@ -74,6 +74,8 @@ generate_password() {
 POSTGRES_PASSWORD=$(generate_password 32)
 REDIS_PASSWORD=$(generate_password 32)
 JWT_SECRET=$(generate_password 64)
+AUDIT_HASH_KEY=$(generate_password 64)
+METRICS_TOKEN=$(generate_password 64)
 
 cat > "${SCRIPT_DIR}/.env" << EOF
 # ============================================================================
@@ -86,6 +88,12 @@ POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 REDIS_PASSWORD=${REDIS_PASSWORD}
 JWT_SECRET=${JWT_SECRET}
 JWT_EXPIRES_IN=7d
+# SEC-001 — REQUIRED: supervisord expands %(ENV_AUDIT_HASH_KEY)s / %(ENV_METRICS_TOKEN)s
+# and the API will not start without them (main.ts asserts AUDIT_HASH_KEY >= 32 chars).
+# /!\ RESTORE: replace AUDIT_HASH_KEY below with the SOURCE environment's value so the
+#     restored audit history stays HMAC-consistent (see scripts/ofs/ofs-restore.sh).
+AUDIT_HASH_KEY=${AUDIT_HASH_KEY}
+METRICS_TOKEN=${METRICS_TOKEN}
 
 # === Ports (optionnel) ===
 HTTP_PORT=80
