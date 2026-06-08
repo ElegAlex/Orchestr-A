@@ -2086,6 +2086,31 @@ describe('TasksService', () => {
 
       expect(result.csv).toContain('title;description');
     });
+
+    it('SEC-011 — neutralises CSV formula injection in user-controlled fields (CWE-1236)', async () => {
+      mockPrismaService.task.findMany.mockResolvedValue([
+        {
+          title: '=1+1',
+          description: '@SUM(A1)',
+          status: TaskStatus.TODO,
+          priority: Priority.NORMAL,
+          assignee: null,
+          milestone: null,
+          estimatedHours: null,
+          startDate: null,
+          endDate: null,
+          subtasks: [],
+        },
+      ]);
+
+      const result = await service.exportProjectTasksCsv('project-1');
+
+      // Dangerous-prefix fields are quote-prefixed so spreadsheets treat them as text.
+      expect(result.csv).toContain("'=1+1");
+      expect(result.csv).toContain("'@SUM(A1)");
+      // The raw formula must never start a CSV field unprefixed.
+      expect(result.csv).not.toMatch(/(^|;)=1\+1/m);
+    });
   });
 
   // COR-019 — reorderSubtasks must wrap updates in a single $transaction

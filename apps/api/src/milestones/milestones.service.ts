@@ -493,10 +493,17 @@ export class MilestonesService {
     ]);
 
     const escapeField = (field: string) => {
-      if (field.includes(';') || field.includes('"') || field.includes('\n')) {
-        return '"' + field.replace(/"/g, '""') + '"';
+      // SEC-011 (CWE-1236) — neutralise CSV formula injection: user-controlled
+      // milestone names/descriptions starting with =,+,-,@ (or tab/CR) are
+      // executed as formulas by spreadsheet apps. Prefix a single quote.
+      let safe = field;
+      if (/^[=+\-@\t\r]/.test(safe)) {
+        safe = "'" + safe;
       }
-      return field;
+      if (safe.includes(';') || safe.includes('"') || safe.includes('\n')) {
+        return '"' + safe.replace(/"/g, '""') + '"';
+      }
+      return safe;
     };
 
     const csv = [

@@ -874,6 +874,18 @@ describe('MilestonesService', () => {
 
       expect(result.csv).toContain('name;description;dueDate');
     });
+
+    it('SEC-011 — neutralises CSV formula injection in milestone name/description (CWE-1236)', async () => {
+      mockPrismaService.milestone.findMany.mockResolvedValue([
+        { name: '=1+1', description: '-2+3', dueDate: new Date('2025-01-01') },
+      ]);
+
+      const result = await service.exportProjectMilestonesCsv('project-1');
+
+      expect(result.csv).toContain("'=1+1");
+      expect(result.csv).toContain("'-2+3");
+      expect(result.csv).not.toMatch(/(^|;)=1\+1/m);
+    });
   });
 
   // COR-002 — the membership bypass in assertProjectMembership must rest on the
