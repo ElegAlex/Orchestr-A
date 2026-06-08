@@ -253,3 +253,38 @@ The deferred findings collapse into a handful of one-pass sweeps (per the source
 
 Full per-finding rationale is in the table above and in the workflow result
 (`audits/2026-06-08-adversarial-review/.triage-workflow.js` run; raw verdicts retained in this session).
+
+---
+
+## F. Verification status & outstanding work
+
+**Gate (LOCAL):** `nest build` clean · 2443 API unit tests pass · eslint 0 errors · prettier clean.
+Each fix carries a witness; structural witnesses (COR-001, DAT-001) were proven RED→GREEN by stashing
+the source fix.
+
+**Frontend-impact check (the reads/permissions tightened):**
+- SEC-006 — `milestonesService.getAll()` (org-wide `GET /milestones`) has **no callers** in `apps/web`
+  (the UI uses the projectId-scoped `getByProject`), so membership-scoping breaks no live flow.
+- SEC-003 / SEC-012 — the leaves-import and ICS-import UIs gate **only** on the API (no pre-existing
+  client-side permission check), so the effect is that roles which should not have had access now get
+  403 instead of an unauthorized success. Intended; no legitimate flow is broken. If desired, hide the
+  import affordances from non-`declare_for_others` / non-`events:create` users to avoid button→403 UX.
+
+**SEC-003 residual (precise):** the preview no longer **echoes** `resolvedUser` for out-of-perimeter
+targets (witnessed), but `validateLeavesImport` still returns a *different* message for "introuvable"
+vs "hors de votre périmètre" — a weak existence-bit remains. **Immaterial** under the now manager/HR/
+admin-only gate (those 5 templates already hold `users:read` directory access); unify the two messages
+if you want it fully closed.
+
+**OUTSTANDING — required by CLAUDE.md, not done here:** Playwright **E2E negative-authz** tests. The
+service-layer `ForbiddenException` witnesses are necessary but are not the mandated e2e. Minimum set
+(matches the audit's Cluster-A remediation "CONTRIBUTEUR on project A gets 403 on project B"):
+- CONTRIBUTEUR (non-member) → 403 on `POST /epics`, `POST /milestones`,
+  `POST /milestones/project/:id/import` for a project B they don't belong to;
+- a `leaves:create`-only role → 403 on `POST /leaves/import` and `POST /planning-export/ics/import`.
+Runnable LOCAL-only per `project_e2e_local_run_recipe`; **not written/run in this session** — flagged so
+the completion claim is honest. (Deploy is separate and also outstanding — COR-028 is a LIVE prod 500.)
+
+**Caveat on the triage:** refutation targeted over-ACCEPTANCE (the costlier false-accept). The 17
+**WONT_FIX** and 102 **REAL_DEFERRED** verdicts are single-pass (Sonnet) calls, logged as real-but-
+deprioritised — confirm before treating as settled.
