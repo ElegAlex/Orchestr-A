@@ -4520,9 +4520,9 @@ describe('LeavesService', () => {
         ...result.warnings,
         ...result.duplicates,
       ];
-      expect(allItems.some((i) => i.resolvedUser?.email === 'user@example.com')).toBe(
-        true,
-      );
+      expect(
+        allItems.some((i) => i.resolvedUser?.email === 'user@example.com'),
+      ).toBe(true);
     });
 
     it('should return error when startDate is missing', async () => {

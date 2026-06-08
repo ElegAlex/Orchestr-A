@@ -171,9 +171,17 @@ describe('MilestonesService', () => {
       mockPrismaService.milestone.findMany.mockResolvedValue([]);
       mockPrismaService.milestone.count.mockResolvedValue(0);
 
-      await service.findAll(1, 10, undefined, undefined, 'user-1', 'CONTRIBUTEUR');
+      await service.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        'user-1',
+        'CONTRIBUTEUR',
+      );
 
-      const findManyCall = mockPrismaService.milestone.findMany.mock.calls[0][0];
+      const findManyCall =
+        mockPrismaService.milestone.findMany.mock.calls[0][0];
       expect(findManyCall.where.project).toEqual({
         members: { some: { userId: 'user-1' } },
       });
@@ -188,7 +196,8 @@ describe('MilestonesService', () => {
 
       await service.findAll(1, 10, undefined, undefined, 'admin-user', 'ADMIN');
 
-      const findManyCall = mockPrismaService.milestone.findMany.mock.calls[0][0];
+      const findManyCall =
+        mockPrismaService.milestone.findMany.mock.calls[0][0];
       expect(findManyCall.where.project).toBeUndefined();
     });
   });

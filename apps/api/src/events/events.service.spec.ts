@@ -920,7 +920,9 @@ describe('EventsService', () => {
       // writes go through. Before the fix they hit the autocommit pool
       // (this.prisma.*) with no surrounding $transaction.
       const txDeleteMany = vi.fn().mockResolvedValue({ count: 0 });
-      const txUpdate = vi.fn().mockResolvedValue({ id: '1', isRecurring: false });
+      const txUpdate = vi
+        .fn()
+        .mockResolvedValue({ id: '1', isRecurring: false });
       const tx = { event: { deleteMany: txDeleteMany, update: txUpdate } };
       mockPrismaService.$transaction.mockImplementationOnce(
         async (cb: (t: typeof tx) => Promise<unknown>) => cb(tx),
@@ -935,7 +937,9 @@ describe('EventsService', () => {
         data: { isRecurring: false },
       });
       // The two writes must NOT bypass the tx via the autocommit pool.
-      expect((mockPrismaService.event as any).deleteMany).not.toHaveBeenCalled();
+      expect(
+        (mockPrismaService.event as any).deleteMany,
+      ).not.toHaveBeenCalled();
     });
 
     it('should stop recurrence of a parent recurring event', async () => {
