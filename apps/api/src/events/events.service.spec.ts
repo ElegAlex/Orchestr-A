@@ -893,6 +893,38 @@ describe('EventsService', () => {
       (mockPrismaService.event as any).deleteMany = vi
         .fn()
         .mockResolvedValue({ count: 0 });
+      // DAT-001 — stopRecurrence now wraps both writes in $transaction; the mock
+      // runs the callback with mockPrismaService as the tx client by default.
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => Promise<unknown>) =>
+          cb(mockPrismaService),
+      );
+    });
+
+    it('DAT-001 — both writes run inside one $transaction (atomic stop)', async () => {
+      mockPrismaService.event.findUnique.mockResolvedValue(recurringEvent);
+      ownershipService.isOwner.mockResolvedValue(true);
+
+      // Distinct tx client with its own spies — proves WHICH client the two
+      // writes go through. Before the fix they hit the autocommit pool
+      // (this.prisma.*) with no surrounding $transaction.
+      const txDeleteMany = vi.fn().mockResolvedValue({ count: 0 });
+      const txUpdate = vi.fn().mockResolvedValue({ id: '1', isRecurring: false });
+      const tx = { event: { deleteMany: txDeleteMany, update: txUpdate } };
+      mockPrismaService.$transaction.mockImplementationOnce(
+        async (cb: (t: typeof tx) => Promise<unknown>) => cb(tx),
+      );
+
+      await service.stopRecurrence('1', 'user-1', 'ADMIN');
+
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
+      expect(txDeleteMany).toHaveBeenCalledTimes(1);
+      expect(txUpdate).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: { isRecurring: false },
+      });
+      // The two writes must NOT bypass the tx via the autocommit pool.
+      expect((mockPrismaService.event as any).deleteMany).not.toHaveBeenCalled();
     });
 
     it('should stop recurrence of a parent recurring event', async () => {

@@ -892,16 +892,22 @@ export class EventsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    await this.prisma.event.deleteMany({
-      where: {
-        parentEventId: id,
-        date: { gte: today },
-      },
-    });
+    // DAT-001 — both writes must be atomic. A crash/connection drop between the
+    // deleteMany and the update left the parent flagged isRecurring:true with no
+    // future occurrences — a permanently inconsistent recurring event needing
+    // manual DB repair. Siblings create()/update() already use $transaction.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.event.deleteMany({
+        where: {
+          parentEventId: id,
+          date: { gte: today },
+        },
+      });
 
-    await this.prisma.event.update({
-      where: { id },
-      data: { isRecurring: false },
+      await tx.event.update({
+        where: { id },
+        data: { isRecurring: false },
+      });
     });
 
     return { message: 'Récurrence arrêtée avec succès' };
