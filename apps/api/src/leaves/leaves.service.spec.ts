@@ -4463,6 +4463,57 @@ describe('LeavesService', () => {
       expect(result.errors[0].messages[0]).toMatch(/type de congé/i);
     });
 
+    it('SEC-003 — out-of-perimeter user is redacted (no resolvedUser echoed) — not an enumeration oracle', async () => {
+      // MANAGER (declare_for_others, NOT manage_any) with no services: the email
+      // resolves to a real user, but the preview must NOT echo {id,email,name}.
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findMany.mockResolvedValue([]);
+
+      const result = await service.validateLeavesImport(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-01',
+            endDate: '2026-03-05',
+          },
+        ],
+        'manager-1',
+        'MANAGER',
+      );
+
+      expect(result.summary.errors).toBe(1);
+      expect(result.errors[0].messages[0]).toMatch(/périmètre/i);
+      // The oracle is closed: no resolved identity is returned to the caller.
+      expect(result.errors[0].resolvedUser).toBeUndefined();
+    });
+
+    it('SEC-003 — manage_any (ADMIN) caller still sees resolvedUser for the whole org', async () => {
+      const result = await service.validateLeavesImport(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-01',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+        'ADMIN',
+      );
+
+      // Some bucket (valid/warnings/duplicates) carries the row with the
+      // resolved identity intact — perimeter does not restrict manage_any.
+      const allItems = [
+        ...result.valid,
+        ...result.warnings,
+        ...result.duplicates,
+      ];
+      expect(allItems.some((i) => i.resolvedUser?.email === 'user@example.com')).toBe(
+        true,
+      );
+    });
+
     it('should return error when startDate is missing', async () => {
       const result = await service.validateLeavesImport([
         {
@@ -4815,6 +4866,52 @@ describe('LeavesService', () => {
 
       expect(result.skipped).toBe(1);
       expect(result.errorDetails[0]).toMatch(/invalide/i);
+    });
+
+    it('SEC-003 — declare_for_others caller cannot import for a user outside their service perimeter', async () => {
+      // MANAGER holds leaves:declare_for_others but NOT leaves:manage_any. With
+      // no managed/member services, target user-1 is outside the perimeter and
+      // the row is skipped — never created.
+      mockPrismaService.service.findMany.mockResolvedValue([]);
+      mockPrismaService.userService.findMany.mockResolvedValue([]);
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-01',
+            endDate: '2026-03-05',
+          },
+        ],
+        'manager-1',
+        'MANAGER',
+      );
+
+      expect(result.created).toBe(0);
+      expect(result.skipped).toBe(1);
+      expect(result.errorDetails[0]).toMatch(/périmètre/i);
+      expect(mockPrismaService.leave.create).not.toHaveBeenCalled();
+    });
+
+    it('SEC-003 — manage_any (ADMIN) caller imports across the whole org', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(activeUser);
+
+      const result = await service.importLeaves(
+        [
+          {
+            userEmail: 'user@example.com',
+            leaveTypeName: 'Congé Payé',
+            startDate: '2026-03-03',
+            endDate: '2026-03-05',
+          },
+        ],
+        'admin-1',
+        'ADMIN',
+      );
+
+      expect(result.created).toBe(1);
+      expect(mockPrismaService.leave.create).toHaveBeenCalled();
     });
 
     it('should skip when endDate is before startDate', async () => {

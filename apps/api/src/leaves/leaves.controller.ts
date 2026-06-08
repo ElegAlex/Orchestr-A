@@ -283,8 +283,13 @@ export class LeavesController {
     return { template: this.leavesService.getImportTemplate() };
   }
 
+  // SEC-003: bulk import declares leaves for OTHER users (resolved by CSV email),
+  // so it requires leaves:declare_for_others — NOT the self-service leaves:create
+  // that every contributor holds. The service additionally enforces the
+  // per-target service perimeter (non-manage_any callers are scoped to their
+  // own services) on both the dry-run and the real import.
   @Post('import/validate')
-  @RequirePermissions('leaves:create')
+  @RequirePermissions('leaves:declare_for_others')
   @ApiOperation({ summary: 'Valider des congés avant import (dry-run)' })
   @ApiResponse({
     status: 200,
@@ -295,12 +300,20 @@ export class LeavesController {
     status: 400,
     description: 'Données invalides',
   })
-  validateImport(@Body() importLeavesDto: ImportLeavesDto) {
-    return this.leavesService.validateLeavesImport(importLeavesDto.leaves);
+  validateImport(
+    @Body() importLeavesDto: ImportLeavesDto,
+    @CurrentUser('id') currentUserId: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
+  ) {
+    return this.leavesService.validateLeavesImport(
+      importLeavesDto.leaves,
+      currentUserId,
+      currentUserRole ?? undefined,
+    );
   }
 
   @Post('import')
-  @RequirePermissions('leaves:create')
+  @RequirePermissions('leaves:declare_for_others')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Importer des congés en masse via CSV' })
   @ApiResponse({
@@ -315,10 +328,12 @@ export class LeavesController {
   importLeaves(
     @Body() importLeavesDto: ImportLeavesDto,
     @CurrentUser('id') currentUserId: string,
+    @CurrentUserRoleCode() currentUserRole: string | null,
   ) {
     return this.leavesService.importLeaves(
       importLeavesDto.leaves,
       currentUserId,
+      currentUserRole ?? undefined,
     );
   }
 

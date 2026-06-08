@@ -3255,7 +3255,18 @@ export class LeavesService {
       halfDay?: string;
       comment?: string;
     }>,
+    currentUserId?: string,
+    currentUserRole?: string,
   ) {
+    // SEC-003: the dry-run preview echoes resolvedUser {id,email,name} for every
+    // CSV email. Without a perimeter gate this is a cross-org email-enumeration
+    // oracle for any import caller. Resolve the caller's declare-for-others
+    // perimeter and only reveal users inside it ('all' = leaves:manage_any). A
+    // role-less internal caller is trusted (mirrors importLeaves/create()).
+    const managedUserIds = currentUserRole
+      ? await this.getManagedUserIds(currentUserId ?? '', currentUserRole)
+      : 'all';
+
     const result: {
       valid: any[];
       duplicates: any[];
@@ -3410,6 +3421,18 @@ export class LeavesService {
         result.summary.errors++;
         continue;
       }
+
+      // SEC-003: redact (never echo) users outside the caller's perimeter, so
+      // the preview cannot be used to enumerate the org's email directory.
+      if (managedUserIds !== 'all' && !managedUserIds.has(resolvedUser.id)) {
+        previewItem.status = 'error';
+        previewItem.messages.push(
+          `"${leaveData.userEmail}" est hors de votre périmètre`,
+        );
+        result.errors.push(previewItem);
+        result.summary.errors++;
+        continue;
+      }
       previewItem.resolvedUser = resolvedUser;
 
       // Résoudre le type de congé par nom
@@ -3535,8 +3558,8 @@ export class LeavesService {
       halfDay?: string;
       comment?: string;
     }>,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     currentUserId: string,
+    currentUserRole?: string,
   ) {
     const result: {
       created: number;
@@ -3549,6 +3572,17 @@ export class LeavesService {
       errors: 0,
       errorDetails: [],
     };
+
+    // SEC-003: bulk import always declares leaves for *other* users (resolved by
+    // CSV email), so it is a declare-for-others operation. The route is gated on
+    // leaves:declare_for_others; here we additionally enforce the SAME per-target
+    // service perimeter that create() applies — a non-manage_any caller may only
+    // import for users in their own services. 'all' = leaves:manage_any holder.
+    // Mirrors create()'s `currentUserId && currentUserRole` contract: the HTTP
+    // path always supplies the role; a role-less internal caller is trusted.
+    const managedUserIds = currentUserRole
+      ? await this.getManagedUserIds(currentUserId, currentUserRole)
+      : 'all';
 
     // PER-009 — project only the fields actually needed (id used for matching;
     // email used as map key). No passwordHash enters Node memory.
@@ -3665,6 +3699,16 @@ export class LeavesService {
             result.skipped++;
             result.errorDetails.push(
               `Ligne ${lineNum}: Utilisateur "${leaveData.userEmail}" introuvable`,
+            );
+            continue;
+          }
+
+          // SEC-003: per-target perimeter — never create a leave for a user
+          // outside the caller's declare-for-others scope.
+          if (managedUserIds !== 'all' && !managedUserIds.has(user.id)) {
+            result.skipped++;
+            result.errorDetails.push(
+              `Ligne ${lineNum}: "${leaveData.userEmail}" hors de votre périmètre`,
             );
             continue;
           }
