@@ -431,6 +431,25 @@ describe('AuditPersistenceService', () => {
       ).not.toThrow();
     });
 
+    it('COR-028 — LEAVE_APPROVED accepts the rejectCancellation() payload (rejectedCancellation marker)', () => {
+      // Witness for COR-028. rejectCancellation() (leaves.service.ts) emits
+      // LEAVE_APPROVED with a `rejectedCancellation: true` marker from INSIDE the
+      // leave $transaction. Before the schema fix, .strict() leaveAudit rejected
+      // the unknown key, the AuditPayloadValidationError propagated out of the tx
+      // callback, Prisma rolled back the CANCELLATION_REQUESTED -> APPROVED update,
+      // and the endpoint returned HTTP 500 (leave stuck in CANCELLATION_REQUESTED).
+      // This asserts the exact payload shape rejectCancellation() builds.
+      expect(() =>
+        validatePayloadForAction(AuditAction.LEAVE_APPROVED, {
+          actor: { id: 'v1' },
+          subject: { leaveId: 'l1', userId: 'u1' },
+          before: { status: 'CANCELLATION_REQUESTED' },
+          after: { status: 'APPROVED' },
+          rejectedCancellation: true,
+        }),
+      ).not.toThrow();
+    });
+
     it('rejects an unexpected top-level key (.strict()) for a known action', () => {
       expect(() =>
         validatePayloadForAction(AuditAction.ROLE_CHANGE, {

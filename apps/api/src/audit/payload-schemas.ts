@@ -97,6 +97,11 @@ const leaveAudit = z
     validatorAssigned: z.string().nullable().optional(),
     selfApproved: z.boolean().nullable().optional(),
     cancelledByOwner: z.boolean().nullable().optional(),
+    // COR-028 — rejectCancellation() distinguishes a cancellation-rejection from a
+    // normal approval by tagging the LEAVE_APPROVED row with this marker. Without
+    // it, .strict() rejected the unknown key from inside the leave $transaction,
+    // rolling back the CANCELLATION_REQUESTED -> APPROVED transition (HTTP 500).
+    rejectedCancellation: z.boolean().nullable().optional(),
     operation: z.string().optional(),
   })
   .strict();
