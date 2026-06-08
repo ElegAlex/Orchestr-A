@@ -6,6 +6,7 @@ import {
   MinLength,
   IsOptional,
   IsArray,
+  ArrayMaxSize,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -85,6 +86,10 @@ export class ImportUsersDto {
     type: [ImportUserDto],
   })
   @IsArray()
+  // SEC-016 — bound the batch: importUsers hashes each row with bcrypt cost-12
+  // serially, so an unbounded array (limited only by the 1MiB body) is a
+  // CPU-exhaustion vector. Mirror the sibling ImportLeavesDto @ArrayMaxSize(500).
+  @ArrayMaxSize(500)
   @ValidateNested({ each: true })
   @Type(() => ImportUserDto)
   users: ImportUserDto[];
