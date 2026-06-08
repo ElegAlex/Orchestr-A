@@ -125,7 +125,11 @@ export class SkillsService {
                 id: true,
                 firstName: true,
                 lastName: true,
-                email: true,
+                // SEC-013: do NOT expose email here. skills:read is held by
+                // templates that lack users:read (e.g. EXTERNAL_PRESTATAIRE), so
+                // returning email turns GET /skills/:id into an org-wide email
+                // directory for a population AB-001 does not cover. The skill
+                // detail card only needs name/avatar/department.
                 avatarUrl: true,
                 avatarPreset: true,
                 department: {
@@ -506,7 +510,9 @@ export class SkillsService {
             id: true,
             firstName: true,
             lastName: true,
-            email: true,
+            // SEC-013: omit email — see findOne(). GET /skills/search/:skillId is
+            // reachable by skills:read holders without users:read, so email here
+            // is an unauthorised org-wide directory leak.
             role: true,
             avatarUrl: true,
             avatarPreset: true,

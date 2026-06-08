@@ -176,6 +176,18 @@ describe('SkillsService', () => {
         NotFoundException,
       );
     });
+
+    it('SEC-013 — findOne does not expose user email (skills:read != users:read)', async () => {
+      mockPrismaService.skill.findUnique.mockResolvedValue(mockSkill);
+
+      await service.findOne('skill-1');
+
+      const userSelect =
+        mockPrismaService.skill.findUnique.mock.calls[0][0].include.users
+          .include.user.select;
+      expect(userSelect.email).toBeUndefined();
+      expect(userSelect.firstName).toBe(true); // name still present for display
+    });
   });
 
   describe('update', () => {
@@ -539,6 +551,19 @@ describe('SkillsService', () => {
           }) as object,
         }),
       );
+    });
+
+    it('SEC-013 — findUsersBySkill does not expose user email', async () => {
+      mockPrismaService.skill.findUnique.mockResolvedValue(mockSkill);
+      mockPrismaService.userSkill.findMany.mockResolvedValue([]);
+
+      await service.findUsersBySkill('skill-1');
+
+      const userSelect =
+        mockPrismaService.userSkill.findMany.mock.calls[0][0].include.user
+          .select;
+      expect(userSelect.email).toBeUndefined();
+      expect(userSelect.firstName).toBe(true);
     });
   });
 
