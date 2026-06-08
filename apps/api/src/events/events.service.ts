@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -746,6 +747,14 @@ export class EventsService {
           { participants: { some: { userId: currentUserId } } },
           { createdById: currentUserId },
         ];
+      } else {
+        // SEC-020 — fail closed: a non-readAll caller with no userId must never
+        // fall through to an unscoped full scan. Unreachable over HTTP (the
+        // global JwtAuthGuard guarantees a userId), so this only trips a
+        // mis-wired internal caller instead of silently returning all events.
+        throw new InternalServerErrorException(
+          'currentUserId is required for scoped event range queries',
+        );
       }
     }
 

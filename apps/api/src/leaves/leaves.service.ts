@@ -1268,7 +1268,12 @@ export class LeavesService {
 
     // Ownership check : seuls le propriétaire et les rôles avec périmètre
     // leaves:manage_any / leaves:approve / leaves:delete + scope peuvent lire.
-    if (currentUserRole && leave.userId !== currentUserId) {
+    // SEC-017 — fail closed like update()/remove(): a non-owner must satisfy
+    // canManageLeave. The previous `currentUserRole && …` guard skipped the
+    // check entirely when the role was absent (a null-role caller could read any
+    // leave). Unreachable over HTTP (the RBAC guard blocks null-role requests),
+    // but the inconsistency was a maintenance hazard.
+    if (leave.userId !== currentUserId) {
       const canManage =
         currentUserId && currentUserRole
           ? await this.canManageLeave(

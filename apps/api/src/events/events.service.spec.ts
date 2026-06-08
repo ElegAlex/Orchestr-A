@@ -8,6 +8,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { Prisma } from 'database';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -667,6 +668,16 @@ describe('EventsService', () => {
         .calls[0][0];
       // Must have a scoped where.OR — not unscoped
       expect(call.where).toHaveProperty('OR');
+    });
+
+    it('SEC-020 — fails closed when a non-readAll caller has no userId (never unscoped scan)', async () => {
+      permissionsService.getPermissionsForRole.mockResolvedValue([]); // no events:readAll
+
+      await expect(
+        service.getEventsByRange('2025-11-01', '2025-11-30', undefined, null),
+      ).rejects.toThrow(InternalServerErrorException);
+      // No query is issued — the guard trips before findMany.
+      expect(prisma.event.findMany).not.toHaveBeenCalled();
     });
   });
 

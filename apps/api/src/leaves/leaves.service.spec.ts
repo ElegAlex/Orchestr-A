@@ -2027,6 +2027,17 @@ describe('LeavesService', () => {
         service.findOne('nonexistent', 'admin-user-id', 'ADMIN'),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('SEC-017 — a non-owner with a null role is denied (fail closed, no role bypass)', async () => {
+      // mockLeave.userId === 'user-1'. Caller is a different user with NO role.
+      // Before the fix the `currentUserRole && …` guard skipped the ownership
+      // check entirely and returned the leave.
+      mockPrismaService.leave.findUnique.mockResolvedValue(mockLeave);
+
+      await expect(
+        service.findOne('leave-1', 'someone-else', undefined),
+      ).rejects.toThrow(ForbiddenException);
+    });
   });
 
   // ============================================
