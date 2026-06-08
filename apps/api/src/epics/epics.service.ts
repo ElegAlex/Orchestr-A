@@ -16,11 +16,27 @@ export class EpicsService {
     private readonly permissionsService: PermissionsService,
   ) {}
 
-  async create(createEpicDto: CreateEpicDto) {
+  async create(
+    createEpicDto: CreateEpicDto,
+    currentUserId?: string,
+    currentUserRole?: string | null,
+  ) {
     const project = await this.prisma.project.findUnique({
       where: { id: createEpicDto.projectId },
     });
     if (!project) throw new NotFoundException('Projet introuvable');
+
+    // SEC-004: epics:create alone is not enough — the caller must also be a
+    // member of the target project (or hold projects:manage_any), mirroring the
+    // membership gate already enforced on update()/remove(). The epic does not
+    // exist yet, so the check targets createEpicDto.projectId directly.
+    if (currentUserId) {
+      await this.assertProjectMembershipByProjectId(
+        createEpicDto.projectId,
+        currentUserId,
+        currentUserRole,
+      );
+    }
 
     return this.prisma.epic.create({
       data: createEpicDto,
@@ -83,7 +99,10 @@ export class EpicsService {
     const epic = await this.prisma.epic.findUnique({
       where: { id },
       include: {
-        project: true,
+        // SEC-008: do not leak the full parent project row (budget, dates,
+        // createdById, …) cross-project to any epics:read holder. The epic
+        // detail card only needs the project id + name.
+        project: { select: { id: true, name: true } },
         tasks: { select: { id: true, title: true, status: true } },
       },
     });
@@ -167,6 +186,27 @@ export class EpicsService {
     // PER-004: single COUNT query replaces unbounded members include.
     const memberCount = await this.prisma.projectMember.count({
       where: { projectId: epic.projectId, userId },
+    });
+    if (memberCount === 0) {
+      throw new ForbiddenException('Not a member of this project');
+    }
+  }
+
+  /**
+   * SEC-004: membership gate keyed by projectId (used by create(), where the
+   * epic does not exist yet). Holders of projects:manage_any bypass the check.
+   */
+  private async assertProjectMembershipByProjectId(
+    projectId: string,
+    userId: string,
+    userRole?: string | null,
+  ): Promise<void> {
+    const permissions =
+      await this.permissionsService.getPermissionsForRole(userRole);
+    if (permissions.includes('projects:manage_any')) return;
+
+    const memberCount = await this.prisma.projectMember.count({
+      where: { projectId, userId },
     });
     if (memberCount === 0) {
       throw new ForbiddenException('Not a member of this project');

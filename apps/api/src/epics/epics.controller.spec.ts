@@ -62,10 +62,20 @@ describe('EpicsController', () => {
     it('should create an epic successfully', async () => {
       mockEpicsService.create.mockResolvedValue(mockEpic);
 
-      const result = await controller.create(createEpicDto);
+      const result = await controller.create(
+        createEpicDto,
+        'user-1',
+        'CONTRIBUTEUR',
+      );
 
       expect(result).toEqual(mockEpic);
-      expect(mockEpicsService.create).toHaveBeenCalledWith(createEpicDto);
+      // SEC-004: caller identity is now threaded to the service for the
+      // project-membership gate.
+      expect(mockEpicsService.create).toHaveBeenCalledWith(
+        createEpicDto,
+        'user-1',
+        'CONTRIBUTEUR',
+      );
       expect(mockEpicsService.create).toHaveBeenCalledTimes(1);
     });
 

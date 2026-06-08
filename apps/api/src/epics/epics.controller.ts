@@ -38,8 +38,12 @@ export class EpicsController {
   @RequirePermissions('epics:create')
   @ApiOperation({ summary: 'Créer un epic' })
   @ApiResponse({ status: 201, description: 'Epic créé' })
-  create(@Body() createEpicDto: CreateEpicDto) {
-    return this.epicsService.create(createEpicDto);
+  create(
+    @Body() createEpicDto: CreateEpicDto,
+    @CurrentUser('id') userId: string,
+    @CurrentUserRoleCode() userRole: string | null,
+  ) {
+    return this.epicsService.create(createEpicDto, userId, userRole);
   }
 
   @Get()

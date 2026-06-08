@@ -97,6 +97,70 @@ describe('EpicsService', () => {
         'Projet introuvable',
       );
     });
+
+    it('SEC-004 — non-member without projects:manage_any cannot create an epic', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Test Project',
+      });
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]); // no bypass
+      mockPrismaService.projectMember.count.mockResolvedValue(0); // not a member
+
+      await expect(
+        service.create(createEpicDto, 'user-nonmember', 'CONTRIBUTEUR'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(mockPrismaService.epic.create).not.toHaveBeenCalled();
+    });
+
+    it('SEC-004 — a project member can create an epic', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Test Project',
+      });
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([]);
+      mockPrismaService.projectMember.count.mockResolvedValue(1); // is a member
+      mockPrismaService.epic.create.mockResolvedValue({ id: '1' });
+
+      await service.create(createEpicDto, 'user-member', 'CONTRIBUTEUR');
+      expect(mockPrismaService.projectMember.count).toHaveBeenCalledWith({
+        where: { projectId: 'project-1', userId: 'user-member' },
+      });
+      expect(mockPrismaService.epic.create).toHaveBeenCalled();
+    });
+
+    it('SEC-004 — projects:manage_any bypasses the membership gate', async () => {
+      mockPrismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        name: 'Test Project',
+      });
+      mockPermissionsService.getPermissionsForRole.mockResolvedValue([
+        'projects:manage_any',
+      ]);
+      mockPrismaService.epic.create.mockResolvedValue({ id: '1' });
+
+      await service.create(createEpicDto, 'admin-user', 'ADMIN');
+      expect(mockPrismaService.projectMember.count).not.toHaveBeenCalled();
+      expect(mockPrismaService.epic.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('findOne (SEC-008)', () => {
+    it('does not leak the full parent project row (slim id+name select only)', async () => {
+      mockPrismaService.epic.findUnique.mockResolvedValue({
+        id: '1',
+        project: { id: 'p1', name: 'P' },
+        tasks: [],
+      });
+
+      await service.findOne('1');
+
+      const call = mockPrismaService.epic.findUnique.mock.calls[0][0];
+      expect(call.include.project).toEqual({
+        select: { id: true, name: true },
+      });
+      // Regression guard: a bare `project: true` would re-expose budget/dates/createdById.
+      expect(call.include.project).not.toBe(true);
+    });
   });
 
   describe('findAll', () => {
