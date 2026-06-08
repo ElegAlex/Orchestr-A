@@ -1004,10 +1004,14 @@ export class TasksService {
     // (taskId, dependsOnTaskId) is the last backstop for the symmetric case.
     const dependency = await this.prisma.$transaction(
       async (tx) => {
-        // Vérifier qu'on ne crée pas une dépendance circulaire
+        // Vérifier qu'on ne crée pas une dépendance circulaire.
+        // COR-001 — pass the tx client so the BFS read shares the SERIALIZABLE
+        // snapshot; reading via this.prisma (autocommit) left the A→B / B→A race
+        // open (both requests saw the pre-insert state and both passed).
         const hasCircularDependency = await this.checkCircularDependency(
           dependsOnTaskId,
           taskId,
+          tx,
         );
 
         if (hasCircularDependency) {
@@ -1424,6 +1428,9 @@ export class TasksService {
   private async checkCircularDependency(
     startTaskId: string,
     targetTaskId: string,
+    // COR-001 — defaults to the autocommit client, but addDependency passes its
+    // tx so the read runs inside the SERIALIZABLE snapshot that guards the insert.
+    prisma: Prisma.TransactionClient | PrismaService = this.prisma,
   ): Promise<boolean> {
     const MAX_DEPTH = 50;
 
@@ -1432,7 +1439,7 @@ export class TasksService {
     // all edges where taskId IN (frontier), expanding the frontier each round.
     // In practice, the reachable subgraph is small (projects have bounded task counts),
     // so this terminates quickly with a single or very few round trips.
-    const allDeps = await this.prisma.taskDependency.findMany({
+    const allDeps = await prisma.taskDependency.findMany({
       select: { taskId: true, dependsOnTaskId: true },
     });
 

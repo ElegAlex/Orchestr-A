@@ -2467,6 +2467,42 @@ describe('TasksService', () => {
     });
   });
 
+  // ─── COR-001 ──────────────────────────────────────────────────────────────
+  describe('COR-001 — circular-dependency BFS reads inside the SERIALIZABLE tx', () => {
+    it('COR-001 — checkCircularDependency reads via the tx client, not the autocommit pool', async () => {
+      const task = { id: 'task-1', projectId: 'project-1' };
+      const dependsOnTask = { id: 'task-2', projectId: 'project-1' };
+
+      mockPrismaService.task.findUnique
+        .mockResolvedValueOnce(task)
+        .mockResolvedValueOnce(dependsOnTask);
+
+      // Distinct tx client with its own spies, so we can prove WHICH client the
+      // BFS read goes through. Before the fix the read used this.prisma (a
+      // separate autocommit connection), defeating the SERIALIZABLE isolation.
+      const txFindMany = vi.fn().mockResolvedValue([]);
+      const tx = {
+        taskDependency: {
+          findMany: txFindMany,
+          findUnique: vi.fn().mockResolvedValue(null),
+          create: vi
+            .fn()
+            .mockResolvedValue({ taskId: 'task-1', dependsOnTaskId: 'task-2' }),
+        },
+      };
+      mockPrismaService.$transaction.mockImplementationOnce(
+        async (cb: (t: typeof tx) => Promise<unknown>) => cb(tx),
+      );
+      // Autocommit-pool read must stay unused for the BFS.
+      mockPrismaService.taskDependency.findMany.mockResolvedValue([]);
+
+      await service.addDependency('task-1', { dependsOnId: 'task-2' });
+
+      expect(txFindMany).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.taskDependency.findMany).not.toHaveBeenCalled();
+    });
+  });
+
   // ─── PER-023 ──────────────────────────────────────────────────────────────
   describe('PER-023 — checkCircularDependency uses a single pre-fetch', () => {
     it('PER-023 — circular-check issues exactly one taskDependency.findMany (not N per node)', async () => {
