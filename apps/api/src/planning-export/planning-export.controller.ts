@@ -64,8 +64,13 @@ export class PlanningExportController {
       .send(icsContent);
   }
 
+  // SEC-012: importIcs bulk-creates Event rows (tx.event.createMany), so the
+  // import path must require events:create — the same gate as POST /events — in
+  // addition to leaves:create. @RequirePermissions is AND (every), so callers
+  // need BOTH; this closes the gap where leaves-only templates (e.g. HR_OFFICER)
+  // could bulk-create events they cannot create through the standard events API.
   @Post('ics/import/preview')
-  @RequirePermissions('leaves:create')
+  @RequirePermissions('leaves:create', 'events:create')
   @ApiOperation({ summary: "Previsualiser l'import ICS" })
   @ApiBody({
     schema: {
@@ -79,7 +84,7 @@ export class PlanningExportController {
   }
 
   @Post('ics/import')
-  @RequirePermissions('leaves:create')
+  @RequirePermissions('leaves:create', 'events:create')
   @ApiOperation({ summary: 'Importer des evenements depuis un fichier ICS' })
   @ApiBody({
     schema: {

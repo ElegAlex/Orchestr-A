@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { vi } from 'vitest';
 import { PlanningExportController } from './planning-export.controller';
 import { PlanningExportService } from './planning-export.service';
+import { REQUIRE_PERMISSIONS_KEY } from '../rbac/decorators/require-permissions.decorator';
 
 const mockService = {
   exportIcs: vi.fn().mockResolvedValue('BEGIN:VCALENDAR\r\nEND:VCALENDAR'),
@@ -35,5 +36,23 @@ describe('PlanningExportController', () => {
     const result = await controller.importIcs({ icsContent: '' }, 'user-1');
     expect(mockService.importIcs).toHaveBeenCalledWith('', 'user-1');
     expect(result).toEqual({ imported: 0, skipped: 0 });
+  });
+
+  describe('SEC-012 — ICS import requires events:create (creates Event rows)', () => {
+    it('ics/import requires BOTH leaves:create and events:create', () => {
+      const metadata = Reflect.getMetadata(
+        REQUIRE_PERMISSIONS_KEY,
+        PlanningExportController.prototype.importIcs,
+      );
+      expect(metadata).toEqual(['leaves:create', 'events:create']);
+    });
+
+    it('ics/import/preview requires BOTH leaves:create and events:create', () => {
+      const metadata = Reflect.getMetadata(
+        REQUIRE_PERMISSIONS_KEY,
+        PlanningExportController.prototype.previewImport,
+      );
+      expect(metadata).toEqual(['leaves:create', 'events:create']);
+    });
   });
 });
