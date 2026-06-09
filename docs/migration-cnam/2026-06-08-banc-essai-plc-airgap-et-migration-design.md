@@ -216,6 +216,25 @@ démarre **`healthy`** (api+web+nginx+postgres+redis RUNNING), `GET /api/health`
 {"status":"ok"}`, et sert les données prod restaurées (41 users, 40 projets, 323 tâches,
 174 audit_logs). **DoD §8 atteint** (zéro perte vérifiée + app saine).
 
+### Validation IN-PLC (2026-06-09) — banc d'essai dans le vrai PLC, air-gappé
+Exécuté DANS un invité KVM du PLC AlmaLinux 8.6 (SB-OFF, SATA, **aucun réseau**), bundle
+livré par ISO9660 + disque data dédié :
+- **Docker 26.1.3 installé + actif dans le PLC durci** (overlay2, cgroup v1, **aucun AVC
+  SELinux**) → **R2 levé : Docker tourne dans le PLC** (SELinux `permissive`).
+- **Restore + PREUVE ZÉRO-PERTE à l'intérieur du PLC** : comptages + empreinte d'audit +
+  migrations IDENTIQUES ; `orchestr_a` lit 41 users ; `/api/health` → 200 ; **egress bloqué**
+  (air-gap prouvé). DoD air-gap §8 atteint.
+
+**Findings de déploiement (À TRANSMETTRE infra CNAM)** :
+1. **Stockage** : LV du PLC petits (`/var` 2 Go, `/opt` 123 Mo) **et VG quasi plein
+   (~740 Mo libres)** → `/var` NON extensible. → **prévoir un disque/volume data dédié
+   (~10 Go+)** pour le data-root Docker (`/etc/docker/daemon.json`).
+2. **Modularité** : `container-selinux`, `fuse-overlayfs`, `slirp4netns`, `libslirp` sont
+   des paquets modulaires → install hors-ligne avec `--setopt=<repo>.module_hotfixes=true`.
+3. **fs cross-distro** : un fs créé sur poste récent (Fedora) n'est PAS montable par le
+   noyau 4.18 du PLC → livrer le bundle en **ISO9660**, et formater tout disque data
+   **par le PLC lui-même**.
+
 **4 bugs de bit-rot de l'all-in-one découverts et corrigés grâce au banc d'essai** (sans eux
 l'image ne build/boot pas) :
 1. `docker/all-in-one/Dockerfile` — chemin bcrypt figé `5.1.1` → résolution dynamique (lockfile en 6.0.0).
@@ -271,7 +290,7 @@ réelle** vers le réseau interne, par un opérateur autre que l'auteur. Contenu
 | # | Risque / inconnue | Traitement |
 |---|---|---|
 | R1 | Boot du PLC en KVM | **VALIDÉ (2026-06-08)** : boote jusqu'au login (Alma 8.6, kernel 4.18.0-372) ; conversion `qemu-img -O qcow2` OK. ⚠️ **Disque en SATA/AHCI (`ich9-ahci`) ou pvscsi OBLIGATOIRE** — pas de pilote virtio dans l'initramfs (virtio-blk/scsi → « cannot open root device »). Machine `q35` + OVMF |
-| R2 | Docker dans le PLC durci | **Probablement ABSENT (2026-06-08)** : aucun runtime conteneur détecté (initramfs, services de boot, /usr/bin\|sbin\|libexec\|opt). Réserve : base RPM sur `varlv` non monté → à confirmer au 1er boot. → **préparer les RPM offline Alma 8.6** (docker-ce + containerd.io + runc + deps) à `docker load`/side-loader |
+| R2 | Docker dans le PLC durci | **RÉSOLU/VALIDÉ (2026-06-09)** : absent à l'origine, mais **install offline (RPM Alma 8.6 en dépôt local + `module_hotfixes=true`) ET run PROUVÉS dans le PLC** (Docker 26.1.3, overlay2, cgroup v1, 0 AVC sous SELinux permissive). Requiert un **disque data dédié** (`/var` 2 Go trop petit, VG quasi plein) |
 | R3 | Secure Boot strict | **Échoue sous OVMF strict mais MITIGEABLE (2026-06-08)** — PAS un rejet de certificat (shim Alma enrôlé, CA MS tierce, aucun « Access Denied ») : c'est un `PageFaultExitBoot: NX not clean` (shim 15.4 + GRUB2 2.02 antérieurs au durcissement NX). Fix : MAJ shim≥15.6 + grub2≥2.02-142.el8 dans le qcow2, OU politique `PcdDxeNxMemoryProtectionPolicy` permissive côté OVMF hôte. Boot fonctionnel actuel = SB-OFF |
 | R4 | Source réelle jour J en version PG > cible | Règle §6 : cible ≥ source ; figer la version |
 | R5 | RAM invité serrée (~5 Go libres) | Allouer ~3 Go à l'invité ; surveiller |

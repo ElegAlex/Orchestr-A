@@ -89,17 +89,30 @@ Attendu : `plc86-AlmaLinux login:` (Alma 8.6, kernel 4.18). **Identifiants du PL
 ### A5. Couper Internet (air-gap simulé)
 Mettre l'invité sur un **réseau libvirt isolé** (pas de NAT/route sortante). Vérification au §A8.
 
-### A6. Installer Docker dans le PLC (hors-ligne)  *(R2 — à préparer)*
-Le PLC **n'embarque probablement pas** de runtime conteneur (aucun détecté ; base RPM sur `varlv` à confirmer au 1er boot). Préparer un **bundle RPM Alma 8.6** sur une machine connectée et l'installer hors-ligne :
+### A6. Installer Docker dans le PLC (hors-ligne)  *(VALIDÉ 2026-06-09)*
+Le PLC n'embarque pas de runtime conteneur. Préparer le bundle RPM Alma 8.6 en **dépôt
+local** — ne PAS faire `dnf install ./*.rpm` (ça upgraderait le socle durci du PLC : glibc,
+systemd, selinux-policy…). Laisser dnf calculer le **delta** :
 ```bash
-# Sur machine connectée (résolution + téléchargement des deps) :
+# Machine connectée : résoudre + télécharger, puis indexer en dépôt
 dnf download --resolve --alldeps --destdir=./docker-rpms \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-# Transfert hors-ligne vers le PLC, puis :
-sudo dnf install -y ./docker-rpms/*.rpm
-sudo systemctl enable --now docker
+createrepo_c ./docker-rpms
+# Dans le PLC (hors-ligne) — dépôt local + module_hotfixes (4 deps sont MODULAIRES :
+# container-selinux, fuse-overlayfs, slirp4netns, libslirp) :
+sudo dnf install -y --repofrompath="be,file:///CHEMIN/docker-rpms" --repo=be \
+  --nogpgcheck --setopt=be.module_hotfixes=true \
+  docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+# Data-root sur un disque DÉDIÉ : le LV /var du PLC = 2 Go et le VG est quasi plein
+# (~740 Mo libres) => /var NON extensible ; l'image fait ~3 Go.
+sudo mkfs.xfs -f /dev/sdX && sudo mkdir -p /var/lib/docker-data && sudo mount /dev/sdX /var/lib/docker-data
+echo '{ "data-root": "/var/lib/docker-data" }' | sudo tee /etc/docker/daemon.json
+sudo systemctl enable --now docker   # => Docker 26.1.3, overlay2, OK (SELinux permissive, 0 AVC)
 ```
-> **À CONFIRMER** : versions exactes vis-à-vis de l'image 8.6 figée (résoudre contre le snapshot de dépôt 8.6 réel).
+> **Validé en local** : Docker tourne dans le PLC, all-in-one restauré + servi, air-gap prouvé.
+> **À CONFIRMER CNAM** : fournir un **disque/volume data dédié (~10 Go+)** ; résoudre les RPM
+> contre le dépôt **8.6 réel** ; livrer le bundle en **ISO9660** (un fs créé sur poste récent
+> n'est pas montable par le noyau 4.18 du PLC).
 
 ### A7. Déposer l'image all-in-one et démarrer  *(validé)*
 L'image se construit sur une machine **connectée** puis se transfère hors-ligne (`docker save`/`load`) — aucune image tirée d'un registre au runtime.
