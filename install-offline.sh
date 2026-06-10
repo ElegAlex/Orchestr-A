@@ -91,7 +91,7 @@ JWT_EXPIRES_IN=7d
 # SEC-001 — REQUIRED: supervisord expands %(ENV_AUDIT_HASH_KEY)s / %(ENV_METRICS_TOKEN)s
 # and the API will not start without them (main.ts asserts AUDIT_HASH_KEY >= 32 chars).
 # /!\ RESTORE: replace AUDIT_HASH_KEY below with the SOURCE environment's value so the
-#     restored audit history stays HMAC-consistent (see scripts/ofs/ofs-restore.sh).
+#     restored audit history stays HMAC-consistent (see scripts/orchestra/orchestra-restore.sh).
 AUDIT_HASH_KEY=${AUDIT_HASH_KEY}
 METRICS_TOKEN=${METRICS_TOKEN}
 

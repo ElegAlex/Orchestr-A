@@ -1,4 +1,4 @@
-# 📘 COMMENCER ICI — Migration OFS Tracker vers le PLC Assurance Maladie
+# 📘 COMMENCER ICI — Migration Orchestr'A vers le PLC Assurance Maladie
 
 > Ce guide est le **point d'entrée**. Il explique le projet en langage simple, montre le
 > flux complet, puis vous oriente vers le bon document selon votre rôle. Aucun pré-requis.
@@ -7,7 +7,7 @@
 
 ## 1. C'est quoi, en deux phrases ?
 
-OFS Tracker (= l'application **Orchestr'A**) doit être hébergé sur le **réseau interne
+**Orchestr'A** doit être hébergé sur le **réseau interne
 Assurance Maladie**, **sans accès Internet** (« air-gap »), sur un **OS imposé** (le « PLC »,
 une image AlmaLinux 8.6 durcie fournie par la CNAM). L'enjeu n°1 : **basculer sans perdre une
 seule donnée**.
@@ -25,10 +25,10 @@ vérifié** qui prouve, chiffres à l'appui, qu'aucune donnée n'a été perdue.
   ┌───────────────────────────┐                       ┌────────────────────────────────────┐
   │ base + uploads + secrets   │                       │  Docker (installé hors-ligne)        │
   └─────────────┬─────────────┘                       │    └─ all-in-one PG18  →  /data       │
-                │  ① ofs-backup.sh  (LECTURE SEULE)    └──────────────────▲───────────────────┘
-                │     pg_dump + uploads + manifeste                       │ ③ ofs-restore.sh
+                │  ① orchestra-backup.sh  (LECTURE SEULE)    └──────────────────▲───────────────────┘
+                │     pg_dump + uploads + manifeste                       │ ③ orchestra-restore.sh
                 ▼     (+ secrets)                                         │    + VÉRIFICATION
-        archive ofs-snapshot-*.tar.gz  ───── ② transfert hors-ligne ──────┘    zéro-perte :
+        archive orchestra-snapshot-*.tar.gz  ───── ② transfert hors-ligne ──────┘    zéro-perte :
                                               (canal sécurisé)                 comptages + empreinte
                                                                                d'audit + migrations
                                                                                ┌──────────────────┐
@@ -60,9 +60,9 @@ qu'elle n'est pas décommissionnée.
 | Artefact | À quoi ça sert |
 |---|---|
 | **Paquet de livraison** (`livraison-orchestra-cnam/`) | Tout pour déployer : image, RPM Docker, scripts de restore, docs. **Sans secrets.** |
-| **Archive de données** (`ofs-snapshot-*.tar.gz`) | Les données prod + uploads + secrets. **Livrée à part, canal sécurisé.** |
-| **Bundle démo** (`plc-ofs-simulation.tar.gz`) | OFS-sur-PLC qui tourne en 1 commande sur une machine KVM (démonstration). |
-| **Scripts `scripts/ofs/`** (dépôt) | Le mécanisme rejouable backup/restore (l'outil du jour J). |
+| **Archive de données** (`orchestra-snapshot-*.tar.gz`) | Les données prod + uploads + secrets. **Livrée à part, canal sécurisé.** |
+| **Bundle démo** (`plc-orchestra-simulation.tar.gz`) | Orchestr'A-sur-PLC qui tourne en 1 commande sur une machine KVM (démonstration). |
+| **Scripts `scripts/orchestra/`** (dépôt) | Le mécanisme rejouable backup/restore (l'outil du jour J). |
 
 ---
 
@@ -121,7 +121,7 @@ Non. La sauvegarde est en **lecture seule** ; la restauration vise une **copie**
 machine. La prod reste intacte et sert de **rollback** tant qu'on ne la décommissionne pas.
 
 **Le même outil sert-il pour le jour J ?**
-Oui — `ofs-backup.sh` / `ofs-restore.sh` sont **rejouables à l'identique** : on ne change que
+Oui — `orchestra-backup.sh` / `orchestra-restore.sh` sont **rejouables à l'identique** : on ne change que
 le fichier de config. La vérification zéro-perte **est** la preuve de bascule réussie.
 
 **Faut-il vraiment livrer les secrets ?**

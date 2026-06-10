@@ -13,7 +13,7 @@
 
 | Terme | Définition |
 |---|---|
-| **OFS Tracker** | L'application (= Orchestr'A), conteneurisée. |
+| **Orchestr'A** | L'application (= Orchestr'A), conteneurisée. |
 | **PLC** | L'OS durci fourni par l'Assurance Maladie : **AlmaLinux 8.6**, livré en **appliance VMware OVF**. |
 | **OVF / VMDK** | Format d'**appliance** virtuelle / de **disque** virtuel VMware. |
 | **KVM / qcow2 / OVMF** | Virtualisation native Linux / format de disque qemu / firmware **UEFI** virtuel. |
@@ -47,11 +47,11 @@ VPS (OS actuel CONSERVÉ, non reformaté)
 Même si **le banc d'essai est non destructif** (l'OS du VPS reste, le PLC tourne en invité), on capture une sauvegarde vérifiée **avant** toute manipulation, avec l'outil rejouable :
 
 ```bash
-cd scripts/ofs
-cp ofs.conf.example ofs.conf      # adapter si besoin (valeurs prod par défaut)
-./ofs-backup.sh --config ofs.conf # LECTURE SEULE sur la base ; archive horodatée
+cd scripts/orchestra
+cp orchestra.conf.example orchestra.conf      # adapter si besoin (valeurs prod par défaut)
+./orchestra-backup.sh --config orchestra.conf # LECTURE SEULE sur la base ; archive horodatée
 ```
-Pousser l'archive **hors du VPS** (NAS interne via `OFS_NAS_DEST`). *Critère : archive + `.sha256` présents hors-disque.*
+Pousser l'archive **hors du VPS** (NAS interne via `ORCHESTRA_NAS_DEST`). *Critère : archive + `.sha256` présents hors-disque.*
 
 ### A2. (Optionnel) Snapshot fournisseur du VPS
 Si l'hébergeur le permet, prendre un snapshot complet du VPS — rollback ultime.
@@ -134,8 +134,8 @@ docker compose -f docker-compose.offline.yml --env-file .env up -d
 
 ### A8. Restaurer les données + PREUVE de zéro-perte  *(validé)*
 ```bash
-cd scripts/ofs
-./ofs-restore.sh --config ofs.conf  /chemin/ofs-snapshot-<UTC>.tar.gz
+cd scripts/orchestra
+./orchestra-restore.sh --config orchestra.conf  /chemin/orchestra-snapshot-<UTC>.tar.gz
 ```
 Le script : vérifie l'archive → **garde-fou de parité des migrations** (image ↔ données) →
 restaure (en tant que `orchestr_a`) → **compare comptages par table + empreinte de chaîne
@@ -162,25 +162,25 @@ curl -s http://127.0.0.1:<HTTP_PORT>/api/health   # => {"status":"ok"}
 
 ## PARTIE B — Dossier de migration Assurance Maladie (jour J, phase 2)
 
-**Le mécanisme `scripts/ofs/` est l'outil réutilisé à l'identique.** On ne change que la
+**Le mécanisme `scripts/orchestra/` est l'outil réutilisé à l'identique.** On ne change que la
 config. Tout fait propre au réseau interne est marqué **`À CONFIRMER CNAM`**.
 
 ### B1. Pré-vol (J-7 à J-1)
 - [ ] Hôte cible interne prêt : `À CONFIRMER CNAM` (specs CPU/RAM/disque, hyperviseur, accès).
 - [ ] Bundle livré et chargé hors-ligne : image `orchestr-a:local` (`docker load`), RPM Docker (si besoin).
-- [ ] `ofs.conf` cible renseignée ; `AUDIT_HASH_KEY`/`JWT_SECRET` de la source obtenus (opérateur).
+- [ ] `orchestra.conf` cible renseignée ; `AUDIT_HASH_KEY`/`JWT_SECRET` de la source obtenus (opérateur).
 - [ ] **R4 — re-vérifier la version PG réelle de la prod** : `docker exec <pg> postgres --version`. La cible all-in-one doit être **≥** (elle est en 18 ; la source est en 18 → OK).
 - [ ] Fenêtre de bascule + plan de communication validés. `À CONFIRMER CNAM`.
 
 ### B2. Bascule (jour J) — séquence Go/No-Go
-1. **Backup de l'état réel** au moment de la bascule : `./ofs-backup.sh` (à chaud, lecture seule). → **Go** si archive + `.sha256` OK, sinon **No-Go**.
+1. **Backup de l'état réel** au moment de la bascule : `./orchestra-backup.sh` (à chaud, lecture seule). → **Go** si archive + `.sha256` OK, sinon **No-Go**.
 2. **Transfert** de l'archive vers la cible interne (hors-ligne / canal autorisé). → **Go** si `sha256sum -c` OK.
-3. **Restauration vérifiée** : `./ofs-restore.sh --config ofs.conf <archive>`. → **Go** seulement si « comptages + empreinte d'audit + migrations IDENTIQUES » ; **tout écart = No-Go** (l'app reste à l'arrêt).
+3. **Restauration vérifiée** : `./orchestra-restore.sh --config orchestra.conf <archive>`. → **Go** seulement si « comptages + empreinte d'audit + migrations IDENTIQUES » ; **tout écart = No-Go** (l'app reste à l'arrêt).
 4. **Smoke applicatif** : `/api/health` 200 + connexion d'un compte témoin. → **Go/No-Go**.
 5. **Bascule du trafic** vers l'instance interne. `À CONFIRMER CNAM` (DNS/reverse-proxy interne).
 
 ### B3. Definition of Done jour J
-- [ ] **Zéro perte vérifiée** (critère premier) : rapport d'intégrité de `ofs-restore.sh` tout vert.
+- [ ] **Zéro perte vérifiée** (critère premier) : rapport d'intégrité de `orchestra-restore.sh` tout vert.
 - [ ] App saine sur le réseau interne, compte témoin OK.
 - [ ] Chaîne d'audit valide (empreinte identique).
 - [ ] Sauvegarde de bascule archivée hors-ligne (rollback possible).
@@ -189,9 +189,9 @@ config. Tout fait propre au réseau interne est marqué **`À CONFIRMER CNAM`**.
 
 ## PARTIE C — Rollback
 
-- **Banc d'essai** : non destructif. En cas d'échec, supprimer l'invité KVM (`virsh destroy/undefine --nvram`) — la prod n'est jamais touchée. Filet : snapshot VPS (§A2) + archive `ofs-snapshot-*` hors-disque.
+- **Banc d'essai** : non destructif. En cas d'échec, supprimer l'invité KVM (`virsh destroy/undefine --nvram`) — la prod n'est jamais touchée. Filet : snapshot VPS (§A2) + archive `orchestra-snapshot-*` hors-disque.
 - **Jour J** : si un critère No-Go tombe **avant** la bascule du trafic, on n'a rien coupé — on investigue, on rejoue. Si après, repointer le trafic vers la source, qui n'a pas été modifiée (backup = lecture seule), puis restaurer l'archive de bascule au besoin.
-- **Données** : `ofs-restore.sh` rejoue une archive antérieure validée ; chaque restauration re-prouve l'intégrité avant remise en service.
+- **Données** : `orchestra-restore.sh` rejoue une archive antérieure validée ; chaque restauration re-prouve l'intégrité avant remise en service.
 
 ---
 

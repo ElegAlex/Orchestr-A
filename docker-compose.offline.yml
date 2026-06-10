@@ -25,7 +25,7 @@ services:
       # %(ENV_AUDIT_HASH_KEY)s / %(ENV_METRICS_TOKEN)s and fails to start the api
       # program when they are unset; main.ts also asserts AUDIT_HASH_KEY (>=32 chars).
       # On a RESTORE, AUDIT_HASH_KEY MUST equal the source environment's value so the
-      # audit HMAC stays consistent with the restored history (see scripts/ofs/).
+      # audit HMAC stays consistent with the restored history (see scripts/orchestra/).
       AUDIT_HASH_KEY: ${AUDIT_HASH_KEY:?AUDIT_HASH_KEY is required (>=32 chars)}
       METRICS_TOKEN: ${METRICS_TOKEN:?METRICS_TOKEN is required}
       RBAC_GUARD_MODE: ${RBAC_GUARD_MODE:-enforce}

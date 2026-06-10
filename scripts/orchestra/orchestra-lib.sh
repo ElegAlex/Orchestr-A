@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# ofs-lib.sh — Fonctions partagées du mécanisme de sauvegarde/restauration OFS
+# orchestra-lib.sh — Fonctions partagées du mécanisme de sauvegarde/restauration Orchestr'A
 # =============================================================================
-# Sourcé par ofs-backup.sh ET ofs-restore.sh. NE PAS exécuter directement.
+# Sourcé par orchestra-backup.sh ET orchestra-restore.sh. NE PAS exécuter directement.
 #
 # Règle d'or (cf. revue de conception) : la SQL de vérification d'intégrité est
 # définie ICI, une seule fois, pour que la sauvegarde et la restauration la
@@ -17,27 +17,27 @@ if [ -t 1 ]; then
 else
   C_RED=''; C_GREEN=''; C_YEL=''; C_BLUE=''; C_NC=''
 fi
-ofs_step() { printf "\n${C_BLUE}▶ %s${C_NC}\n" "$1"; }
-ofs_ok()   { printf "  ${C_GREEN}✓ %s${C_NC}\n" "$1"; }
-ofs_warn() { printf "  ${C_YEL}⚠ %s${C_NC}\n" "$1"; }
-ofs_err()  { printf "  ${C_RED}✗ %s${C_NC}\n" "$1" >&2; }
-ofs_die()  { printf "\n${C_RED}════ ÉCHEC : %s ════${C_NC}\n" "$1" >&2; exit 1; }
+orchestra_step() { printf "\n${C_BLUE}▶ %s${C_NC}\n" "$1"; }
+orchestra_ok()   { printf "  ${C_GREEN}✓ %s${C_NC}\n" "$1"; }
+orchestra_warn() { printf "  ${C_YEL}⚠ %s${C_NC}\n" "$1"; }
+orchestra_err()  { printf "  ${C_RED}✗ %s${C_NC}\n" "$1" >&2; }
+orchestra_die()  { printf "\n${C_RED}════ ÉCHEC : %s ════${C_NC}\n" "$1" >&2; exit 1; }
 
 # --- Prérequis ---------------------------------------------------------------
-ofs_require_cmd() { command -v "$1" >/dev/null 2>&1 || ofs_die "commande requise absente : $1"; }
+orchestra_require_cmd() { command -v "$1" >/dev/null 2>&1 || orchestra_die "commande requise absente : $1"; }
 
-ofs_require_container_running() {
+orchestra_require_container_running() {
   local c="$1"
   docker ps --format '{{.Names}}' | grep -qx "$c" \
-    || ofs_die "conteneur '$c' introuvable ou non démarré (docker ps)"
+    || orchestra_die "conteneur '$c' introuvable ou non démarré (docker ps)"
 }
 
-ofs_container_exists() { docker ps -a --format '{{.Names}}' | grep -qx "$1"; }
+orchestra_container_exists() { docker ps -a --format '{{.Names}}' | grep -qx "$1"; }
 
 # --- Chargement de configuration --------------------------------------------
-ofs_load_config() {
+orchestra_load_config() {
   local cfg="$1"
-  [ -f "$cfg" ] || ofs_die "fichier de configuration introuvable : $cfg"
+  [ -f "$cfg" ] || orchestra_die "fichier de configuration introuvable : $cfg"
   # shellcheck disable=SC1090
   . "$cfg"
 }
@@ -46,12 +46,12 @@ ofs_load_config() {
 # Le rôle propriétaire/superuser de la SOURCE n'est pas forcément "postgres"
 # (en prod c'est `orchestr_a`) : il est passé en paramètre. Sur un socket en
 # `trust` (cas prod), aucun mot de passe n'est requis. Si le socket exige un mot
-# de passe, fournir OFS_SRC_PG_PASSWORD dans la config (jamais lu de .env.production).
-ofs_psql() {
-  # usage: ofs_psql <container> <db> <role> <sql>
+# de passe, fournir ORCHESTRA_SRC_PG_PASSWORD dans la config (jamais lu de .env.production).
+orchestra_psql() {
+  # usage: orchestra_psql <container> <db> <role> <sql>
   local c="$1" db="$2" role="$3" sql="$4"
-  if [ -n "${OFS_SRC_PG_PASSWORD:-}" ]; then
-    docker exec -i -e PGPASSWORD="$OFS_SRC_PG_PASSWORD" "$c" psql -U "$role" -d "$db" -tAqc "$sql"
+  if [ -n "${ORCHESTRA_SRC_PG_PASSWORD:-}" ]; then
+    docker exec -i -e PGPASSWORD="$ORCHESTRA_SRC_PG_PASSWORD" "$c" psql -U "$role" -d "$db" -tAqc "$sql"
   else
     docker exec -i "$c" psql -U "$role" -d "$db" -tAqc "$sql"
   fi
@@ -63,7 +63,7 @@ ofs_psql() {
 
 # Comptage de TOUTES les tables de base du schéma public, en une requête
 # déterministe (ordre par nom). Sortie : lignes "table_name|n".
-ofs_sql_table_counts() {
+orchestra_sql_table_counts() {
   cat <<'SQL'
 SELECT table_name || '|' ||
        (xpath('/row/c/text()',
@@ -80,7 +80,7 @@ SQL
 # apps/api/src/audit/recompute-chain.ts. Si l'empreinte source == cible, toutes
 # les lignes audit_logs ont été restaurées à l'identique => chaîne intacte, SANS
 # réimplémenter le hash. 'NO_AUDIT_TABLE' si la table n'existe pas.
-ofs_sql_audit_fingerprint() {
+orchestra_sql_audit_fingerprint() {
   cat <<'SQL'
 SELECT CASE WHEN to_regclass('public.audit_logs') IS NULL
             THEN 'NO_AUDIT_TABLE'
@@ -91,7 +91,7 @@ SQL
 }
 
 # Liste CSV triée des migrations Prisma APPLIQUÉES (finished_at non nul).
-ofs_sql_migrations_applied() {
+orchestra_sql_migrations_applied() {
   cat <<'SQL'
 SELECT CASE WHEN to_regclass('public._prisma_migrations') IS NULL
             THEN 'NO_MIGRATIONS_TABLE'
@@ -103,17 +103,17 @@ SQL
 
 # --- Collecte des 3 artefacts de vérification dans un répertoire -------------
 # Écrit <dir>/counts.txt, <dir>/audit.fingerprint, <dir>/migrations.txt
-ofs_collect_verification() {
-  # usage: ofs_collect_verification <container> <db> <role> <dir>
+orchestra_collect_verification() {
+  # usage: orchestra_collect_verification <container> <db> <role> <dir>
   local c="$1" db="$2" role="$3" dir="$4"
   mkdir -p "$dir"
-  ofs_psql "$c" "$db" "$role" "$(ofs_sql_table_counts)"       > "$dir/counts.txt"
-  ofs_psql "$c" "$db" "$role" "$(ofs_sql_audit_fingerprint)"  > "$dir/audit.fingerprint"
-  ofs_psql "$c" "$db" "$role" "$(ofs_sql_migrations_applied)" > "$dir/migrations.txt"
+  orchestra_psql "$c" "$db" "$role" "$(orchestra_sql_table_counts)"       > "$dir/counts.txt"
+  orchestra_psql "$c" "$db" "$role" "$(orchestra_sql_audit_fingerprint)"  > "$dir/audit.fingerprint"
+  orchestra_psql "$c" "$db" "$role" "$(orchestra_sql_migrations_applied)" > "$dir/migrations.txt"
 }
 
 # --- Hash --------------------------------------------------------------------
-ofs_sha256() { sha256sum "$1" | awk '{print $1}'; }
+orchestra_sha256() { sha256sum "$1" | awk '{print $1}'; }
 
 # Horodatage UTC déterministe (le jour J doit être en UTC — prod est en UTC).
-ofs_utc_stamp() { date -u +%Y%m%dT%H%M%SZ; }
+orchestra_utc_stamp() { date -u +%Y%m%dT%H%M%SZ; }

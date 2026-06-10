@@ -12,7 +12,7 @@
 
 Transformer le VPS de préproduction en **réplique fidèle de l'environnement cible CNAM**
 (OS PLC Assurance Maladie AlmaLinux 8.6, conditions **air-gapped**), y faire tourner
-**OFS Tracker** (= l'application Orchestr'A) via un docker-compose autonome, et **valider
+**Orchestr'A** (= l'application Orchestr'A) via un docker-compose autonome, et **valider
 que l'hébergement embarque la base de données en un seul bloc consolidé et reproductible**.
 
 **Contrainte n°1, au-dessus de tout : conservation des données — zéro perte.** Elle
@@ -38,7 +38,7 @@ elle est en revanche **entièrement documentée** (voir §10) comme finalité du
   `ovf-plc8-almalinux86-1.vmdk` (1,5 Go, `streamOptimized`) + `*.nvram` + manifeste `.mf`.
 - Firmware **EFI + Secure Boot activé**, matériel `vmx-14`, contrôleur **pvscsi**,
   carte réseau **VmxNet3**, **disque 26 Go** (27 917 287 424 octets), RHEL8/Alma 8.6.
-- C'est un **OS-hôte scellé** : OFS Tracker y tourne **en Docker**, pas en natif.
+- C'est un **OS-hôte scellé** : Orchestr'A y tourne **en Docker**, pas en natif.
 
 ### 2.2 VPS source (prod `92.222.35.25` / `/opt/orchestra`) — inspection lecture seule 2026-06-08
 [FAIT — vérifié en lecture seule]
@@ -145,7 +145,7 @@ Un **couple de scripts paramétrés** par un fichier de configuration (qui dési
 de conteneurs / DB / volumes / chemins). **Le même outil sert maintenant ET au jour J** :
 on ne change que la config.
 
-### 7.1 `ofs-backup.sh` (à chaud, contre la source)
+### 7.1 `orchestra-backup.sh` (à chaud, contre la source)
 1. **DB** : `pg_dump -Fc --no-owner --no-privileges` →
    - format `custom` (compressé, restaurable sélectivement),
    - `--no-owner --no-privileges` **neutralise les rôles** (résout `app_user`/`postgres`
@@ -156,12 +156,12 @@ on ne change que la config.
 4. **Manifeste d'intégrité** `MANIFEST.json` : horodatage UTC, hôte source, **version PG**,
    tailles, **sha256** de chaque artefact, **comptage par table** (`COUNT(*)` ordonné +
    `n_live_tup`), état `_prisma_migrations`, version applicative (`RELEASE_SHA`).
-5. **Archive unique** `ofs-snapshot-<UTC>.tar.gz` + sha256, **poussée HORS du VPS** vers un
+5. **Archive unique** `orchestra-snapshot-<UTC>.tar.gz` + sha256, **poussée HORS du VPS** vers un
    **NAS interne maîtrisé** (droits d'accès restreints ; **pas de chiffrement d'archive** —
    protection assurée par le contrôle d'accès du NAS + permissions FS `600`) ; rétention
    paramétrable.
 
-### 7.2 `ofs-restore.sh` (contre la cible all-in-one)
+### 7.2 `orchestra-restore.sh` (contre la cible all-in-one)
 1. Vérifie sha256 de l'archive + cohérence du `MANIFEST.json`.
 2. `pg_restore --clean --if-exists --no-owner --no-privileges` du dump.
 3. Restaure les uploads dans le volume cible.
@@ -197,10 +197,10 @@ Le banc d'essai est « DONE » si **et seulement si** :
 Mécanisme exécuté de bout en bout : **sauvegarde de la VRAIE prod → restauration dans
 l'all-in-one PG18 local → preuve de non-perte.**
 
-**Backup prod (lecture seule)** — `ofs-snapshot-20260608T140155Z` :
+**Backup prod (lecture seule)** — `orchestra-snapshot-20260608T140155Z` :
 - PostgreSQL **18.3**, connexion rôle `orchestr_a` (socket `trust`). ⚠️ Le superuser/propriétaire
   prod s'appelle **`orchestr_a`, PAS `postgres`** (`DATABASE_USER` surchargé dans `.env.production`) —
-  paramétré via `OFS_SRC_PG_SUPERUSER`.
+  paramétré via `ORCHESTRA_SRC_PG_SUPERUSER`.
 - dump 560 Ko, **45 tables**, **8 uploads** (3,7 Mo), empreinte d'audit `7463aa07…`,
   release `30511717` ; archive 4,2 Mo, sha256 vérifié, rapatriée.
 
@@ -249,8 +249,8 @@ l'image ne build/boot pas) :
 - **Banc d'essai** (non destructif par conception) : l'OS du VPS et ses données restent en
   place ; en cas d'échec, on **supprime l'invité KVM** — la prod n'est jamais touchée.
 - **Filet supplémentaire** : **snapshot fournisseur du VPS** avant de commencer (à
-  confirmer selon l'offre), + archive `ofs-snapshot-*` hors-VPS conservée.
-- **Données** : `ofs-restore.sh` rejoue une archive antérieure validée si besoin.
+  confirmer selon l'offre), + archive `orchestra-snapshot-*` hors-VPS conservée.
+- **Données** : `orchestra-restore.sh` rejoue une archive antérieure validée si besoin.
 
 ---
 
@@ -276,7 +276,7 @@ réelle** vers le réseau interne, par un opérateur autre que l'auteur. Contenu
 ## 11. Livrables (ordre de production)
 
 1. **Ce spec** (présent document).
-2. `scripts/ofs-backup.sh` + `scripts/ofs-restore.sh` + fichier de config exemple
+2. `scripts/orchestra-backup.sh` + `scripts/orchestra-restore.sh` + fichier de config exemple
    (paramétrés, idempotents, vérification d'intégrité).
 3. **Patch PG18** de `docker/all-in-one/Dockerfile` + reconstruction/`docker save`.
 4. **Runbook banc d'essai** : import OVF→KVM (conversion qcow2, OVMF/SecureBoot), réseau

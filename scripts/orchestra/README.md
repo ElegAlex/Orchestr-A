@@ -1,9 +1,9 @@
-# `scripts/ofs/` — Mécanisme rejouable de sauvegarde/restauration OFS Tracker
+# `scripts/orchestra/` — Mécanisme rejouable de sauvegarde/restauration Orchestr'A
 
 Outil **paramétré, idempotent et vérifiable** de capture/restauration des données
-d'OFS Tracker (= Orchestr'A). Conçu pour être **rejoué à l'identique** : il sert au
+d'Orchestr'A. Conçu pour être **rejoué à l'identique** : il sert au
 banc d'essai PLC air-gap *aujourd'hui* et à la **bascule réseau Assurance Maladie**
-le jour J. On ne change que `ofs.conf`, jamais les scripts.
+le jour J. On ne change que `orchestra.conf`, jamais les scripts.
 
 > Spec & contexte : `docs/migration-cnam/2026-06-08-banc-essai-plc-airgap-et-migration-design.md`
 
@@ -11,23 +11,23 @@ le jour J. On ne change que `ofs.conf`, jamais les scripts.
 
 | Fichier | Rôle |
 |---|---|
-| `ofs-lib.sh` | Fonctions partagées + **SQL de vérification canonique** (source unique) |
-| `ofs-backup.sh` | Sauvegarde **à chaud** (sans arrêt) : dump DB + uploads + secrets + manifeste |
-| `ofs-restore.sh` | Restauration **vérifiée** dans l'image all-in-one PG18 (toute non-perte prouvée) |
-| `ofs.conf.example` | Modèle de configuration (copier en `ofs.conf`) |
+| `orchestra-lib.sh` | Fonctions partagées + **SQL de vérification canonique** (source unique) |
+| `orchestra-backup.sh` | Sauvegarde **à chaud** (sans arrêt) : dump DB + uploads + secrets + manifeste |
+| `orchestra-restore.sh` | Restauration **vérifiée** dans l'image all-in-one PG18 (toute non-perte prouvée) |
+| `orchestra.conf.example` | Modèle de configuration (copier en `orchestra.conf`) |
 
 ## Utilisation
 
 ```bash
-cd scripts/ofs
-cp ofs.conf.example ofs.conf && $EDITOR ofs.conf
+cd scripts/orchestra
+cp orchestra.conf.example orchestra.conf && $EDITOR orchestra.conf
 
 # Sauvegarde (LECTURE SEULE sur la source ; demande confirmation)
-./ofs-backup.sh --config ofs.conf
+./orchestra-backup.sh --config orchestra.conf
 
 # Restauration dans l'all-in-one (créer le conteneur cible d'abord)
 #   docker compose -f ../../docker-compose.offline.yml up -d
-./ofs-restore.sh --config ofs.conf ../../backups-ofs/ofs-snapshot-<UTC>.tar.gz
+./orchestra-restore.sh --config orchestra.conf ../../backups-orchestra/orchestra-snapshot-<UTC>.tar.gz
 ```
 
 ## Garanties de non-perte (intégrées)
@@ -52,4 +52,4 @@ et `METRICS_TOKEN` (sinon l'API ne démarre pas) — sur une restauration,
 ## Limite assumée
 
 Les scripts **ne lisent jamais** `.env.production`. Les secrets (`AUDIT_HASH_KEY`,
-`JWT_SECRET`) sont fournis par l'opérateur via `ofs.conf` (ou renseignés à la main).
+`JWT_SECRET`) sont fournis par l'opérateur via `orchestra.conf` (ou renseignés à la main).

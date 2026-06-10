@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# firstboot-provision.sh — PROVISIONNEMENT UNIQUE du bundle transportable PLC-OFS.
+# firstboot-provision.sh — PROVISIONNEMENT UNIQUE du bundle transportable PLC-Orchestr'A.
 # Exécuté 1 seule fois dans le PLC. Installe Docker (data-root sur disque data
 # PERSISTANT + entrée fstab), charge l'image, up + restore, active l'auto-
 # démarrage, puis ARRÊT PROPRE. L'état (image + volume + données) persiste sur le
@@ -8,7 +8,7 @@
 # =============================================================================
 set +e
 exec > /root/provision.log 2>&1
-echo "=== PROVISIONNEMENT PLC-OFS — $(date -u) ==="
+echo "=== PROVISIONNEMENT PLC-Orchestr'A — $(date -u) ==="
 echo "OS: $(cat /etc/redhat-release 2>/dev/null) | SELinux: $(getenforce 2>/dev/null)"
 
 echo "--- [0] disque data Docker (vierge -> xfs LABEL=DOCKERDATA + fstab) ---"
@@ -42,15 +42,15 @@ echo "--- [3] docker load image all-in-one ---"
 gunzip -c "$B"/orchestr-a-local.tar.gz | docker load 2>&1 | tail -2
 
 echo "--- [4] compose up (compose + env COPIÉS sur le PLC ; restart=unless-stopped) ---"
-mkdir -p /opt/ofs
-cp "$B"/docker-compose.offline.yml /opt/ofs/docker-compose.yml
-cp "$B"/aio.env /opt/ofs/.env
-docker compose -f /opt/ofs/docker-compose.yml --env-file /opt/ofs/.env up -d 2>&1 | tail -4
+mkdir -p /opt/orchestra
+cp "$B"/docker-compose.offline.yml /opt/orchestra/docker-compose.yml
+cp "$B"/aio.env /opt/orchestra/.env
+docker compose -f /opt/orchestra/docker-compose.yml --env-file /opt/orchestra/.env up -d 2>&1 | tail -4
 echo "  init 75s…"; sleep 75; docker ps --format '  {{.Names}} {{.Status}}'
 
 echo "--- [5] restore + preuve zéro-perte ---"
-cd "$B"/ofs
-bash ofs-restore.sh --config "$B"/ofs/ofs.conf --allow-migrate "$B"/backup.tar.gz 2>&1 | tail -20
+cd "$B"/orchestra
+bash orchestra-restore.sh --config "$B"/orchestra/orchestra.conf --allow-migrate "$B"/backup.tar.gz 2>&1 | tail -20
 
 echo "--- [6] vérif finale ---"
 sleep 12
