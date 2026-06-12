@@ -177,3 +177,9 @@ playwright/.auth/
 # Orchestr'A backup/restore mechanism — never commit prod data or live config/secrets
 backups-orchestra/
 scripts/orchestra/orchestra.conf
+
+# Migration Ramage — assembled deliverables: large binaries (~4 GB) AND prod data
+# WITH SECRETS (AUDIT_HASH_KEY/JWT_SECRET inside the snapshot archive).
+# Only the README (the map) is tracked; everything else must NEVER be committed.
+migration_ramage/*
+!migration_ramage/README.md
