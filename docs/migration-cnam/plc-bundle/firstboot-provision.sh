@@ -50,7 +50,9 @@ echo "  init 75s…"; sleep 75; docker ps --format '  {{.Names}} {{.Status}}'
 
 echo "--- [5] restore + preuve zéro-perte ---"
 cd "$B"/orchestra
-bash orchestra-restore.sh --config "$B"/orchestra/orchestra.conf --allow-migrate "$B"/backup.tar.gz 2>&1 | tail -20
+# tail -60 (et non -20) : les ~20 lignes d'attente du healthcheck poussaient les
+# lignes de preuve « ✓ IDENTIQUES » hors du journal (constaté le 2026-06-12).
+bash orchestra-restore.sh --config "$B"/orchestra/orchestra.conf --allow-migrate "$B"/backup.tar.gz 2>&1 | tail -60
 
 echo "--- [6] vérif finale ---"
 sleep 12
