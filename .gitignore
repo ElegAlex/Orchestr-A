@@ -183,3 +183,7 @@ scripts/orchestra/orchestra.conf
 # Only the README (the map) is tracked; everything else must NEVER be committed.
 migration_ramage/*
 !migration_ramage/README.md
+
+# Local scratch / runtime data — never commit
+.playwright-mcp/
+uploads/

@@ -1,0 +1,55 @@
+{
+  "report_date": "2026-06-08",
+  "repo_commit": "b9347d2f809ca2c1d897cbf3bc59bebfbfeb68ac",
+  "verdict": "blocking-issues",
+  "verdict_rationale": "Four findings carry blocking severity (SEC-001 API crash-loop on standalone/all-in-one boot, COR-028 rejectCancellation always returns HTTP 500 due to strict audit schema mismatch rolling back the status transition, COR-001 dependency-cycle race condition defeats the SERIALIZABLE guard by reading off the outer prisma client, DAT-001 stopRecurrence leaves a permanently inconsistent recurrence state on any mid-operation failure). Beyond the explicit blockers, Cluster A (IDOR / scope bypass on epics, milestones, tasks, orphans, skills) represents a class of privilege-escalation issues that allow any authenticated contributor to read and mutate data across project boundaries — this is not a nit but a systemic authorization design gap. The codebase is not ready for production promotion on any new deployment target until at minimum the Phase-1 clusters (A, D, E, F, M) are resolved.",
+  "totals": {
+    "findings": 147,
+    "blocking": 4,
+    "important": 73,
+    "nit": 61,
+    "suggestion": 9,
+    "by_category": {
+      "security": 33,
+      "correctness": 39,
+      "data_integrity": 27,
+      "performance": 25,
+      "observability": 14,
+      "tests": 9
+    }
+  },
+  "top_10_blocking": [
+    "COR-028",
+    "SEC-001",
+    "COR-001",
+    "DAT-001",
+    "SEC-003",
+    "SEC-006",
+    "SEC-010",
+    "SEC-013",
+    "SEC-004",
+    "SEC-011"
+  ],
+  "key_metrics": {
+    "controllers_total": 35,
+    "services_total": 50,
+    "migrations_total": 81,
+    "schema_models": 44,
+    "require_permissions_decorators": 251,
+    "public_routes": 19,
+    "raw_query_calls": 225,
+    "transactions": 239,
+    "web_pages": 30,
+    "web_components": 91,
+    "api_specs": 157,
+    "web_tests": 67,
+    "e2e_specs": 48
+  },
+  "coverage_assertion": {
+    "controllers_scanned": 35,
+    "migrations_scanned": 81,
+    "services_scanned": 50,
+    "test_files_scanned": 153,
+    "untracked_files_included": 0
+  }
+}

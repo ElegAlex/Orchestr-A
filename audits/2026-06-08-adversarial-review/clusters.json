@@ -1,0 +1,232 @@
+[
+  {
+    "id": "A",
+    "title": "Missing authorization scope gates on resource endpoints (IDOR / privilege escalation)",
+    "root_cause": "Multiple controllers omit @CurrentUser (or @CurrentUserRoleCode) from their handler signatures, so the service never receives caller identity. Services that do accept a caller ID often have no membership or scope guard on create/read paths, while sibling update/delete paths are guarded. The result is that any authenticated user holding the relevant permission can read or mutate resources in projects they are not a member of.",
+    "findings": [
+      "SEC-003",
+      "SEC-017",
+      "SEC-004",
+      "SEC-005",
+      "SEC-006",
+      "SEC-007",
+      "SEC-008",
+      "SEC-009",
+      "SEC-010",
+      "SEC-012",
+      "SEC-020",
+      "SEC-013"
+    ],
+    "transversal_remediation": "Audit every controller handler: any endpoint that returns or mutates a resource scoped to a project or user MUST extract @CurrentUser and @CurrentUserRoleCode and pass both to the service. Services must apply a fail-closed membership/scope gate (throw ForbiddenException when userId is missing AND role lacks the *:readAll / *:manageAny permission). Add an E2E smoke test asserting that a CONTRIBUTEUR on project A gets 403 on project B resources.",
+    "phase_recommendation": 1
+  },
+  {
+    "id": "B",
+    "title": "DTO input validation gaps — missing @MaxLength, @IsUUID, @IsDateString, @ArrayMaxSize",
+    "root_cause": "A mix of omissions: (1) the shared @IsStrongPassword() helper deliberately omits @MaxLength, leaving bcrypt-fed fields unbounded; (2) import/update DTOs were not kept in sync with their Create counterparts when MaxLength decorators were added; (3) UUID-typed FK arrays use @IsString instead of @IsUUID; (4) date fields use @IsString instead of @IsDateString; (5) array fields lack @ArrayMaxSize. The common thread is no shared-base-class pattern enforcing these constraints and no lint rule to flag unbounded string fields.",
+    "findings": [
+      "SEC-002",
+      "SEC-014",
+      "SEC-015",
+      "SEC-016",
+      "COR-011",
+      "DAT-007",
+      "COR-012",
+      "DAT-008",
+      "DAT-009",
+      "DAT-010",
+      "DAT-011",
+      "DAT-012",
+      "COR-014",
+      "COR-003",
+      "COR-015",
+      "COR-016",
+      "COR-017",
+      "COR-018",
+      "SEC-021"
+    ],
+    "transversal_remediation": "Introduce shared base DTOs using class-transformer inheritance (CreateTaskDto extends a BaseTaskDto that enforces all string bounds). Add a project-wide custom ESLint rule that flags any @IsString() field in a DTO without a companion @MaxLength(). Apply @MaxLength to all bcrypt-fed password fields. Replace @IsString with @IsUUID where the field is a FK. Replace @IsString with @IsDateString on all date inputs. Add @ArrayMaxSize to all unbounded array fields. Run a one-pass sweep of all dto files against this checklist.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "C",
+    "title": "Local-timezone date arithmetic instead of UTC — incorrect midnight boundaries and month/year bucketing",
+    "root_cause": "Widespread use of getMonth(), getFullYear(), setHours(0,0,0,0), setDate(getDate()+N), and getHours()/getMinutes() which all operate in the Node.js process's local timezone. The codebase uses @db.Date (UTC midnight) and Prisma DateTime (UTC), so these calls produce shifted query bounds and wrong grouping keys on any server not running UTC.",
+    "findings": [
+      "COR-004",
+      "COR-005",
+      "COR-020",
+      "COR-022",
+      "COR-010",
+      "COR-023",
+      "COR-026",
+      "COR-027",
+      "COR-035"
+    ],
+    "transversal_remediation": "Introduce a shared date-utils module exporting toUTCMidnight(date), toUTCStartOfMonth(y,m), advanceDaysUTC(date,n), getUTCMonthIndex(date), and extractUTCHHMM(date). Replace all local-TZ usages in telework, events, planning-export, projects, and personal-todos with these helpers. Add a CI lint rule forbidding direct .setHours/.getMonth/.getDate usage outside the date-utils module. Add a unit test suite for each helper covering DST-boundary dates.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "D",
+    "title": "Non-atomic multi-step writes — missing $transaction wrappers create TOCTOU windows and partial-update states",
+    "root_cause": "Multiple service methods issue two or more Prisma calls (read-check-write, write-then-audit, delete-then-update, create-then-assign) as independent round-trips without a $transaction wrapper. The pattern is consistent: the operation was implemented correctly in one method (e.g. update() wrapped, create() not), then sibling methods were added or refactored without matching the atomicity. The departments.remove() TOCTOU is a specific case of this broader pattern.",
+    "findings": [
+      "DAT-002",
+      "DAT-003",
+      "DAT-004",
+      "DAT-006",
+      "DAT-001",
+      "COR-029",
+      "COR-030",
+      "COR-031"
+    ],
+    "transversal_remediation": "Apply a code-review checklist: every method that contains >1 prisma.* call must use $transaction unless explicitly justified. Priority: DAT-001 (stopRecurrence, blocking data corruption), DAT-003/DAT-004 (user create/import ghost-user risk), COR-029 (daily-cap race), COR-030 (bulkUpdate settings). Wrap the departments.remove count-check+delete in a $transaction and add a P2003/P2025 catch clause. Add a shared helper assertExistsOrThrow(tx, model, id) to centralize the check-then-act pattern.",
+    "phase_recommendation": 1
+  },
+  {
+    "id": "E",
+    "title": "Unbounded date-range expansion — O(N_days) in-memory iteration with no span cap",
+    "root_cause": "Both the telework generate-schedules endpoint and the planning overview endpoint accept arbitrary startDate/endDate with no maximum span validation in the DTO. The service expands these day-by-day in memory. The 366-day guard present in findAll was not replicated in generateSchedulesFromRules, and PlanningOverviewQueryDto has no span constraint at all.",
+    "findings": [
+      "PER-001",
+      "PER-002"
+    ],
+    "transversal_remediation": "Add a @MaxDateSpanDays(366) custom class-validator decorator and apply it to GenerateSchedulesDto and PlanningOverviewQueryDto. Add a shared service-level guard (assertSpanDaysNotExceeded) in the planning and telework services. Add an E2E test sending a 10-year span and asserting 400.",
+    "phase_recommendation": 1
+  },
+  {
+    "id": "F",
+    "title": "checkCircularDependency uses the outer this.prisma client inside a $transaction — SERIALIZABLE isolation is defeated",
+    "root_cause": "checkCircularDependency accepts no tx parameter and always reads from this.prisma (a separate autocommit connection). The $transaction callback passes a tx client but never threads it into the helper. As a consequence the SERIALIZABLE isolation level protecting the insert does not cover the BFS read, creating a real data-race for dependency cycles. Separately, the helper also fetches the global task_dependency table with no WHERE clause (the performance dimension of the same design flaw).",
+    "findings": [
+      "COR-001",
+      "PER-003"
+    ],
+    "transversal_remediation": "Refactor checkCircularDependency(fromId, toId, tx?) so it accepts an optional tx parameter, defaulting to this.prisma, and pass the tx client at every call site inside a $transaction. Separately, scope the initial findMany to the relevant project (add a WHERE projectId = targetTask.projectId join) to eliminate the global table scan.",
+    "phase_recommendation": 1
+  },
+  {
+    "id": "G",
+    "title": "Frontend service methods hardcode limit=1000 — full-table fetches on every page load",
+    "root_cause": "All frontend service methods that replaced the backend's 10-row default used limit=1000 as a safe ceiling without defining a practical upper bound or implementing pagination. With multiple 1000-row fetches on a single page (users + projects + leaves + milestones), total transferred payload can reach megabytes for growing organisations.",
+    "findings": [
+      "PER-020",
+      "PER-006",
+      "PER-007",
+      "PER-008",
+      "PER-012",
+      "PER-019"
+    ],
+    "transversal_remediation": "Introduce paginated versions of all list service methods (cursor or offset+limit). Remove hardcoded limit=1000 defaults. For pages that genuinely need full lists (dropdowns), replace with server-side search endpoints. Coordinate with the backend to expose search/autocomplete endpoints for user and project dropdowns.",
+    "phase_recommendation": 3
+  },
+  {
+    "id": "H",
+    "title": "Frontend fetch inefficiency — serial waterfall calls, full re-fetch on every mutation, no TanStack Query cache reuse",
+    "root_cause": "Pages were authored in the classic CSR useEffect pattern before TanStack Query hooks were available. Sequential awaits replaced Promise.all, full fetchData() calls replaced targeted cache invalidation, and the majority of pages remain use client with no RSC shell. The result is 3-5x longer TTFB on page load and high re-fetch frequency on common interactions.",
+    "findings": [
+      "PER-021",
+      "PER-009",
+      "PER-010",
+      "PER-022",
+      "PER-011",
+      "PER-013",
+      "PER-023",
+      "PER-024",
+      "PER-025"
+    ],
+    "transversal_remediation": "Migrate list queries to TanStack Query hooks (useUsers, useProjects, useTasks already exist — extend to all pages). Replace sequential awaits with Promise.all for independent fetches. Add optimistic updates for status-toggle mutations. Pre-index getDayCell inputs by (userId, date) using useMemo in usePlanningData. Align staleTime across analytics widgets to 5 minutes.",
+    "phase_recommendation": 3
+  },
+  {
+    "id": "I",
+    "title": "Backend analytics services materialise unbounded row sets for in-JS aggregation",
+    "root_cause": "Analytics services (RecentActivity, MilestonesCompletion, TasksBreakdown, captureSnapshots) fetch all rows for the caller's scope with no take limit because they compute distributions (status/priority counts) in JavaScript. The correct pattern for these is a DB-side groupBy query which transfers only the aggregate output.",
+    "findings": [
+      "PER-005",
+      "PER-016",
+      "PER-017",
+      "PER-018"
+    ],
+    "transversal_remediation": "Rewrite each analytics fetch as a Prisma groupBy query: prisma.task.groupBy({ by: ['status','priority'], _count: true, where: projectScope }). captureSnapshots should use groupBy per project. Add a take guard as a backstop for any remaining findMany that cannot be converted. Add a regression test asserting each analytics endpoint returns within 500ms against a 10,000-task seed.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "J",
+    "title": "Audit coverage gaps — organizational and configuration mutations emit no audit rows",
+    "root_cause": "The initial audit-coverage expansion (OBS-007..OBS-024) focused on leaf transactional events (leave lifecycle, user CRUD, RBAC changes). Structural/configuration mutations — org units (departments, services), HR configuration (leave types), project-hierarchy entities (epics, milestones), collaboration (comments), and predefined-task assignments — were never in scope. The AuditAction enum has no codes for these entity types.",
+    "findings": [
+      "OBS-003",
+      "OBS-004",
+      "OBS-005",
+      "OBS-007",
+      "OBS-010",
+      "OBS-011",
+      "OBS-012"
+    ],
+    "transversal_remediation": "Add AuditAction codes for DEPARTMENT_*, SERVICE_*, LEAVE_TYPE_*, EPIC_*, MILESTONE_*, COMMENT_DELETED_BY_ADMIN, PREDEFINED_TASK_ASSIGNMENT_*. Inject AuditPersistenceService into the corresponding service constructors. Emit an audit row on every state-changing mutation. Add the revokeAllForUser session-termination event to the password-change audit payload.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "K",
+    "title": "Audit requestId correlation absent from AuditPersistenceService — business events cannot be correlated to HTTP requests",
+    "root_cause": "AuditService.log() (used for auth/RBAC events) injects the ALS-based requestId via getRequestId(). AuditPersistenceService.log() (used for all business events: tasks, projects, milestones, time-entries) has no requestId parameter and no ALS import. Only the security-envelope path has correlation; all business-mutation rows are uncorelatable to specific HTTP requests.",
+    "findings": [
+      "OBS-002"
+    ],
+    "transversal_remediation": "Add getRequestId() from the ALS context to AuditPersistenceService.log(). It should be injected unconditionally and fall back to null when the ALS context is absent (background jobs, seeds). This single change propagates requestId to all 50+ call sites automatically. Add a test asserting that a POST /tasks request produces an audit row with a non-null requestId.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "L",
+    "title": "Missing DB-level CHECK constraints on numeric and date columns",
+    "root_cause": "The CHECK constraint migration sweep (DAT-004/DAT-008/DAT-015/DAT-032/DAT-033) covered time_entries, leave_balances, subtask positions, and project_snapshots but omitted tasks (date ordering), projects/tasks (non-negative hours/estimates), project_snapshots (cross-column tasksDone <= tasksTotal), leave_balances (year range), and leave.days upper bound.",
+    "findings": [
+      "DAT-014",
+      "DAT-015",
+      "DAT-022",
+      "DAT-026",
+      "DAT-027"
+    ],
+    "transversal_remediation": "Write a single migration (dat_checks_phase2) adding: CHECK (tasks.startDate IS NULL OR tasks.endDate IS NULL OR endDate >= startDate); CHECK (projects.budgetHours IS NULL OR budgetHours >= 0); CHECK (tasks.estimatedHours IS NULL OR estimatedHours >= 0); CHECK (project_snapshots.tasksDone <= project_snapshots.tasksTotal); CHECK (leave_balances.year BETWEEN 1900 AND 2200); CHECK (leaves.days <= 365). Test in a migration dry-run against prod data before applying.",
+    "phase_recommendation": 2
+  },
+  {
+    "id": "M",
+    "title": "Docker/deploy configuration drift — standalone and all-in-one containers missing required secrets, hardcoded credentials, and security hardening",
+    "root_cause": "The standalone compose and all-in-one Dockerfile/supervisord were not kept in sync when production hardening was applied to docker-compose.prod.yml. Required env vars (AUDIT_HASH_KEY, METRICS_TOKEN, RBAC_GUARD_MODE) are absent from the standalone targets, causing crash-loops on boot. Additional issues: hardcoded DB credentials baked into image layers, unquoted env-var shell injection in entrypoint.sh, Redis password exposed in process list via -a flag, missing root .dockerignore, certbot image unpinned.",
+    "findings": [
+      "SEC-001",
+      "SEC-024",
+      "SEC-025",
+      "SEC-026",
+      "SEC-027",
+      "SEC-028",
+      "SEC-029",
+      "SEC-030",
+      "SEC-031",
+      "SEC-032",
+      "SEC-033"
+    ],
+    "transversal_remediation": "Sync standalone compose with prod: add AUDIT_HASH_KEY/:?REQUIRED, METRICS_TOKEN, RBAC_GUARD_MODE=enforce. Remove hardcoded DATABASE_URL and JWT_SECRET from all-in-one Dockerfile ENV layer; document them as required runtime vars. Fix entrypoint.sh to quote ADMIN_PASSWORD via a heredoc node script or a bcrypt CLI call (not inline -e). Replace redis-cli -a with REDISCLI_AUTH env var to hide password from process list. Add a root .dockerignore excluding .env*, secrets/, and dist/. Pin certbot to a specific digest. Align all-in-one nginx.conf security headers with main nginx/nginx.conf.",
+    "phase_recommendation": 1
+  },
+  {
+    "id": "N",
+    "title": "Test quality gaps — false-green smoke tests, missing negative paths, and controller spec coverage",
+    "root_cause": "Three overlapping patterns: (1) legacy E2E root specs use UI-form login instead of storage-state tokens; (2) @smoke kanban tests use data-guard skip logic that makes them report green when seed data is absent; (3) controller specs and web service tests cover only happy-path delegation without error-path assertions; (4) rbac-escalation tests accept 404 as a valid blocked-access response, masking guard bypasses.",
+    "findings": [
+      "TST-001",
+      "TST-002",
+      "TST-003",
+      "TST-004",
+      "TST-005",
+      "TST-006",
+      "TST-007",
+      "TST-008",
+      "TST-009"
+    ],
+    "transversal_remediation": "Migrate 5 legacy root specs to asRole() + storage-state auth. Convert @smoke kanban tests to assert seed data is present (test.fail on missing seed rather than test.skip). Extend the top 5 highest-risk controller specs (settings, roles, users, tasks, leaves) with service-throws-NotFoundException/ForbiddenException paths. Replace 404-acceptance in rbac-escalation with a real resource pre-created in beforeEach. Extend web service tests for auth.service pattern of error-path coverage to leaves, tasks, and projects services.",
+    "phase_recommendation": 3
+  }
+]
