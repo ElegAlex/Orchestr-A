@@ -11,6 +11,12 @@ name: orchestr-a
 services:
   orchestr-a:
     image: orchestr-a:local
+    # Pin the runtime container name. Without this, Compose derives it from
+    # <project>-<service>-<index> => "orchestr-a-orchestr-a-1", which the restore
+    # mechanism (orchestra-restore.sh, exact `grep -qx`) cannot match. Pinning it
+    # keeps `ORCHESTRA_AIO_CONTAINER="orchestr-a"`, `docker logs orchestr-a` and
+    # `--volumes-from orchestr-a` all valid as documented.
+    container_name: orchestr-a
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"

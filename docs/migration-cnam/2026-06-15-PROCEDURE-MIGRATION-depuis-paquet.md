@@ -181,10 +181,12 @@ cd ../scripts
 | Symptôme | Cause la plus probable | Action |
 |---|---|---|
 | Le conteneur **redémarre en boucle** | `AUDIT_HASH_KEY`/`METRICS_TOKEN` absents ou faux dans `.env` | `docker logs --tail 50 orchestr-a` ; vérifier les 2 secrets (étape 3.2/3.3) |
+| Au **1ᵉʳ** démarrage (base vide), crash-loop + `Cannot find module 'bcrypt'` | bug d'image (corrigé ≥ ce paquet) : le seed de l'admin par défaut ne résolvait pas `bcrypt` | **bénin pour une migration** : la restauration emprunte le volume via `--volumes-from` même si le conteneur crash-loop ; après restauration les comptes existent → le seed est **sauté** → `healthy`. Ne pas le corriger : dérouler la restauration (3.6). |
+| Restore : « conteneur '…' inexistant » alors que `… ps` affiche `orchestr-a-orchestr-a-1` | **ancien paquet** sans `container_name` épinglé | paquet ≥ ce build : le nom est épinglé à `orchestr-a` (rien à faire). Ancien paquet : mettre `ORCHESTRA_AIO_CONTAINER` au nom réel affiché. |
 | L'API monte mais **ne lit pas la base** après restore | `POSTGRES_PASSWORD` (.env) ≠ `ORCHESTRA_AIO_RUNTIME_PASSWORD` (orchestra.conf) | aligner les deux (étape 3.5), relancer la restore |
 | Restore : « **image trop ancienne** » | l'image livrée est antérieure aux données | ne pas forcer ; me remonter le message (il faut une image au commit ≥ source) |
 | Restore : « migrations NON présentes dans les données » | image **plus récente** que les données | montée de version contrôlée : relancer avec `--allow-migrate` **seulement si décidé** (cf. Annexe B) |
-| `Permission denied` au montage `/restore` (conteneur temporaire) | **SELinux enforcing** bloque le bind-mount `-v` (vécu en mars 2026) | le PLC cible est en **permissive** → OK. Sinon : `sudo setenforce 0` le temps du restore (puis `setenforce 1`), **ou** ajouter `,z` aux deux `-v` du script (`-v "$SNAP:/restore:ro,z"`) |
+| `/restore/db.dump: Permission denied` (conteneur temporaire) | **Si `getenforce`=Permissive, ce n'est PAS SELinux** : droits DAC. Hôte durci (umask 077) ou opérateur non-root → fichiers extraits en `0600` que le process `postgres` du conteneur (UID ≠) ne peut pas lire | paquet ≥ ce build : le script **rend l'arborescence temporaire lisible** (`chmod -R a+rX`) → rien à faire. Ancien script : ajouter cette ligne avant le `docker run`, **ou** relancer avec `umask 022`. *(Vrai cas SELinux **enforcing** — hôte RHEL durci : `sudo setenforce 0` le temps du restore puis `setenforce 1`, ou `,z` sur les `-v`.)* |
 | `/api/health` ne répond pas | démarrage long (jusqu'à ~90 s) | attendre, puis `docker compose -f docker-compose.offline.yml logs -f` |
 
 ---
@@ -196,7 +198,7 @@ Ces sections existent pour la traçabilité complète et le banc d'essai ; **ell
 - Conversion **OVF → qcow2**, démarrage **KVM**, **Secure Boot / NX**, disque **SATA** (RUNBOOK §A3–A5).
 - **Banc d'essai** et preuves de faisabilité (déjà validées : 2026-06-08/09).
 - Partie « architecture prod actuelle » / historique d'hébergement du README.
-- `install-offline.sh` (génère des secrets aléatoires → **inadapté à une restauration**).
+- `install-offline.sh` : **retiré de ce paquet** — il visait l'ancien layout (`images/orchestr-a.tar`, `docker-compose.yml`), régénérait des secrets aléatoires et seedait `admin/admin123` → inadapté à une restauration.
 
 ---
 
@@ -229,7 +231,7 @@ docker version && docker compose version      # -> Docker 26.1.3, compose v2
 | `relation "_prisma_migrations" does not exist` au redémarrage | restore fait **en tant que `postgres`** → tables possédées par postgres ; l'app se connecte en `orchestr_a` qui ne « voit » rien (PG renvoie « does not exist », trompeur) | **restore fait directement EN TANT QUE `orchestr_a`** (`pg_restore --role`, schéma créé `AUTHORIZATION orchestr_a`). Le bon propriétaire dès le départ. |
 | `REASSIGN OWNED BY postgres` échoue (objets système non transférables) | transfert de propriété en masse impossible | on **ne réassigne pas** : on restaure sous le bon rôle d'emblée. |
 | le correctif « ne s'exécute jamais » | `docker run` **sans `--entrypoint`** → l'entrypoint de l'image tournait à la place du script | le conteneur temporaire est lancé avec **`--entrypoint bash`**. |
-| `Permission denied` sur les fichiers montés (`-v`) | **SELinux** (host RHEL *enforcing*) bloque les bind-mounts hôte | le PLC cible est en **permissive** (validé) → non bloquant. Sinon : voir §5 (ligne SELinux). |
+| `Permission denied` sur les fichiers montés (`-v`) | **SELinux** (host RHEL *enforcing*) bloque les bind-mounts hôte | le PLC cible est en **permissive** (validé) → non bloquant. *Résiduel découvert sur le PLC (16/06) : droits DAC/umask (≠ SELinux), désormais auto-corrigés par le script (`chmod -R a+rX`).* Voir §5 (ligne `/restore`). |
 | **8 migrations** appliquées au 1ᵉʳ démarrage | image plus récente que le dump | **normal et sûr** : l'entrypoint joue `prisma migrate deploy` **sans toucher aux données**. Le garde-fou de parité te prévient *avant* (cf. §5). |
 
 **Preuve que ça aboutit (situation ACTUELLE, pas mars)** : le **paquet actuel** (PG18, données du **12/06**) a été validé **zéro-perte** au banc d'essai (2026-06-08/09) puis **rejoué le 12/06** sur le snapshot livré — comptages par table + empreinte de chaîne d'audit + migrations **IDENTIQUES**, app `healthy`, air-gap prouvé. État réellement restauré aujourd'hui : **41 users / 41 projets / 327 tâches / 1042 sous-tâches / 219 audit_logs** (empreinte d'audit `16c239e6…`). Surtout : `orchestra-restore.sh` **re-prouve le zéro-perte à CHAQUE exécution** (comparaison stricte au manifeste, refus de démarrer en cas d'écart) — la preuve est donc **rejouée chez toi**, elle ne dépend pas d'un run passé. *(Mars 2026, à titre purement historique : 44/21/185 sous PG16 — autres données, autre version PostgreSQL.)*

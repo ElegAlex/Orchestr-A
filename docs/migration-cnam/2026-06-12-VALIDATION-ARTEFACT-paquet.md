@@ -42,15 +42,45 @@ SB-OFF, **sans réseau**.
   `ÉCHEC : INTÉGRITÉ NON PROUVÉE` et l'app reste à l'arrêt (cf. `orchestra-restore.sh`
   §3/4). Bannière présente ⟹ comptages et audit identiques.
 
+## Re-validation 2026-06-16 — 3 correctifs + nouveau sceau
+
+Un **run réel sur le PLC Ramage** (opérateur non-root `udocker`, umask strict) a révélé
+3 défauts d'**artefact** (pas applicatifs). Corrigés et re-validés :
+
+| # | Défaut observé | Cause racine | Correctif |
+|---|---|---|---|
+| A | `orchestra-restore.sh` : « conteneur 'orchestr-a' inexistant » | `docker-compose.offline.yml` sans `container_name` → Compose nomme `orchestr-a-orchestr-a-1`, le script matche le nom **exact** (`grep -qx`) | `container_name: orchestr-a` ajouté au compose |
+| D | `/restore/db.dump: Permission denied` (SELinux pourtant Permissive) | umask 077 / opérateur non-root → fichiers temporaires `0600` illisibles par le process `postgres` (UID ≠) du conteneur — **DAC, pas SELinux** | `chmod -R a+rX "$SNAP"` avant le `docker run` |
+| C | `Cannot find module 'bcrypt'` → crash-loop au 1ᵉʳ boot (base vide) | l'entrypoint faisait `node -e require('bcrypt')` depuis `/app` (pnpm ne hoist pas bcrypt, lié sous `/app/apps/api`) | `cd /app/apps/api && node -e …` dans l'entrypoint (+ `log_err` ; `install-offline.sh` obsolète **retiré du paquet**) |
+
+> Note : C ne bloquait pas la migration (la restauration emprunte le volume via `--volumes-from` même conteneur en crash-loop ; après restauration le seed admin est sauté car les comptes existent). Seuls **A et D** bloquaient réellement.
+
+**Re-validation AU NIVEAU ARTEFACT** — tout part du tarball reconstruit ; contexte
+**`umask 0077`, `uid 1000` non-root** (identique au PLC) :
+
+| Contrôle (source = le tarball livré) | Résultat |
+|---|---|
+| `sha256sum -c CHECKSUMS.txt` | ✅ **206/206 OK**, 0 FAILED |
+| image rechargée **depuis le tarball** (après `docker rmi`) | ✅ `IMAGE_LOADED_OK` |
+| `compose up` → nom du conteneur | ✅ `orchestr-a` (Fix A) |
+| `orchestra-restore.sh` sous umask 077 | ✅ **aucun** `Permission denied` (Fix D), bannière `RESTAURATION VÉRIFIÉE` |
+| zéro-perte | ✅ 45 tables, comptages + empreinte audit `16c239e6c7dc28d570993dac3f99a4be` + migrations IDENTIQUES |
+| `/api/health` | ✅ `{"status":"ok"}`, conteneur `healthy` |
+| bcrypt résout depuis `/app/apps/api` | ✅ `BCRYPT_OK` (Fix C) |
+
+Image rebuildée à **parité exacte des migrations** avec les données du 12/06 (81/81).
+CHECKSUMS : 206 fichiers (était 207 ; `install-offline.sh` retiré).
+
 ## Sceau de l'artefact validé
 
 ```
 livraison-orchestra-cnam.tar.gz
-sha256 = 26a888d6e3bcbf5419e093b8863de6e3bc9a7717c07083f274148daaa98cf5b9
+sha256 = 7ff6d8221c2fb5a6a4d46a0f57124cc25ffe6310c448571efc9a3da4dbe202f6   (2026-06-16, courant)
+sha256 = 26a888d6e3bcbf5419e093b8863de6e3bc9a7717c07083f274148daaa98cf5b9   (2026-06-12, périmé — A/C/D non corrigés)
 ```
 
-**Toute remise à l'infra doit porter ce sha256.** Si le paquet est modifié (même un
-fichier de doc), il doit être **re-validé en tant qu'artefact** avant remise.
+**Toute remise à l'infra doit porter le sha256 COURANT (`7ff6d822…`).** Si le paquet est
+modifié (même un fichier de doc), il doit être **re-validé en tant qu'artefact** avant remise.
 
 ## Leçon (désormais règle)
 

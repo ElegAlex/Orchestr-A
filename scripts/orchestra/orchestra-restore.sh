@@ -187,6 +187,14 @@ say "PostgreSQL arrêté proprement"
 INNER
 chmod +x "$SNAP/_inner.sh"
 
+# Le conteneur temporaire lit /restore en tant que `postgres` (gosu), un UID
+# différent de l'opérateur. Sur un hôte durci (umask 077) ou un opérateur non-root,
+# les fichiers extraits/écrits ici sont 0600 => EACCES « /restore/db.dump:
+# Permission denied » (ce N'EST PAS du SELinux si getenforce=Permissive). On rend
+# donc l'arborescence lisible+traversable par tout UID. Le parent `mktemp -d` reste
+# en 0700 et est purgé en sortie, donc secrets.env n'est pas exposé hors de l'hôte.
+chmod -R a+rX "$SNAP"
+
 # ─── 2) Restauration via conteneur temporaire ───────────────────────────────
 orchestra_step "2/4 — Restauration (conteneur temporaire, application à l'arrêt)"
 orchestra_container_exists "$ORCHESTRA_AIO_CONTAINER" \

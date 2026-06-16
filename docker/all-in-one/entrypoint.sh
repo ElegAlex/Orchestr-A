@@ -181,12 +181,16 @@ if [ "$USER_COUNT" = "0" ] || [ "$USER_COUNT" = "error" ]; then
         FORCE_PASSWORD_CHANGE="true"
     fi
 
-    # Hash the password with bcrypt using node
-    ADMIN_HASH=$(node -e "const bcrypt = require('bcrypt'); bcrypt.hash('${ADMIN_PASS}', 12).then(h => console.log(h));")
+    # Hash the password with bcrypt using node.
+    # bcrypt is a DIRECT dependency of apps/api, so pnpm links it under
+    # /app/apps/api/node_modules (NOT hoisted to /app/node_modules). Running
+    # `node -e require('bcrypt')` from /app therefore fails with MODULE_NOT_FOUND
+    # and crash-loops the container on a fresh (empty) boot. Resolve from apps/api.
+    ADMIN_HASH=$(cd /app/apps/api && node -e "const bcrypt = require('bcrypt'); bcrypt.hash('${ADMIN_PASS}', 12).then(h => console.log(h));")
 
     ADMIN_ROLE_ID=$(gosu postgres psql -d orchestr_a -tAc "SELECT id FROM roles WHERE code = 'ADMIN' LIMIT 1;" 2>/dev/null || true)
     if [ -z "$ADMIN_ROLE_ID" ]; then
-        log_error "Impossible de créer l'admin: rôle ADMIN introuvable. Exécutez le seed RBAC."
+        log_err "Impossible de créer l'admin: rôle ADMIN introuvable. Exécutez le seed RBAC."
         exit 1
     fi
 
