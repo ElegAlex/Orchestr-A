@@ -13,6 +13,12 @@
 
 + une **VM PLC** avec **Docker + Docker Compose v2** déjà installés et actifs (`docker version` et `docker compose version` répondent), et un **disque data dédié** pour `/var/lib/docker-data` (l'image fait ~3 Go).
 
+> **Environnement réel (run du 16/06, à connaître)** — la mise en service a été déroulée :
+> - sous un **compte non-root** (ex. `udocker`) avec un **umask strict** : c'est normal, le script gère désormais les droits lui-même (cf. §5, ligne `/restore`) ;
+> - depuis un **dossier de travail dédié** (ici `/docker/livraisons/`) : adapte les chemins `<chemin>` du document à TON dossier ;
+> - avec le **paquet v2** (sceau `7ff6d822…`) : vérifie-le en §2 ;
+> - derrière un **reverse proxy Apache httpd** déjà en place, qui sert le hostname interne et pointe vers le conteneur (cf. **Annexe C**).
+
 ---
 
 ## 1. Le principe — à lire d'abord (5 lignes)
@@ -24,6 +30,8 @@
 - **Filet de secours** : le cloud actuel reste **intact et en service** tant que la bascule n'est pas validée. Rien n'est destructif.
 
 > ℹ️ **La « sauvegarde » dont parle le README, c'est sur le CLOUD (la source), pas sur ta VM.** Elle est **déjà faite** : c'est le paquet n°2. Tu n'y retouches **que** si tu veux rafraîchir la donnée le jour J (§4, étape B2). Sur ta VM cible, tu ne sauvegardes rien : tu restaures.
+
+> ✅ **Cas fréquent — recette ET bascule en une seule passe.** Les 2 temps n'ont d'intérêt que s'il s'écoule du temps entre la répétition et la coupure réelle (donnée qui continue d'évoluer côté cloud). **Si les écritures cloud sont DÉJÀ gelées et que le snapshot du paquet n°2 EST la donnée finale** (personne n'écrit plus depuis le 12/06), alors la Phase 1 **est** la bascule : tu déroules §3 **une fois**, et il ne reste plus que la bascule du trafic (§4 B6 / Annexe C). **Ne rejoue PAS** `down -v` + restore (B3/B4) — ce serait refaire à l'identique pour rien. C'est exactement ce qui s'est passé au run du 16/06.
 
 ---
 
@@ -78,13 +86,19 @@ POSTGRES_PASSWORD=<choisir un mot de passe ≥16 — À NOTER, réutilisé à l'
 REDIS_PASSWORD=<choisir un mot de passe>
 JWT_SECRET=<👉 valeur lue à l'étape 3.2 (secrets.env)>
 AUDIT_HASH_KEY=<👉 valeur lue à l'étape 3.2 (secrets.env)>
-METRICS_TOKEN=<openssl rand -hex 32>
+METRICS_TOKEN=<générer PUIS COLLER le résultat de : openssl rand -hex 32>
 RBAC_GUARD_MODE=enforce
-ALLOWED_ORIGINS=http://localhost           # en recette ; en prod : https://<hostname-interne>
-HTTP_PORT=80
+ALLOWED_ORIGINS=http://orchestra.cpam-hauts-de-seine.ramage   # 👉 le hostname public servi par Apache (cf. Annexe C)
+HTTP_PORT=3000                                                # 👉 la cible ProxyPass d'Apache : http://127.0.0.1:3000/
 ```
 
 > ⚠️ **Les 2 valeurs `JWT_SECRET` et `AUDIT_HASH_KEY` viennent de l'archive (étape 3.2), pas d'un tirage aléatoire.** Ne lance **pas** `install-offline.sh` : il regénère des secrets aléatoires (bon pour une install vierge, **faux pour une restauration**).
+>
+> ⚠️ **`METRICS_TOKEN`** : exécute `openssl rand -hex 32` et **colle la valeur produite** — ne laisse pas la commande littérale (`<openssl …>`) dans le fichier, sinon le conteneur crash-loop.
+>
+> 🔌 **`HTTP_PORT` et `ALLOWED_ORIGINS` sont les 2 réglages dictés par l'hébergement** (le reste est générique) :
+> - `HTTP_PORT` = le port hôte que ton reverse proxy cible. Avec le VirtualHost réel (`ProxyPass / http://127.0.0.1:3000/`), c'est **3000**. Le conteneur publie alors `0.0.0.0:3000->80/tcp`.
+> - `ALLOWED_ORIGINS` = l'**origine exacte** que tape l'utilisateur dans le navigateur, **schéma compris**. Le VirtualHost réel est en `*:80` (HTTP) → `http://`. S'il passe un jour en HTTPS (TLS terminé sur Apache), bascule en `https://` ici **et** dans `ServerName` (Annexe C). Plusieurs origines = séparées par des virgules, sans espace.
 
 ### 3.4 Démarrer le conteneur (il crée une base VIDE)
 
@@ -132,9 +146,11 @@ Attendu en fin d'exécution :
 ### 3.7 Smoke-test applicatif
 
 ```bash
-curl -s http://localhost/api/health          # -> {"status":"ok"}
+curl -s http://localhost:3000/api/health     # -> {"status":"ok"}   (port = HTTP_PORT du .env)
 ```
 Puis ouvre l'appli dans un navigateur et connecte-toi avec un compte témoin (les comptes sont ceux de la prod — l'admin habituel fonctionne). Vérifie : connexion OK, données présentes (projets/tâches/utilisateurs), une page ou deux.
+
+> Accès navigateur : passe par le **hostname Apache** (`http://orchestra.cpam-hauts-de-seine.ramage`, cf. Annexe C) — c'est l'origine déclarée dans `ALLOWED_ORIGINS`. Un accès direct en `http://<ip-vm>:3000` afficherait l'appli mais peut être refusé par CORS sur certains appels (origine non listée).
 
 ### 3.8 Figer la recette
 
@@ -170,7 +186,7 @@ cd ../scripts
 
 **B5 — Smoke** : `/api/health` 200 + connexion d'un compte témoin (comme 3.7).
 
-**B6 — Bascule du trafic** vers l'instance interne (DNS / reverse-proxy / TLS de l'AC interne). *Périmètre infra CNAM* — hors de ce script.
+**B6 — Bascule du trafic** vers l'instance interne : activer / repointer le **reverse proxy Apache** vers `127.0.0.1:3000`, DNS interne, TLS de l'AC interne. La conf qui tourne réellement est en **Annexe C** (à fournir/valider par l'infra CNAM, qui reste maître de la terminaison TLS et du DNS).
 
 **B7 — Rollback** : tant que B6 n'est pas validé, le cloud n'a pas été touché (le backup est en lecture seule) → on repointe simplement le trafic vers le cloud. Une fois validé et stable, le contenu de l'ancienne VM cloud peut être abandonné.
 
@@ -181,6 +197,8 @@ cd ../scripts
 | Symptôme | Cause la plus probable | Action |
 |---|---|---|
 | Le conteneur **redémarre en boucle** | `AUDIT_HASH_KEY`/`METRICS_TOKEN` absents ou faux dans `.env` | `docker logs --tail 50 orchestr-a` ; vérifier les 2 secrets (étape 3.2/3.3) |
+| Crash-loop + logs : `database files are incompatible with server` / `was initialized by PostgreSQL version 16 … not compatible with this version 18` | **volume PG16 résiduel** d'un essai précédent (le conteneur PG18 retrouve un vieux datadir) | repartir d'un volume vierge : `docker compose -f docker-compose.offline.yml --env-file .env down -v` puis `up -d`. Si le `down -v` laisse un volume (voir ligne suivante), le supprimer à la main. |
+| `down -v` n'a **pas** tout supprimé — `docker volume ls \| grep orchestr` montre encore un volume | un volume au **nom hérité** (ex. `orchestr-a-data` à côté de `orchestr-a_orchestr-a-data`) n'est pas rattaché au projet Compose courant → non supprimé par `down -v` | le supprimer explicitement : `docker volume rm <nom>` (répéter), puis `up -d`. Contrôle : `docker volume ls \| grep orchestr` ne doit lister que le volume du projet courant. |
 | Au **1ᵉʳ** démarrage (base vide), crash-loop + `Cannot find module 'bcrypt'` | bug d'image (corrigé ≥ ce paquet) : le seed de l'admin par défaut ne résolvait pas `bcrypt` | **bénin pour une migration** : la restauration emprunte le volume via `--volumes-from` même si le conteneur crash-loop ; après restauration les comptes existent → le seed est **sauté** → `healthy`. Ne pas le corriger : dérouler la restauration (3.6). |
 | Restore : « conteneur '…' inexistant » alors que `… ps` affiche `orchestr-a-orchestr-a-1` | **ancien paquet** sans `container_name` épinglé | paquet ≥ ce build : le nom est épinglé à `orchestr-a` (rien à faire). Ancien paquet : mettre `ORCHESTRA_AIO_CONTAINER` au nom réel affiché. |
 | L'API monte mais **ne lit pas la base** après restore | `POSTGRES_PASSWORD` (.env) ≠ `ORCHESTRA_AIO_RUNTIME_PASSWORD` (orchestra.conf) | aligner les deux (étape 3.5), relancer la restore |
@@ -235,3 +253,35 @@ docker version && docker compose version      # -> Docker 26.1.3, compose v2
 | **8 migrations** appliquées au 1ᵉʳ démarrage | image plus récente que le dump | **normal et sûr** : l'entrypoint joue `prisma migrate deploy` **sans toucher aux données**. Le garde-fou de parité te prévient *avant* (cf. §5). |
 
 **Preuve que ça aboutit (situation ACTUELLE, pas mars)** : le **paquet actuel** (PG18, données du **12/06**) a été validé **zéro-perte** au banc d'essai (2026-06-08/09) puis **rejoué le 12/06** sur le snapshot livré — comptages par table + empreinte de chaîne d'audit + migrations **IDENTIQUES**, app `healthy`, air-gap prouvé. État réellement restauré aujourd'hui : **41 users / 41 projets / 327 tâches / 1042 sous-tâches / 219 audit_logs** (empreinte d'audit `16c239e6…`). Surtout : `orchestra-restore.sh` **re-prouve le zéro-perte à CHAQUE exécution** (comparaison stricte au manifeste, refus de démarrer en cas d'écart) — la preuve est donc **rejouée chez toi**, elle ne dépend pas d'un run passé. *(Mars 2026, à titre purement historique : 44/21/185 sous PG16 — autres données, autre version PostgreSQL.)*
+
+---
+
+## Annexe C — Reverse-proxy Apache (httpd) devant le conteneur
+
+> C'est l'**ajustement d'hébergement** réellement en place sur le PLC Ramage : le conteneur n'est PAS exposé directement, Apache (httpd) le sert sous le hostname interne. La terminaison TLS et le DNS interne restent du **périmètre infra CNAM** ; ce qui suit est la conf applicative qui marche.
+
+L'instance écoute en local sur `HTTP_PORT` (= **3000**, cf. §3.3). Apache fait le pont entre le hostname interne et ce port.
+
+```apache
+# /etc/httpd/conf.d/orchestra.conf  (httpd rechargé : sudo systemctl reload httpd)
+<VirtualHost *:80>
+    ServerName orchestra.cpam-hauts-de-seine.ramage
+    ProxyPreserveHost On
+    ProxyPass        / http://127.0.0.1:3000/
+    ProxyPassReverse / http://127.0.0.1:3000/
+    ErrorLog  /var/log/httpd/orchestra-error.log
+    CustomLog /var/log/httpd/orchestra.log combined
+</VirtualHost>
+```
+
+Points de cohérence à respecter (sinon erreurs CORS ou 502) :
+
+| Réglage | Doit valoir | Pourquoi |
+|---|---|---|
+| `ProxyPass … :3000` | = `HTTP_PORT` du `.env` | Apache cible le port publié par le conteneur (`0.0.0.0:3000->80/tcp`) |
+| `ServerName` | le hostname tapé par l'utilisateur | `ProxyPreserveHost On` transmet ce `Host` au backend |
+| `.env:ALLOWED_ORIGINS` | `http://` + le même `ServerName` | l'API n'accepte que cette origine exacte (schéma + hôte) |
+
+**Passage en HTTPS (si/quand l'infra le décide)** : terminer le TLS sur un `<VirtualHost *:443>` (certificat de l'AC interne), rediriger `80 → 443`, puis basculer `ALLOWED_ORIGINS` en `https://orchestra.cpam-hauts-de-seine.ramage`. Le conteneur, lui, ne change pas (il reste en HTTP local sur `:3000`).
+
+**SELinux (rappel)** : sur un hôte httpd en `enforcing`, autoriser les connexions sortantes du proxy avec `sudo setsebool -P httpd_can_network_connect 1`, sinon Apache renvoie 503/502 sur le `ProxyPass`. Sur le PLC cible (Permissive), non bloquant.
