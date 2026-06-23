@@ -71,6 +71,7 @@ If source files exist → work with existing code. NEVER recreate existing files
 - JWT in localStorage: deliberate choice, do not migrate without request
 - Project soft-delete: status `CANCELLED`, hard delete via dedicated endpoint
 - Next.js 16 + React 19: verify third-party lib compatibility
+- Prod runs **air-gapped on Ramage** (CPAM internal network, behind Apache → `127.0.0.1:3000`): any code change must ALSO prepare an offline update package — see `docs/migration-cnam/2026-06-22-RUNBOOK-MAJ-PROD-Ramage.md` (tiered T0/T1/T2, backup-first, never replay the migration snapshot on live data)
 
 ## Further reading
 
