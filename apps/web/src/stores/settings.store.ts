@@ -11,6 +11,7 @@ interface SettingsState {
 
   // Actions
   fetchSettings: () => Promise<void>;
+  fetchPublicSettings: () => Promise<void>;
   updateSetting: (key: string, value: unknown) => Promise<void>;
   getSetting: <T = unknown>(key: string, defaultValue?: T) => T;
 }
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   defaultLeaveDays: 25,
   maxTeleworkDaysPerWeek: 3,
   "planning.visibleDays": [1, 2, 3, 4, 5],
+  "planning.specialDays": [],
   "planning.schoolVacationZone": "C",
 };
 
@@ -48,6 +50,33 @@ export const useSettingsStore = create<SettingsState>()(
           });
         } catch (error: unknown) {
           logger.error("Error fetching settings:", error);
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Erreur lors du chargement des paramètres";
+          set({
+            error: message,
+            isLoading: false,
+            isLoaded: true, // Mark as loaded even on error to use defaults
+          });
+        }
+      },
+
+      // For users WITHOUT settings:read (RBAC §NOTE 3). Loads only the
+      // non-sensitive public projection (formats + planning visible/special
+      // days) so the planning view reflects the admin-defined global config
+      // for every role instead of the hardcoded Mon–Fri default.
+      fetchPublicSettings: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await settingsService.getPublic();
+          set({
+            settings: { ...DEFAULT_SETTINGS, ...response.settings },
+            isLoading: false,
+            isLoaded: true,
+          });
+        } catch (error: unknown) {
+          logger.error("Error fetching public settings:", error);
           const message =
             error instanceof Error
               ? error.message

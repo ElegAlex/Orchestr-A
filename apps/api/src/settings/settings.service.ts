@@ -90,7 +90,37 @@ const DEFAULT_SETTINGS: Record<string, SettingConfig> = {
     description:
       'Jours marqués comme spéciaux (fond distinctif) - numéros 1=Lundi à 7=Dimanche',
   },
+  // Added to the web store + the "Vacances scolaires" zone selector in b023fca7
+  // but never whitelisted here, so saving the settings map (which carries it)
+  // threw "Unknown setting key" → HTTP 400. Whitelisted + seeded so the bulk
+  // save accepts it and the zone is resettable. Default 'C' = Île-de-France
+  // (CPAM Hauts-de-Seine), matching the web store default.
+  'planning.schoolVacationZone': {
+    value: 'C',
+    category: 'planning',
+    description:
+      'Zone de vacances scolaires utilisée pour l\'import Open Data (A, B ou C)',
+  },
 };
+
+/**
+ * Non-sensitive settings exposed to ANY authenticated user via GET
+ * /settings/public — display formatting + the planning grid's visible/special
+ * days, which the planning view and date utils need for EVERY role. The full
+ * settings map stays gated behind `settings:read` (RBAC §NOTE 3): entitlement
+ * keys (defaultLeaveDays, maxTeleworkDaysPerWeek) and the school-vacation zone
+ * are deliberately omitted from this projection.
+ */
+const PUBLIC_SETTING_KEYS: readonly string[] = [
+  'dateFormat',
+  'timeFormat',
+  'dateTimeFormat',
+  'locale',
+  'weekStartsOn',
+  'appName',
+  'planning.visibleDays',
+  'planning.specialDays',
+];
 
 @Injectable()
 export class SettingsService implements OnModuleInit {
@@ -164,6 +194,42 @@ export class SettingsService implements OnModuleInit {
       settings: settingsMap,
       list: settingsList,
     };
+  }
+
+  /**
+   * Récupérer la projection publique (non sensible) des paramètres.
+   *
+   * Lisible par tout utilisateur authentifié (pas de `settings:read`) : la vue
+   * planning et les utilitaires de date ont besoin du format/jours visibles
+   * pour TOUS les rôles. Avant ce point, seuls les rôles avec `settings:read`
+   * chargeaient les paramètres ; les autres retombaient sur les valeurs codées
+   * en dur du store front (Lun–Ven), d'où l'impression de jours « figés par
+   * rôle ». Filtre sur `PUBLIC_SETTING_KEYS` — aucune fuite de clé sensible.
+   */
+  async findPublic(): Promise<{ settings: Record<string, SettingValue> }> {
+    const settings = await this.prisma.appSettings.findMany({
+      where: { key: { in: [...PUBLIC_SETTING_KEYS] } },
+    });
+
+    const allowed = new Set<string>(PUBLIC_SETTING_KEYS);
+    const settingsMap: Record<string, SettingValue> = {};
+    for (const setting of settings) {
+      // Whitelist enforced in code too — never trust a row outside the
+      // projection to land in a non-privileged response (defense in depth).
+      if (!allowed.has(setting.key)) continue;
+      settingsMap[setting.key] = this.parseValue(setting.value);
+    }
+
+    // Fall back to in-memory defaults for any public key missing from the DB
+    // (e.g. a fresh prod DB before onModuleInit seeding), so a non-privileged
+    // user always gets a complete, well-formed display config.
+    for (const key of PUBLIC_SETTING_KEYS) {
+      if (!(key in settingsMap) && DEFAULT_SETTINGS[key]) {
+        settingsMap[key] = DEFAULT_SETTINGS[key].value;
+      }
+    }
+
+    return { settings: settingsMap };
   }
 
   /**

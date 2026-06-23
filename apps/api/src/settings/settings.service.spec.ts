@@ -104,6 +104,62 @@ describe('SettingsService', () => {
       expect(SettingsService.isKnownKey('__proto__')).toBe(false);
       expect(SettingsService.isKnownKey('')).toBe(false);
     });
+
+    // Regression — the Settings page saves the whole settings map, which carries
+    // `planning.schoolVacationZone` (added to the web store + zone selector in
+    // b023fca7). It was never whitelisted on the backend, so any save including
+    // it threw BadRequestException → HTTP 400, blocking the visible-days change.
+    it('should whitelist planning.schoolVacationZone (regression: bulk save 400)', () => {
+      expect(SettingsService.isKnownKey('planning.schoolVacationZone')).toBe(
+        true,
+      );
+    });
+  });
+
+  describe('bulkUpdate — full settings map (page handleSave)', () => {
+    it('does NOT 400 when the map contains planning.schoolVacationZone', async () => {
+      mockPrismaService.appSettings.findUnique.mockResolvedValue(null);
+      mockPrismaService.appSettings.upsert.mockImplementation(
+        ({ where }: { where: { key: string } }) =>
+          Promise.resolve(makeSetting(where.key, 'x')),
+      );
+
+      await expect(
+        service.bulkUpdate({
+          'planning.visibleDays': [1, 2, 3, 4, 5, 6],
+          'planning.specialDays': [6],
+          'planning.schoolVacationZone': 'C',
+        }),
+      ).resolves.toBeDefined();
+    });
+  });
+
+  describe('findPublic — non-sensitive projection for all roles', () => {
+    it('returns display + planning visible/special days, excludes entitlement keys', async () => {
+      const rows = [
+        makeSetting('dateFormat', 'dd/MM/yyyy', { category: 'display' }),
+        makeSetting('weekStartsOn', 1, { category: 'display' }),
+        makeSetting('planning.visibleDays', [1, 2, 3, 4, 5, 6], {
+          category: 'planning',
+        }),
+        makeSetting('planning.specialDays', [6], { category: 'planning' }),
+        makeSetting('defaultLeaveDays', 25, { category: 'general' }),
+        makeSetting('maxTeleworkDaysPerWeek', 3, { category: 'general' }),
+      ];
+      mockPrismaService.appSettings.findMany.mockResolvedValue(rows);
+
+      const result = await service.findPublic();
+
+      expect(result.settings['planning.visibleDays']).toEqual([
+        1, 2, 3, 4, 5, 6,
+      ]);
+      expect(result.settings['planning.specialDays']).toEqual([6]);
+      expect(result.settings['dateFormat']).toBe('dd/MM/yyyy');
+      expect(result.settings['weekStartsOn']).toBe(1);
+      // Entitlement-like keys must NOT leak to non-privileged users (§NOTE 3).
+      expect(result.settings).not.toHaveProperty('defaultLeaveDays');
+      expect(result.settings).not.toHaveProperty('maxTeleworkDaysPerWeek');
+    });
   });
 
   describe('findAll', () => {

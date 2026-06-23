@@ -21,6 +21,16 @@ export const settingsService = {
     return response.data;
   },
 
+  // Non-sensitive display/planning config readable by ANY authenticated role
+  // (no settings:read). Used by AuthProvider so low-privilege users still get
+  // the admin-defined visible days / formats instead of hardcoded defaults.
+  async getPublic(): Promise<{ settings: Record<string, unknown> }> {
+    const response = await api.get<{ settings: Record<string, unknown> }>(
+      "/settings/public",
+    );
+    return response.data;
+  },
+
   async getByCategory(category: string): Promise<AppSetting[]> {
     const response = await api.get<AppSetting[]>(
       `/settings/category/${category}`,

@@ -14,6 +14,7 @@ import {
   BulkUpdateSettingsDto,
 } from './dto/update-setting.dto';
 import { RequirePermissions } from '../rbac/decorators/require-permissions.decorator';
+import { AllowSelfService } from '../rbac/decorators/allow-self-service.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Settings')
@@ -27,6 +28,21 @@ export class SettingsController {
   @ApiBearerAuth()
   async findAll() {
     return this.settingsService.findAll();
+  }
+
+  // Authenticated, any role (no `settings:read`): the planning view + date
+  // utils need the display config (formats, visible/special days) for EVERY
+  // role. The full settings map stays gated (§NOTE 3); this returns only the
+  // non-sensitive PUBLIC_SETTING_KEYS projection.
+  @Get('public')
+  @AllowSelfService()
+  @ApiOperation({
+    summary:
+      'Récupérer la projection publique des paramètres (affichage + planning)',
+  })
+  @ApiBearerAuth()
+  async findPublic() {
+    return this.settingsService.findPublic();
   }
 
   @Get('category/:category')

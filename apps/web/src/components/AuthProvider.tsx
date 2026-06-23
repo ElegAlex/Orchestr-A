@@ -16,9 +16,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // (role-gated features) before /auth/me resolves.
   const ready = useAuthBootstrap();
 
-  // Settings still fetched after successful auth — only when user has the perm.
-  // Templates excluded from settings:read by RBAC v4 §NOTE 3 (IT_SUPPORT,
-  // BASIC_USER, etc.) would otherwise hit a guaranteed 403 at every login.
+  // Settings fetched after successful auth. Users with settings:read get the
+  // full map; the rest (excluded by RBAC v4 §NOTE 3 — IT_SUPPORT, BASIC_USER,
+  // CONTRIBUTEUR, OBSERVATEUR…) get the non-sensitive public projection so the
+  // planning view + date utils reflect the admin-defined global config for
+  // EVERY role, instead of falling back to the hardcoded Mon–Fri default.
   useEffect(() => {
     if (!isAuthenticated || !ready) return;
     const canReadSettings = useAuthStore
@@ -27,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (canReadSettings) {
       useSettingsStore.getState().fetchSettings();
     } else {
-      useSettingsStore.setState({ isLoaded: true });
+      useSettingsStore.getState().fetchPublicSettings();
     }
   }, [isAuthenticated, ready]);
 

@@ -127,7 +127,7 @@ export class SchoolVacationsController {
   ) {
     const zoneStr = await this.settingsService.getValue<string>(
       'planning.schoolVacationZone',
-      'A',
+      'C',
     );
     const zone = zoneStr as SchoolVacationZone;
     return this.schoolVacationsService.importFromOpenData(
