@@ -65,6 +65,13 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, unknown>>({});
   const [, setSettingsList] = useState<AppSetting[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  // Only keys the admin actually edits are sent on save. `settings` is the FULL
+  // map returned by getAll() and may contain rows this page does not manage
+  // (orphan/legacy keys, e.g. an unknown planning.* row). Re-sending the whole
+  // map made bulkUpdate reject the first non-whitelisted key with a 400 and lose
+  // the real change. Tracking dirty keys keeps the payload minimal and immune to
+  // stray DB rows, without weakening the backend's unknown-key guard.
+  const [changedKeys, setChangedKeys] = useState<Set<string>>(new Set());
 
   const isAdmin = hasPermission("settings:update");
 
@@ -82,6 +89,7 @@ export default function SettingsPage() {
       const response = await settingsService.getAll();
       setSettings(response.settings);
       setSettingsList(response.list);
+      setChangedKeys(new Set());
     } catch (err) {
       logger.error("Error loading settings:", err);
       toast.error(t("messages.loadError"));
@@ -92,14 +100,26 @@ export default function SettingsPage() {
 
   const handleChange = (key: string, value: unknown) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+    setChangedKeys((prev) => new Set(prev).add(key));
     setHasChanges(true);
   };
 
   const handleSave = async () => {
+    // Send ONLY the keys edited in this session — never the whole getAll() map.
+    const payload = Object.fromEntries(
+      [...changedKeys]
+        .filter((k) => k in settings)
+        .map((k) => [k, settings[k]]),
+    );
+    if (Object.keys(payload).length === 0) {
+      setHasChanges(false);
+      return;
+    }
     setSaving(true);
     try {
-      await settingsService.bulkUpdate(settings);
+      await settingsService.bulkUpdate(payload);
       await fetchSettings(); // Refresh global settings
+      setChangedKeys(new Set());
       setHasChanges(false);
       toast.success(t("messages.saveSuccess"));
     } catch (err) {
@@ -124,6 +144,7 @@ export default function SettingsPage() {
       setSettings(response.settings);
       setSettingsList(response.list);
       await fetchSettings();
+      setChangedKeys(new Set());
       setHasChanges(false);
       toast.success(t("messages.resetSuccess"));
     } catch (err) {

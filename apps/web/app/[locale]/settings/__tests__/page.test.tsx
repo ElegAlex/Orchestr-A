@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // TST-023 — Settings page RBAC affordances test
@@ -27,18 +27,26 @@ const mockPush = jest.fn();
 // Mocks — declared before imports
 // ---------------------------------------------------------------------------
 
-jest.mock("next/navigation", () => ({
-  useRouter: () => ({
-    push: mockPush,
-    replace: jest.fn(),
-    back: jest.fn(),
-    forward: jest.fn(),
-    refresh: jest.fn(),
-    prefetch: jest.fn(),
-  }),
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => "/fr/settings",
-}));
+jest.mock("next/navigation", () => {
+  // Stable router instance — real Next returns a stable object; a fresh object
+  // per render would re-fire the page's [isAdmin, router] effect (reloads +
+  // loading flicker) and make post-interaction assertions racy. Lazily
+  // memoised so `mockPush` is read at call time (avoids the jest.mock TDZ).
+  let router: Record<string, unknown> | undefined;
+  return {
+    useRouter: () =>
+      (router ??= {
+        push: mockPush,
+        replace: jest.fn(),
+        back: jest.fn(),
+        forward: jest.fn(),
+        refresh: jest.fn(),
+        prefetch: jest.fn(),
+      }),
+    useSearchParams: () => new URLSearchParams(),
+    usePathname: () => "/fr/settings",
+  };
+});
 
 jest.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
@@ -175,6 +183,51 @@ describe("TST-023 — SettingsPage: RBAC route-guard affordances", () => {
       );
 
       expect(screen.getByText("reset")).toBeInTheDocument();
+    });
+
+    // Regression: save must send ONLY the keys the admin edited, never the whole
+    // getAll() map. A real prod DB carried an orphan `planning.lateThresholdDays`
+    // (no code reference) — re-sending it made bulkUpdate 400 on the unknown key
+    // and lose the visible-days change. Here the page loads with that orphan key
+    // present; toggling Saturday and saving must POST only planning.visibleDays.
+    it("save sends only changed keys, excluding unmanaged/orphan rows", async () => {
+      settingsService.getAll.mockResolvedValue({
+        settings: {
+          "planning.visibleDays": [1, 2, 3, 4, 5],
+          "planning.specialDays": [],
+          "planning.lateThresholdDays": 1, // orphan: not whitelisted on the API
+          dateFormat: "dd/MM/yyyy",
+        },
+        list: [],
+      });
+
+      render(<SettingsPage />);
+
+      // Open the Planning tab where the visible-days checkboxes live.
+      await waitFor(
+        () => expect(screen.getByText("tabs.planning")).toBeInTheDocument(),
+        { timeout: 10000 },
+      );
+      fireEvent.click(screen.getByText("tabs.planning"));
+
+      // Toggle Saturday on (currentDays [1..5] → [1..6]).
+      const saturdayLabel = await screen.findByText("planning.days.saturday");
+      const saturdayCheckbox = saturdayLabel
+        .closest("label")!
+        .querySelector('input[type="checkbox"]') as HTMLInputElement;
+      fireEvent.click(saturdayCheckbox);
+
+      fireEvent.click(screen.getByText("save"));
+
+      await waitFor(() =>
+        expect(settingsService.bulkUpdate).toHaveBeenCalledTimes(1),
+      );
+      const payload = settingsService.bulkUpdate.mock.calls[0][0];
+      // Only the edited key is sent…
+      expect(payload).toEqual({ "planning.visibleDays": [1, 2, 3, 4, 5, 6] });
+      // …and the orphan / unmanaged rows are NOT re-sent (would 400).
+      expect(payload).not.toHaveProperty("planning.lateThresholdDays");
+      expect(payload).not.toHaveProperty("dateFormat");
     });
   });
 });
