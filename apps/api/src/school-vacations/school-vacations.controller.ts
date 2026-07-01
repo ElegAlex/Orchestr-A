@@ -28,8 +28,6 @@ import { CreateSchoolVacationDto } from './dto/create-school-vacation.dto';
 import { UpdateSchoolVacationDto } from './dto/update-school-vacation.dto';
 import { SchoolVacationRangeQueryDto } from './dto/school-vacation-range-query.dto';
 import { ImportSchoolVacationDto } from './dto/import-school-vacation.dto';
-import { SettingsService } from '../settings/settings.service';
-import { SchoolVacationZone } from 'database';
 import type { User } from '@prisma/client';
 
 @ApiTags('School Vacations')
@@ -38,7 +36,6 @@ import type { User } from '@prisma/client';
 export class SchoolVacationsController {
   constructor(
     private readonly schoolVacationsService: SchoolVacationsService,
-    private readonly settingsService: SettingsService,
   ) {}
 
   @Get()
@@ -125,16 +122,8 @@ export class SchoolVacationsController {
     @Body() dto: ImportSchoolVacationDto,
     @CurrentUser() user: User,
   ) {
-    const zoneStr = await this.settingsService.getValue<string>(
-      'planning.schoolVacationZone',
-      'C',
-    );
-    const zone = zoneStr as SchoolVacationZone;
-    return this.schoolVacationsService.importFromOpenData(
-      dto.year,
-      zone,
-      user.id,
-    );
+    // COR-071 — import every zone selected in settings (1, 2 or 3), not just one.
+    return this.schoolVacationsService.importConfiguredZones(dto.year, user.id);
   }
 
   @Patch(':id')

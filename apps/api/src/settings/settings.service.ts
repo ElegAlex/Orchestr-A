@@ -11,7 +11,8 @@ import { AuditPersistenceService } from '../audit/audit-persistence.service';
 import { AuditAction } from '../audit/audit-action.enum';
 
 // Types for settings
-type SettingValue = string | number | boolean | number[];
+// COR-071 — string[] added for planning.schoolVacationZone (list of zones A/B/C).
+type SettingValue = string | number | boolean | number[] | string[];
 
 interface SettingConfig {
   value: SettingValue;
@@ -93,13 +94,16 @@ const DEFAULT_SETTINGS: Record<string, SettingConfig> = {
   // Added to the web store + the "Vacances scolaires" zone selector in b023fca7
   // but never whitelisted here, so saving the settings map (which carries it)
   // threw "Unknown setting key" → HTTP 400. Whitelisted + seeded so the bulk
-  // save accepts it and the zone is resettable. Default 'C' = Île-de-France
-  // (CPAM Hauts-de-Seine), matching the web store default.
+  // save accepts it and the zone is resettable.
+  // COR-071 — now a LIST of zones (1, 2 or 3) driving BOTH the planning display
+  // and the Open Data import. Default ['C'] = Île-de-France (CPAM Hauts-de-Seine).
+  // Legacy prod rows may still hold the scalar 'C'; readers normalize both shapes
+  // (see SchoolVacationsService.normalizeSchoolVacationZones).
   'planning.schoolVacationZone': {
-    value: 'C',
+    value: ['C'],
     category: 'planning',
     description:
-      'Zone de vacances scolaires utilisée pour l\'import Open Data (A, B ou C)',
+      "Zones de vacances scolaires affichées dans le planning et importées depuis l'Open Data (sous-ensemble de A, B, C)",
   },
 };
 

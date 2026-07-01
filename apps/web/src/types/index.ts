@@ -950,6 +950,45 @@ export const SCHOOL_VACATION_ZONE_LABELS: Record<SchoolVacationZone, string> = {
   [SchoolVacationZone.C]: "Zone C",
 };
 
+// COR-071 — a distinct colour per zone so 1, 2 or 3 zones stay legible when their
+// periods overlap in the planning (one banner row per zone). `border` is used for
+// the row's bottom accent, `gradient` for its background, `text` for the label.
+export const SCHOOL_VACATION_ZONE_COLORS: Record<
+  SchoolVacationZone,
+  { border: string; gradient: string; text: string }
+> = {
+  [SchoolVacationZone.A]: {
+    border: "#f59e0b",
+    gradient: "linear-gradient(to right, #fef3c7, #fde68a)",
+    text: "#92400e",
+  },
+  [SchoolVacationZone.B]: {
+    border: "#10b981",
+    gradient: "linear-gradient(to right, #d1fae5, #a7f3d0)",
+    text: "#065f46",
+  },
+  [SchoolVacationZone.C]: {
+    border: "#3b82f6",
+    gradient: "linear-gradient(to right, #dbeafe, #bfdbfe)",
+    text: "#1e40af",
+  },
+};
+
+// COR-071 — the zone setting moved from a scalar ("C") to a list (["A","B","C"]).
+// Legacy prod rows / persisted stores may still hold the scalar, so the UI must
+// accept BOTH shapes. Returns valid zones in canonical A,B,C order, de-duplicated.
+export function normalizeSchoolVacationZones(
+  raw: unknown,
+): SchoolVacationZone[] {
+  const all = [
+    SchoolVacationZone.A,
+    SchoolVacationZone.B,
+    SchoolVacationZone.C,
+  ];
+  const candidates: unknown[] = Array.isArray(raw) ? raw : [raw];
+  return all.filter((z) => candidates.includes(z));
+}
+
 export const SCHOOL_VACATION_SOURCE_LABELS: Record<
   SchoolVacationSource,
   string

@@ -116,7 +116,11 @@ export class PlanningService {
         dateOnlyEnd,
       ),
       this.holidaysService.findByRange(dateOnlyStart, dateOnlyEnd),
-      this.schoolVacationsService.findByRange(dateOnlyStart, dateOnlyEnd),
+      // COR-071 — only the zones selected in settings (1, 2 or 3) reach the grid.
+      this.schoolVacationsService.findByRangeForDisplay(
+        dateOnlyStart,
+        dateOnlyEnd,
+      ),
       canViewPredefinedTasks
         ? this.predefinedTasksService.findAssignments({
             startDate: dateOnlyStart,

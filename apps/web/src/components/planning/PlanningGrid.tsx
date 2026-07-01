@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
-import { Task } from "@/types";
+import { Task, SchoolVacationZone, SCHOOL_VACATION_ZONE_COLORS } from "@/types";
 import { Event } from "@/services/events.service";
 import { PredefinedTaskAssignment } from "@/services/predefined-tasks.service";
 import {
@@ -475,39 +475,51 @@ export const PlanningGrid = ({
             </div>
 
             {/* School vacation banners */}
-            {vacationBanners.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: gridCols }}>
-                {/* Empty resource column */}
-                <div />
-                {/* Vacation bars positioned via grid columns */}
-                {vacationBanners.map((banner) => {
-                  const shortName = banner.name
-                    .replace(/^Vacances\s+d[eu']/i, "")
-                    .replace(/^Vacances\s+/i, "")
-                    .trim();
+            {vacationBanners.length > 0 &&
+              [SchoolVacationZone.A, SchoolVacationZone.B, SchoolVacationZone.C]
+                .filter((zone) => vacationBanners.some((b) => b.zone === zone))
+                .map((zone) => {
+                  const colors = SCHOOL_VACATION_ZONE_COLORS[zone];
                   return (
                     <div
-                      key={banner.id}
-                      className={`flex items-center justify-center border-b-2 border-blue-500 text-blue-800 font-medium truncate ${
-                        viewMode === "month"
-                          ? "text-[9px] py-0.5"
-                          : "text-xs py-1"
-                      }`}
-                      style={{
-                        gridColumn: `${banner.startCol} / ${banner.endCol}`,
-                        background:
-                          "linear-gradient(to right, #dbeafe, #bfdbfe)",
-                      }}
-                      title={`${banner.name} — Zone ${banner.zone}`}
+                      key={zone}
+                      style={{ display: "grid", gridTemplateColumns: gridCols }}
                     >
-                      {viewMode === "month"
-                        ? `\uD83C\uDFD6\uFE0F ${shortName}`
-                        : `\uD83C\uDFD6\uFE0F ${banner.name} — Zone ${banner.zone}`}
+                      {/* Empty resource column */}
+                      <div />
+                      {/* Vacation bars for this zone, positioned via grid columns */}
+                      {vacationBanners
+                        .filter((banner) => banner.zone === zone)
+                        .map((banner) => {
+                          const shortName = banner.name
+                            .replace(/^Vacances\s+d[eu']/i, "")
+                            .replace(/^Vacances\s+/i, "")
+                            .trim();
+                          return (
+                            <div
+                              key={banner.id}
+                              className={`flex items-center justify-center border-b-2 font-medium truncate ${
+                                viewMode === "month"
+                                  ? "text-[9px] py-0.5"
+                                  : "text-xs py-1"
+                              }`}
+                              style={{
+                                gridColumn: `${banner.startCol} / ${banner.endCol}`,
+                                background: colors.gradient,
+                                borderBottomColor: colors.border,
+                                color: colors.text,
+                              }}
+                              title={`${banner.name} — Zone ${banner.zone}`}
+                            >
+                              {viewMode === "month"
+                                ? `\uD83C\uDFD6\uFE0F ${shortName}`
+                                : `\uD83C\uDFD6\uFE0F ${banner.name} — Zone ${banner.zone}`}
+                            </div>
+                          );
+                        })}
                     </div>
                   );
                 })}
-              </div>
-            )}
 
             {/* Service sections */}
             {filteredGroups.length === 0 ? (

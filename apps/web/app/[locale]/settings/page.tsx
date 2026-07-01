@@ -9,7 +9,11 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { HolidaysManager } from "@/components/holidays/HolidaysManager";
 import { SchoolVacationsManager } from "@/components/school-vacations/SchoolVacationsManager";
-import { SCHOOL_VACATION_ZONE_LABELS } from "@/types";
+import {
+  SCHOOL_VACATION_ZONE_LABELS,
+  SchoolVacationZone,
+  normalizeSchoolVacationZones,
+} from "@/types";
 import { useTranslations, useLocale } from "next-intl";
 import { logger } from "@/lib/logger";
 
@@ -462,23 +466,48 @@ export default function SettingsPage() {
                 <h3 className="text-sm font-medium text-gray-700 mb-2">
                   {t("schoolVacations.zoneLabel")}
                 </h3>
-                <select
-                  value={
-                    (settings["planning.schoolVacationZone"] as string) ?? "C"
-                  }
-                  onChange={(e) =>
-                    handleChange("planning.schoolVacationZone", e.target.value)
-                  }
-                  className="w-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {Object.entries(SCHOOL_VACATION_ZONE_LABELS).map(
-                    ([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ),
-                  )}
-                </select>
+                {/* COR-071 — multi-zone selector: show 1, 2 or all 3 zones. */}
+                {(() => {
+                  const selected = normalizeSchoolVacationZones(
+                    settings["planning.schoolVacationZone"],
+                  );
+                  const current =
+                    selected.length > 0 ? selected : [SchoolVacationZone.C];
+                  const toggle = (zone: SchoolVacationZone) => {
+                    const next = current.includes(zone)
+                      ? current.filter((z) => z !== zone)
+                      : [...current, zone];
+                    // Always keep at least one zone selected.
+                    if (next.length === 0) return;
+                    handleChange(
+                      "planning.schoolVacationZone",
+                      normalizeSchoolVacationZones(next),
+                    );
+                  };
+                  return (
+                    <div className="flex flex-wrap gap-4">
+                      {Object.entries(SCHOOL_VACATION_ZONE_LABELS).map(
+                        ([value, label]) => {
+                          const zone = value as SchoolVacationZone;
+                          return (
+                            <label
+                              key={value}
+                              className="flex items-center gap-2 text-sm text-gray-700"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={current.includes(zone)}
+                                onChange={() => toggle(zone)}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              {label}
+                            </label>
+                          );
+                        },
+                      )}
+                    </div>
+                  );
+                })()}
                 <p className="text-xs text-gray-500 mt-1">
                   {t("schoolVacations.zoneHint")}
                 </p>

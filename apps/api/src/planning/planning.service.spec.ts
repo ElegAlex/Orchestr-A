@@ -33,7 +33,8 @@ describe('PlanningService', () => {
     findForPlanningOverview: vi.fn(),
   };
   const mockHolidaysService = { findByRange: vi.fn() };
-  const mockSchoolVacationsService = { findByRange: vi.fn() };
+  // COR-071 — planning now filters vacations by the zones selected in settings.
+  const mockSchoolVacationsService = { findByRangeForDisplay: vi.fn() };
   const mockPredefinedTasksService = { findAssignments: vi.fn() };
   const mockPermissionsService = { getPermissionsForRole: vi.fn() };
 
@@ -54,7 +55,9 @@ describe('PlanningService', () => {
       { id: 'tw1' },
     ]);
     mockHolidaysService.findByRange.mockResolvedValue([{ id: 'h1' }]);
-    mockSchoolVacationsService.findByRange.mockResolvedValue([{ id: 'sv1' }]);
+    mockSchoolVacationsService.findByRangeForDisplay.mockResolvedValue([
+      { id: 'sv1' },
+    ]);
     mockPredefinedTasksService.findAssignments.mockResolvedValue([
       { id: 'pa1', userId: 'u1' },
     ]);
@@ -165,10 +168,9 @@ describe('PlanningService', () => {
       '2026-04-13',
       '2026-04-19',
     );
-    expect(mockSchoolVacationsService.findByRange).toHaveBeenCalledWith(
-      '2026-04-13',
-      '2026-04-19',
-    );
+    expect(
+      mockSchoolVacationsService.findByRangeForDisplay,
+    ).toHaveBeenCalledWith('2026-04-13', '2026-04-19');
     expect(mockPredefinedTasksService.findAssignments).toHaveBeenCalledWith({
       startDate: '2026-04-13',
       endDate: '2026-04-19',

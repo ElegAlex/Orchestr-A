@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { SchoolVacationsService } from './school-vacations.service';
+import {
+  SchoolVacationsService,
+  normalizeSchoolVacationZones,
+} from './school-vacations.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import { NotFoundException, ConflictException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { SchoolVacationZone, SchoolVacationSource, Prisma } from 'database';
@@ -16,6 +20,11 @@ describe('SchoolVacationsService', () => {
       update: vi.fn(),
       delete: vi.fn(),
     },
+  };
+
+  // COR-071 — the service now reads the selected zones from settings.
+  const mockSettingsService = {
+    getValue: vi.fn().mockResolvedValue([SchoolVacationZone.C]),
   };
 
   const mockVacation = {
@@ -43,6 +52,10 @@ describe('SchoolVacationsService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: SettingsService,
+          useValue: mockSettingsService,
         },
       ],
     }).compile();
@@ -478,6 +491,112 @@ describe('SchoolVacationsService', () => {
       expect(callArgs).toBeDefined();
       const opts = callArgs[1];
       expect(opts?.signal).toBeInstanceOf(AbortSignal);
+    });
+  });
+
+  // COR-071 — multi-zone planning display + import (1, 2 or 3 zones).
+  describe('normalizeSchoolVacationZones', () => {
+    it('accepts the legacy scalar and wraps it into a list', () => {
+      expect(normalizeSchoolVacationZones('C')).toEqual([SchoolVacationZone.C]);
+    });
+
+    it('keeps a valid multi-zone list in canonical A,B,C order and de-dupes', () => {
+      expect(normalizeSchoolVacationZones(['C', 'A', 'C'])).toEqual([
+        SchoolVacationZone.A,
+        SchoolVacationZone.C,
+      ]);
+    });
+
+    it('drops garbage and falls back to [C] when nothing valid remains', () => {
+      expect(normalizeSchoolVacationZones(['Z', 42, null])).toEqual([
+        SchoolVacationZone.C,
+      ]);
+      expect(normalizeSchoolVacationZones([])).toEqual([SchoolVacationZone.C]);
+      expect(normalizeSchoolVacationZones(undefined)).toEqual([
+        SchoolVacationZone.C,
+      ]);
+    });
+  });
+
+  describe('getConfiguredZones', () => {
+    it('normalizes a legacy scalar setting into a list', async () => {
+      mockSettingsService.getValue.mockResolvedValueOnce('B');
+      await expect(service.getConfiguredZones()).resolves.toEqual([
+        SchoolVacationZone.B,
+      ]);
+    });
+
+    it('returns the full multi-zone list when all three are selected', async () => {
+      mockSettingsService.getValue.mockResolvedValueOnce(['A', 'B', 'C']);
+      await expect(service.getConfiguredZones()).resolves.toEqual([
+        SchoolVacationZone.A,
+        SchoolVacationZone.B,
+        SchoolVacationZone.C,
+      ]);
+    });
+  });
+
+  describe('findByRange zone filter', () => {
+    it('adds a zone IN filter only when zones are provided', async () => {
+      mockPrismaService.schoolVacation.findMany.mockResolvedValue([]);
+
+      await service.findByRange('2025-01-01', '2025-12-31', [
+        SchoolVacationZone.A,
+        SchoolVacationZone.B,
+      ]);
+      expect(
+        mockPrismaService.schoolVacation.findMany.mock.calls[0][0].where.zone,
+      ).toEqual({ in: [SchoolVacationZone.A, SchoolVacationZone.B] });
+
+      mockPrismaService.schoolVacation.findMany.mockClear();
+      await service.findByRange('2025-01-01', '2025-12-31');
+      expect(
+        mockPrismaService.schoolVacation.findMany.mock.calls[0][0].where.zone,
+      ).toBeUndefined();
+    });
+  });
+
+  describe('findByRangeForDisplay', () => {
+    it('restricts the query to the zones selected in settings', async () => {
+      mockSettingsService.getValue.mockResolvedValueOnce(['A', 'C']);
+      mockPrismaService.schoolVacation.findMany.mockResolvedValue([]);
+
+      await service.findByRangeForDisplay('2025-01-01', '2025-12-31');
+
+      expect(
+        mockPrismaService.schoolVacation.findMany.mock.calls[0][0].where.zone,
+      ).toEqual({ in: [SchoolVacationZone.A, SchoolVacationZone.C] });
+    });
+  });
+
+  describe('importConfiguredZones', () => {
+    it('imports each selected zone and aggregates the counts', async () => {
+      mockSettingsService.getValue.mockResolvedValueOnce(['A', 'B']);
+      const spy = vi
+        .spyOn(service, 'importFromOpenData')
+        .mockResolvedValueOnce({ created: 2, skipped: 1 })
+        .mockResolvedValueOnce({ created: 3, skipped: 0 });
+
+      const result = await service.importConfiguredZones(2025, 'user-1');
+
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy).toHaveBeenNthCalledWith(
+        1,
+        2025,
+        SchoolVacationZone.A,
+        'user-1',
+      );
+      expect(spy).toHaveBeenNthCalledWith(
+        2,
+        2025,
+        SchoolVacationZone.B,
+        'user-1',
+      );
+      expect(result).toEqual({
+        created: 5,
+        skipped: 1,
+        zones: [SchoolVacationZone.A, SchoolVacationZone.B],
+      });
     });
   });
 });

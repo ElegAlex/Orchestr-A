@@ -5,9 +5,32 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 import { CreateSchoolVacationDto } from './dto/create-school-vacation.dto';
 import { UpdateSchoolVacationDto } from './dto/update-school-vacation.dto';
 import { Prisma, SchoolVacationZone, SchoolVacationSource } from 'database';
+
+/** The three French school-vacation zones, in canonical display order. */
+export const ALL_SCHOOL_VACATION_ZONES: readonly SchoolVacationZone[] = [
+  SchoolVacationZone.A,
+  SchoolVacationZone.B,
+  SchoolVacationZone.C,
+];
+
+/**
+ * COR-071 — the planning zone setting moved from a single string ("C") to a
+ * LIST of zones (["A","B","C"]) so the planning can show 1, 2 or all 3 zones.
+ * Prod still stores the legacy scalar, so reads MUST accept both shapes. Returns
+ * a de-duplicated, canonically-ordered list of valid zones; falls back to ['C']
+ * (Île-de-France / CPAM Hauts-de-Seine) when the stored value is empty/garbage.
+ */
+export function normalizeSchoolVacationZones(
+  raw: unknown,
+): SchoolVacationZone[] {
+  const candidates: unknown[] = Array.isArray(raw) ? raw : [raw];
+  const valid = ALL_SCHOOL_VACATION_ZONES.filter((z) => candidates.includes(z));
+  return valid.length > 0 ? [...valid] : [SchoolVacationZone.C];
+}
 
 interface OpenDataRecord {
   description: string;
@@ -28,7 +51,22 @@ interface OpenDataResponse {
 export class SchoolVacationsService {
   private readonly logger = new Logger(SchoolVacationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settingsService: SettingsService,
+  ) {}
+
+  /**
+   * COR-071 — zones selected in settings for planning display + Open Data import.
+   * Accepts the legacy scalar ("C") and the new list (["A","B","C"]).
+   */
+  async getConfiguredZones(): Promise<SchoolVacationZone[]> {
+    const raw = await this.settingsService.getValue(
+      'planning.schoolVacationZone',
+      [SchoolVacationZone.C],
+    );
+    return normalizeSchoolVacationZones(raw);
+  }
 
   /**
    * Récupère toutes les vacances scolaires, optionnellement filtrées par année
@@ -70,11 +108,18 @@ export class SchoolVacationsService {
   /**
    * Récupère les vacances scolaires sur une période donnée (chevauchement)
    */
-  async findByRange(startDate: string, endDate: string) {
+  async findByRange(
+    startDate: string,
+    endDate: string,
+    zones?: SchoolVacationZone[],
+  ) {
     return this.prisma.schoolVacation.findMany({
       where: {
         startDate: { lte: new Date(endDate) },
         endDate: { gte: new Date(startDate) },
+        // COR-071 — restrict to the requested zones when provided; omit the
+        // filter entirely (all zones) when not, preserving the prior behaviour.
+        ...(zones && zones.length > 0 ? { zone: { in: zones } } : {}),
       },
       orderBy: { startDate: 'asc' },
       include: {
@@ -83,6 +128,15 @@ export class SchoolVacationsService {
         },
       },
     });
+  }
+
+  /**
+   * COR-071 — planning display: only the zones selected in settings (1, 2 or 3).
+   * Deselecting a zone hides its banners WITHOUT deleting the imported rows.
+   */
+  async findByRangeForDisplay(startDate: string, endDate: string) {
+    const zones = await this.getConfiguredZones();
+    return this.findByRange(startDate, endDate, zones);
   }
 
   /**
@@ -241,5 +295,28 @@ export class SchoolVacationsService {
 
     this.logger.log(`Import complete: ${created} created, ${skipped} skipped`);
     return { created, skipped };
+  }
+
+  /**
+   * COR-071 — import EVERY zone selected in settings (1, 2 or 3), aggregating the
+   * per-zone counts so the planning has data for each displayed zone in one call.
+   */
+  async importConfiguredZones(
+    year: number,
+    userId: string,
+  ): Promise<{
+    created: number;
+    skipped: number;
+    zones: SchoolVacationZone[];
+  }> {
+    const zones = await this.getConfiguredZones();
+    let created = 0;
+    let skipped = 0;
+    for (const zone of zones) {
+      const res = await this.importFromOpenData(year, zone, userId);
+      created += res.created;
+      skipped += res.skipped;
+    }
+    return { created, skipped, zones };
   }
 }

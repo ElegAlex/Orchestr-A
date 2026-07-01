@@ -28,7 +28,8 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   maxTeleworkDaysPerWeek: 3,
   "planning.visibleDays": [1, 2, 3, 4, 5],
   "planning.specialDays": [],
-  "planning.schoolVacationZone": "C",
+  // COR-071 — list of zones (1, 2 or 3) shown in the planning + imported.
+  "planning.schoolVacationZone": ["C"],
 };
 
 export const useSettingsStore = create<SettingsState>()(
