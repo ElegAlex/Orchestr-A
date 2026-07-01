@@ -1794,59 +1794,67 @@ export class UsersService {
     // > on_site precedence. The sub-queries replace the four auxiliary
     // findMany calls (telework_schedules, leaves, task_assignees via tasks,
     // event_participants via events).
+    // COR-070 — the physical columns are camelCase (Prisma default: no
+    // per-field @map), so they MUST be double-quoted. The PER-016 refactor used
+    // unquoted snake_case identifiers (u.first_name, ts.is_telework, …) which
+    // Postgres folds to lowercase → "column u.first_name does not exist" → the
+    // whole query throws (500) → the dashboard "Présence" dialog shows
+    // "Erreur lors du chargement des données". Only truly single-word columns
+    // (id, name, status, date) are safe unquoted; every camelCase one is quoted.
+    // Output aliases stay snake_case to match the PresenceRow type above.
     const rows = await this.prisma.$queryRaw<PresenceRow[]>`
       SELECT
         u.id,
-        u.first_name,
-        u.last_name,
-        u.avatar_url,
-        u.avatar_preset,
+        u."firstName"     AS first_name,
+        u."lastName"      AS last_name,
+        u."avatarUrl"     AS avatar_url,
+        u."avatarPreset"  AS avatar_preset,
         d.name            AS department_name,
         s.name            AS service_name,
         CASE
           WHEN EXISTS (
             SELECT 1 FROM leaves l
-            WHERE l.user_id = u.id
-              AND l.start_date <= ${endOfDay}::date
-              AND l.end_date   >= ${startOfDay}::date
+            WHERE l."userId" = u.id
+              AND l."startDate" <= ${endOfDay}::date
+              AND l."endDate"   >= ${startOfDay}::date
               AND l.status = 'APPROVED'
           ) THEN 'ABSENT'
           WHEN EXISTS (
             SELECT 1 FROM task_assignees ta
-            JOIN tasks t ON t.id = ta.task_id
-            WHERE ta.user_id = u.id
-              AND t.is_external_intervention = TRUE
-              AND t.start_date <= ${endOfDay}
-              AND t.end_date   >= ${startOfDay}
+            JOIN tasks t ON t.id = ta."taskId"
+            WHERE ta."userId" = u.id
+              AND t."isExternalIntervention" = TRUE
+              AND t."startDate" <= ${endOfDay}
+              AND t."endDate"   >= ${startOfDay}
               AND t.status <> 'DONE'
           ) OR EXISTS (
             SELECT 1 FROM event_participants ep
-            JOIN events e ON e.id = ep.event_id
-            WHERE ep.user_id = u.id
-              AND e.is_external_intervention = TRUE
+            JOIN events e ON e.id = ep."eventId"
+            WHERE ep."userId" = u.id
+              AND e."isExternalIntervention" = TRUE
               AND e.date >= ${startOfDay}
               AND e.date <= ${endOfDay}
           ) THEN 'EXTERNAL'
           WHEN EXISTS (
             SELECT 1 FROM telework_schedules ts
-            WHERE ts.user_id = u.id
+            WHERE ts."userId" = u.id
               AND ts.date >= ${startOfDay}::date
               AND ts.date <= ${endOfDay}::date
-              AND ts.is_telework = TRUE
+              AND ts."isTelework" = TRUE
           ) THEN 'REMOTE'
           ELSE 'ON_SITE'
         END AS presence_status
       FROM users u
-      LEFT JOIN departments d ON d.id = u.department_id
+      LEFT JOIN departments d ON d.id = u."departmentId"
       LEFT JOIN LATERAL (
         SELECT sv.name
         FROM user_services us2
-        JOIN services sv ON sv.id = us2.service_id
-        WHERE us2.user_id = u.id
+        JOIN services sv ON sv.id = us2."serviceId"
+        WHERE us2."userId" = u.id
         LIMIT 1
       ) s ON TRUE
-      WHERE u.is_active = TRUE
-      ORDER BY u.last_name ASC, u.first_name ASC
+      WHERE u."isActive" = TRUE
+      ORDER BY u."lastName" ASC, u."firstName" ASC
     `;
 
     const onSite: Array<{
