@@ -95,7 +95,7 @@ cd <DOSSIER_DEPLOIEMENT_ACTUEL> && docker compose -f docker-compose.offline.yml 
 
 | Champ | Valeur |
 |---|---|
-| Commit | `3a35e55b` (branche `remediation/cor-070-071-presence-planning-zones`) |
+| Commit | `3a35e55b` (sur `master`) — code packagé ; doc §5 à `master` HEAD |
 | Paquet | `migration_ramage/6-maj-T0-3a35e55b/livraison-orchestra-cnam-maj-3a35e55b.tar.gz` (623 Mo) |
 | **Sceau sha256** | `21c13572b5853ea40fe2b3c77416d193c28b80a022f2ece88770e100670cee74` |
 | Image | `orchestr-a:local` (`sha256:6ab0a601ce612e7e18dcd8e17290c8201a1b3e79a865facae46d9966246035e1`) |
