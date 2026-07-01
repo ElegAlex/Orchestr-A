@@ -91,31 +91,37 @@ cd <DOSSIER_DEPLOIEMENT_ACTUEL> && docker compose -f docker-compose.offline.yml 
 
 ---
 
-## 5. Instance courante — MAJ du 2026-06-23 (commit `8e3e19e2`)
+## 5. Instance courante — MAJ du 2026-07-01 (commit `3a35e55b`)
 
 | Champ | Valeur |
 |---|---|
-| Commit `master` | `8e3e19e223e9baebd39ce5ea1c931d2982b43048` |
-| Paquet | `migration_ramage/5-maj-T0-8e3e19e2/livraison-orchestra-cnam-maj-8e3e19e2.tar.gz` (652 Mo) |
-| **Sceau sha256** | `5162d92727cf924e80f2bf842688bd610d90dc966e2c2c57de3a11bd19fd11e3` |
-| Image | `orchestr-a:local` (`sha256:e7a5e449e8c672b7ca8acfcb4323ff148e96fc86cd45cb7c0d490c22c1d7ea60`) |
+| Commit | `3a35e55b` (branche `remediation/cor-070-071-presence-planning-zones`) |
+| Paquet | `migration_ramage/6-maj-T0-3a35e55b/livraison-orchestra-cnam-maj-3a35e55b.tar.gz` (623 Mo) |
+| **Sceau sha256** | `21c13572b5853ea40fe2b3c77416d193c28b80a022f2ece88770e100670cee74` |
+| Image | `orchestr-a:local` (`sha256:6ab0a601ce612e7e18dcd8e17290c8201a1b3e79a865facae46d9966246035e1`) |
 | Palier | **T0** — 81/81 migrations (migrate-at-boot = no-op) |
 
 **Remédiations embarquées :**
-- `7e853107` — jours de planning visibles : corrige le **400** à la sauvegarde
-  (whitelist `planning.schoolVacationZone`) + endpoint `GET /settings/public` →
-  la config d'affichage **globale** parvient à **tous les rôles** (plus seulement
-  ceux ayant `settings:read`).
-- `8e3e19e2` — robustesse : la page Paramètres n'envoie plus que les **clés
-  modifiées** → immunise contre les lignes orphelines (ex. `planning.lateThresholdDays`).
+- `COR-070` — bouton **« Présence »** (dashboard) → « Erreur lors du chargement des
+  données » : la requête SQL de `GET /users/presence` utilisait des identifiants
+  snake_case non quotés alors que les colonnes sont camelCase → **500**. Colonnes
+  re-quotées (`u."firstName"`…).
+- `COR-071` — vues **planning** : afficher **1, 2 ou 3 zones** de vacances scolaires.
+  Le réglage `planning.schoolVacationZone` devient une **liste** de zones pilotant
+  l'affichage **et** l'import Open Data ; une ligne de bannière par zone (couleur
+  distincte). Rétro-compat de la valeur scalaire prod `'C'` (aucune migration).
 
 **Smoke métier spécifique à vérifier après MAJ :**
-1. Un compte **sans** `settings:read` (CONTRIBUTEUR / OBSERVATEUR) voit bien les
-   jours configurés (et plus seulement Lun–Ven).
-2. En **admin** : modifier puis **sauvegarder** les jours affichés → **succès**
-   (plus d'erreur 400).
+1. **COR-070** — Dashboard → **« Présence »** : le dialog s'ouvre **sans** erreur ;
+   les 4 onglets (Sur site / Télétravail / Absents / Externes) sont peuplés.
+2. **COR-071** — Paramètres → **Vacances scolaires** : cocher 2 puis 3 zones →
+   **enregistrer** (succès) ; l'import Open Data importe **chaque** zone ; **Planning** :
+   une ligne de bannière **par zone**, couleur distincte ; décocher une zone la masque
+   (données conservées). Instance legacy `'C'` → affichée `['C']` (Zone C).
 
-**Validation faite côté dépôt :** build vert + tests (API settings 48/48, suites web OK),
-fix validé en **pré-prod réel** (VPS 92.222.35.25, données prod), **image smoke-testée**
-(boot healthy, `/api/health`=200, `/api/settings/public`=401 = route présente,
-81 migrations appliquées sur base vierge), sceau calculé et vérifié.
+**Validation faite côté dépôt :** build API vert + **suite API complète 2454/2454**,
+typecheck web 0 erreur (fichiers sources), **intégration Postgres réel 6/6**
+(COR-070 présence ×2 avec RED/GREEN prouvé — SQLSTATE 42703 ; COR-071 filtre de zone ×4),
+**image smoke-testée** (boot healthy, `/api/health`=200, 81 migrations appliquées sur base
+vierge, `app_settings['planning.schoolVacationZone']` seedé à `["C"]`, API restarts=0),
+sceau calculé et **vérifié** (`sha256sum -c` = OK).
