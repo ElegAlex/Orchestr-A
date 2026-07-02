@@ -17,6 +17,7 @@ import {
   DisplayFilters,
 } from "@/hooks/usePlanningData";
 import { GroupHeader } from "./GroupHeader";
+import { DepartmentHeader } from "./DepartmentHeader";
 import { ServiceAbsenceSummaryRow } from "./ServiceAbsenceSummaryRow";
 import { UserRow } from "./UserRow";
 import { TaskModal } from "./TaskModal";
@@ -224,8 +225,54 @@ export const PlanningGrid = ({
   const currentUser = useAuthStore((state) => state.user);
   const { hasPermission } = usePermissions();
   const currentUserId = currentUser?.id || "";
+  const currentUserDepartmentId = currentUser?.departmentId ?? null;
   const canManageOthersTelework = hasPermission("telework:manage_any");
   const canAssignPredefinedTask = hasPermission("predefined_tasks:assign");
+
+  // Intercale une bande "département" avant le premier service de chaque
+  // département (les services sont déjà triés par département en amont dans
+  // usePlanningData). Les sections transverses "Encadrement" / "Sans service"
+  // ont departmentId=null et ne déclenchent aucune bande.
+  const renderRows = useMemo(() => {
+    const deptTotals = new Map<string, number>();
+    for (const g of filteredGroups) {
+      if (g.departmentId) {
+        deptTotals.set(
+          g.departmentId,
+          (deptTotals.get(g.departmentId) ?? 0) + g.users.length,
+        );
+      }
+    }
+
+    const rows: Array<
+      | {
+          kind: "dept";
+          key: string;
+          name: string;
+          count: number;
+          isCurrent: boolean;
+        }
+      | { kind: "group"; key: string; group: ServiceGroup }
+    > = [];
+    let prevDept: string | null = null;
+    for (const g of filteredGroups) {
+      const dept = g.departmentId ?? null;
+      if (dept && dept !== prevDept) {
+        rows.push({
+          kind: "dept",
+          key: `dept-${dept}`,
+          name: g.departmentName ?? "",
+          count: deptTotals.get(dept) ?? 0,
+          isCurrent:
+            currentUserDepartmentId !== null &&
+            currentUserDepartmentId === dept,
+        });
+      }
+      rows.push({ kind: "group", key: g.id, group: g });
+      prevDept = dept;
+    }
+    return rows;
+  }, [filteredGroups, currentUserDepartmentId]);
 
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [dragSourceUserId, setDragSourceUserId] = useState<string | null>(null);
@@ -521,13 +568,25 @@ export const PlanningGrid = ({
                   );
                 })}
 
-            {/* Service sections */}
+            {/* Department bands + service sections */}
             {filteredGroups.length === 0 ? (
               <div className="px-4 py-8 text-center text-gray-500">
                 {t("noResources")}
               </div>
             ) : (
-              filteredGroups.map((group) => {
+              renderRows.map((row) => {
+                if (row.kind === "dept") {
+                  return (
+                    <DepartmentHeader
+                      key={row.key}
+                      name={row.name}
+                      userCount={row.count}
+                      isCurrentUserDepartment={row.isCurrent}
+                    />
+                  );
+                }
+
+                const group = row.group;
                 const taskCount = getGroupTaskCount(group.users);
 
                 return (

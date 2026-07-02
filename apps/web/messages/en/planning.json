@@ -47,6 +47,10 @@
     "tasks": "tasks",
     "collapsed": "(collapsed)"
   },
+  "department": {
+    "label": "Department",
+    "mine": "My department"
+  },
   "absenceSummary": {
     "label": "Off-site",
     "tooltipHeader": "{count}/{total} off-site ({percent}%)",

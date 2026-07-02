@@ -47,6 +47,10 @@
     "tasks": "tâches",
     "collapsed": "(replié)"
   },
+  "department": {
+    "label": "Département",
+    "mine": "Mon département"
+  },
   "absenceSummary": {
     "label": "Hors présentiel",
     "tooltipHeader": "{count}/{total} hors présentiel ({percent}%)",

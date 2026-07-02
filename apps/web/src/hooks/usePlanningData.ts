@@ -62,6 +62,11 @@ export interface ServiceGroup {
   users: User[];
   color: string;
   hexColor?: string | null;
+  // Département de rattachement du service (null pour les sections transverses
+  // "Encadrement" et "Sans service"). Sert au regroupement visuel par
+  // département dans la grille de planning.
+  departmentId?: string | null;
+  departmentName?: string | null;
 }
 
 interface UsePlanningDataOptions {
@@ -256,7 +261,23 @@ export const usePlanningData = ({
 
     const groups: ServiceGroup[] = [];
 
-    // 1. Section Encadrement en premier (si des managers existent)
+    // Table de correspondance departmentId -> nom lisible. Alimentée par les
+    // services (qui incluent `department { id, name }` via l'API) et par les
+    // utilisateurs (dont le champ `department` est projeté dans l'annuaire).
+    const deptNameById = new Map<string, string>();
+    for (const s of services) {
+      if (s.departmentId && s.department?.name) {
+        deptNameById.set(s.departmentId, s.department.name);
+      }
+    }
+    for (const u of users) {
+      if (u.department?.id && u.department?.name) {
+        deptNameById.set(u.department.id, u.department.name);
+      }
+    }
+
+    // 1. Section Encadrement en premier (si des managers existent).
+    // Transverse à tous les départements → pas de bande département.
     if (managementUsers.length > 0) {
       groups.push({
         id: "management",
@@ -267,6 +288,8 @@ export const usePlanningData = ({
           a.lastName.localeCompare(b.lastName),
         ),
         color: "amber",
+        departmentId: null,
+        departmentName: null,
       });
     }
 
@@ -287,10 +310,19 @@ export const usePlanningData = ({
       }
     }
 
-    // Trier les services par nom et créer les groupes
+    // Trier les services par département (nom) puis par nom de service, afin que
+    // les services d'un même département soient contigus → la grille peut
+    // insérer une bande "département" au changement de groupe.
+    const deptLabelOf = (departmentId: string) =>
+      deptNameById.get(departmentId) ?? departmentId ?? "";
     const sortedServices = services
       .filter((s) => serviceMap.has(s.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => {
+        const deptCmp = deptLabelOf(a.departmentId).localeCompare(
+          deptLabelOf(b.departmentId),
+        );
+        return deptCmp !== 0 ? deptCmp : a.name.localeCompare(b.name);
+      });
 
     for (const service of sortedServices) {
       const serviceUsers = serviceMap.get(service.id) || [];
@@ -306,11 +338,16 @@ export const usePlanningData = ({
           ),
           color: style.color,
           hexColor: service.color || null,
+          departmentId: service.departmentId ?? null,
+          departmentName: service.departmentId
+            ? (deptNameById.get(service.departmentId) ?? null)
+            : null,
         });
       }
     }
 
-    // 3. Section "Sans service" pour les orphelins
+    // 3. Section "Sans service" pour les orphelins.
+    // Transverse (pas de service → pas de département fiable) → pas de bande.
     if (usersWithoutService.length > 0) {
       groups.push({
         id: "unassigned",
@@ -321,6 +358,8 @@ export const usePlanningData = ({
           a.lastName.localeCompare(b.lastName),
         ),
         color: "gray",
+        departmentId: null,
+        departmentName: null,
       });
     }
 

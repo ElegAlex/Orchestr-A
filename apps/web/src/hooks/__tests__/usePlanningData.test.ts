@@ -334,6 +334,86 @@ describe("usePlanningData", () => {
     expect(devGroup).toBeDefined();
   });
 
+  it("should tag service groups with their department and order services by department", async () => {
+    (planningService.getOverview as jest.Mock).mockResolvedValue({
+      users: [
+        {
+          id: "u-z",
+          email: "z@test.com",
+          login: "z",
+          firstName: "Zoe",
+          lastName: "Zeta",
+          role: roleContributor,
+          isActive: true,
+          createdAt: "2025-01-01",
+          updatedAt: "2025-01-01",
+          department: { id: "dept-b", name: "Zoologie" },
+          userServices: [{ service: { id: "svc-b", name: "Service B" } }],
+        },
+        {
+          id: "u-a",
+          email: "a@test.com",
+          login: "a",
+          firstName: "Alice",
+          lastName: "Alpha",
+          role: roleContributor,
+          isActive: true,
+          createdAt: "2025-01-01",
+          updatedAt: "2025-01-01",
+          department: { id: "dept-a", name: "Archives" },
+          userServices: [{ service: { id: "svc-a", name: "Service A" } }],
+        },
+      ],
+      services: [
+        {
+          id: "svc-b",
+          name: "Service B",
+          departmentId: "dept-b",
+          department: { id: "dept-b", name: "Zoologie" },
+          createdAt: "2025-01-01",
+          updatedAt: "2025-01-01",
+        },
+        {
+          id: "svc-a",
+          name: "Service A",
+          departmentId: "dept-a",
+          department: { id: "dept-a", name: "Archives" },
+          createdAt: "2025-01-01",
+          updatedAt: "2025-01-01",
+        },
+      ],
+      tasks: [],
+      leaves: [],
+      events: [],
+      telework: [],
+      holidays: [],
+      schoolVacations: [],
+      predefinedAssignments: [],
+    });
+
+    const { result } = renderHook(() =>
+      usePlanningData({
+        currentDate: new Date(),
+        viewMode: "week",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    const serviceGroups = result.current.groupedUsers.filter(
+      (g) => !g.isManagement && g.id !== "unassigned",
+    );
+
+    // Trié par nom de département : "Archives" (dept-a) avant "Zoologie" (dept-b)
+    expect(serviceGroups.map((g) => g.id)).toEqual(["svc-a", "svc-b"]);
+    expect(serviceGroups[0].departmentId).toBe("dept-a");
+    expect(serviceGroups[0].departmentName).toBe("Archives");
+    expect(serviceGroups[1].departmentId).toBe("dept-b");
+    expect(serviceGroups[1].departmentName).toBe("Zoologie");
+  });
+
   it("should filter groups by user id", async () => {
     const { result } = renderHook(() =>
       usePlanningData({
