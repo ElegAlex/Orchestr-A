@@ -276,15 +276,103 @@ export const usePlanningData = ({
       }
     }
 
-    // 1. Section Encadrement en premier (si des managers existent).
-    // Transverse à tous les départements → pas de bande département.
-    if (managementUsers.length > 0) {
+    const NO_DEPT = "__none__";
+    const deptLabelOf = (deptKey: string) =>
+      deptNameById.get(deptKey) ?? deptKey ?? "";
+
+    // Non-managers regroupés par service (1er service de l'utilisateur),
+    // buckets indexés par département.
+    const serviceMap = new Map<string, User[]>();
+    const usersWithoutService: User[] = [];
+    for (const u of nonManagers) {
+      if (u.userServices && u.userServices.length > 0) {
+        const firstService = u.userServices[0].service;
+        if (!serviceMap.has(firstService.id))
+          serviceMap.set(firstService.id, []);
+        serviceMap.get(firstService.id)!.push(u);
+      } else {
+        usersWithoutService.push(u);
+      }
+    }
+
+    const serviceGroupsByDept = new Map<string, ServiceGroup[]>();
+    for (const service of services) {
+      const serviceUsers = serviceMap.get(service.id);
+      if (!serviceUsers || serviceUsers.length === 0) continue;
+      const style = getServiceStyle(service.name);
+      const deptKey = service.departmentId ?? NO_DEPT;
+      const group: ServiceGroup = {
+        id: service.id,
+        name: service.name,
+        icon: style.icon,
+        isManagement: false,
+        users: serviceUsers.sort((a, b) =>
+          a.lastName.localeCompare(b.lastName),
+        ),
+        color: style.color,
+        hexColor: service.color || null,
+        departmentId: service.departmentId ?? null,
+        departmentName: service.departmentId
+          ? (deptNameById.get(service.departmentId) ?? null)
+          : null,
+      };
+      if (!serviceGroupsByDept.has(deptKey))
+        serviceGroupsByDept.set(deptKey, []);
+      serviceGroupsByDept.get(deptKey)!.push(group);
+    }
+    for (const list of serviceGroupsByDept.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    // Encadrement (managers) bucketé PAR DÉPARTEMENT : chaque département a sa
+    // propre section Encadrement, sous sa bande — et non une section transverse
+    // unique en tête de grille.
+    const managersByDept = new Map<string, User[]>();
+    for (const u of managementUsers) {
+      const deptKey = u.departmentId ?? NO_DEPT;
+      if (!managersByDept.has(deptKey)) managersByDept.set(deptKey, []);
+      managersByDept.get(deptKey)!.push(u);
+    }
+
+    // Départements présents (via managers OU services), triés par libellé.
+    const deptKeys = new Set<string>([
+      ...managersByDept.keys(),
+      ...serviceGroupsByDept.keys(),
+    ]);
+    deptKeys.delete(NO_DEPT);
+    const orderedDeptKeys = [...deptKeys].sort((a, b) =>
+      deptLabelOf(a).localeCompare(deptLabelOf(b)),
+    );
+
+    // Assemblage : pour chaque département → Encadrement du département, puis
+    // ses services. La bande "département" s'insère au changement de groupe
+    // (cf. PlanningGrid), donc au-dessus de l'Encadrement du département.
+    for (const deptId of orderedDeptKeys) {
+      const mgrs = managersByDept.get(deptId);
+      if (mgrs && mgrs.length > 0) {
+        groups.push({
+          id: `management-${deptId}`,
+          name: "Encadrement",
+          icon: "",
+          isManagement: true,
+          users: mgrs.sort((a, b) => a.lastName.localeCompare(b.lastName)),
+          color: "amber",
+          departmentId: deptId,
+          departmentName: deptNameById.get(deptId) ?? null,
+        });
+      }
+      for (const g of serviceGroupsByDept.get(deptId) ?? []) groups.push(g);
+    }
+
+    // Managers sans département → Encadrement transverse (sans bande), en fin.
+    const orphanManagers = managersByDept.get(NO_DEPT);
+    if (orphanManagers && orphanManagers.length > 0) {
       groups.push({
         id: "management",
         name: "Encadrement",
         icon: "",
         isManagement: true,
-        users: managementUsers.sort((a, b) =>
+        users: orphanManagers.sort((a, b) =>
           a.lastName.localeCompare(b.lastName),
         ),
         color: "amber",
@@ -293,61 +381,8 @@ export const usePlanningData = ({
       });
     }
 
-    // 2. Regrouper les non-managers par service
-    const serviceMap = new Map<string, User[]>();
-    const usersWithoutService: User[] = [];
-
-    for (const u of nonManagers) {
-      if (u.userServices && u.userServices.length > 0) {
-        // Prendre le premier service de l'utilisateur
-        const firstService = u.userServices[0].service;
-        if (!serviceMap.has(firstService.id)) {
-          serviceMap.set(firstService.id, []);
-        }
-        serviceMap.get(firstService.id)!.push(u);
-      } else {
-        usersWithoutService.push(u);
-      }
-    }
-
-    // Trier les services par département (nom) puis par nom de service, afin que
-    // les services d'un même département soient contigus → la grille peut
-    // insérer une bande "département" au changement de groupe.
-    const deptLabelOf = (departmentId: string) =>
-      deptNameById.get(departmentId) ?? departmentId ?? "";
-    const sortedServices = services
-      .filter((s) => serviceMap.has(s.id))
-      .sort((a, b) => {
-        const deptCmp = deptLabelOf(a.departmentId).localeCompare(
-          deptLabelOf(b.departmentId),
-        );
-        return deptCmp !== 0 ? deptCmp : a.name.localeCompare(b.name);
-      });
-
-    for (const service of sortedServices) {
-      const serviceUsers = serviceMap.get(service.id) || [];
-      if (serviceUsers.length > 0) {
-        const style = getServiceStyle(service.name);
-        groups.push({
-          id: service.id,
-          name: service.name,
-          icon: style.icon,
-          isManagement: false,
-          users: serviceUsers.sort((a, b) =>
-            a.lastName.localeCompare(b.lastName),
-          ),
-          color: style.color,
-          hexColor: service.color || null,
-          departmentId: service.departmentId ?? null,
-          departmentName: service.departmentId
-            ? (deptNameById.get(service.departmentId) ?? null)
-            : null,
-        });
-      }
-    }
-
-    // 3. Section "Sans service" pour les orphelins.
-    // Transverse (pas de service → pas de département fiable) → pas de bande.
+    // Services sans département rattaché (edge), puis orphelins "Sans service".
+    for (const g of serviceGroupsByDept.get(NO_DEPT) ?? []) groups.push(g);
     if (usersWithoutService.length > 0) {
       groups.push({
         id: "unassigned",

@@ -210,8 +210,15 @@ export const PlanningView = ({
       groupedUsers.some((g) => g.id === id),
     );
 
-    if (isManager && groupedUsers.some((g) => g.id === "management")) {
-      validServiceIds.push("management");
+    // Encadrement est désormais scindé par département : cibler celui du
+    // département de l'utilisateur (fallback "management" transverse).
+    if (isManager) {
+      const mgmtId = currentUser?.departmentId
+        ? `management-${currentUser.departmentId}`
+        : "management";
+      if (groupedUsers.some((g) => g.id === mgmtId)) {
+        validServiceIds.push(mgmtId);
+      }
     }
 
     if (validServiceIds.length > 0) {

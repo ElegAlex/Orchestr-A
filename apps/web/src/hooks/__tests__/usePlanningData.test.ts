@@ -320,12 +320,15 @@ describe("usePlanningData", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    // Should have Encadrement group for manager
+    // Encadrement is now per-department: the manager (user-2, departmentId
+    // "dept-1") lands in a department-scoped management group, not a single
+    // transverse "management" group.
     const managementGroup = result.current.groupedUsers.find(
-      (g) => g.id === "management",
+      (g) => g.isManagement,
     );
     expect(managementGroup).toBeDefined();
-    expect(managementGroup?.isManagement).toBe(true);
+    expect(managementGroup?.id).toBe("management-dept-1");
+    expect(managementGroup?.departmentId).toBe("dept-1");
 
     // Should have Development group for dev user
     const devGroup = result.current.groupedUsers.find(
@@ -412,6 +415,82 @@ describe("usePlanningData", () => {
     expect(serviceGroups[0].departmentName).toBe("Archives");
     expect(serviceGroups[1].departmentId).toBe("dept-b");
     expect(serviceGroups[1].departmentName).toBe("Zoologie");
+  });
+
+  it("should place Encadrement per department (under its band), not as a single transverse section", async () => {
+    const mk = (id, fn, ln, deptId, deptName, svcId, svcName, managed) => ({
+      id,
+      email: `${id}@test.com`,
+      login: id,
+      firstName: fn,
+      lastName: ln,
+      role: managed ? roleManager : roleContributor,
+      isActive: true,
+      createdAt: "2025-01-01",
+      updatedAt: "2025-01-01",
+      departmentId: deptId,
+      department: { id: deptId, name: deptName },
+      userServices: [{ service: { id: svcId, name: svcName } }],
+      ...(managed ? { managedServices: [{ id: svcId, name: svcName }] } : {}),
+    });
+    (planningService.getOverview as jest.Mock).mockResolvedValue({
+      users: [
+        mk("mA", "Manager", "Alpha", "dept-a", "Alpha", "svc-a", "Svc A", true),
+        mk("eA", "Emp", "Alpha", "dept-a", "Alpha", "svc-a", "Svc A", false),
+        mk("mB", "Manager", "Beta", "dept-b", "Beta", "svc-b", "Svc B", true),
+        mk("eB", "Emp", "Beta", "dept-b", "Beta", "svc-b", "Svc B", false),
+      ],
+      services: [
+        {
+          id: "svc-a",
+          name: "Svc A",
+          departmentId: "dept-a",
+          department: { id: "dept-a", name: "Alpha" },
+          createdAt: "2025-01-01",
+          updatedAt: "2025-01-01",
+        },
+        {
+          id: "svc-b",
+          name: "Svc B",
+          departmentId: "dept-b",
+          department: { id: "dept-b", name: "Beta" },
+          createdAt: "2025-01-01",
+          updatedAt: "2025-01-01",
+        },
+      ],
+      tasks: [],
+      leaves: [],
+      events: [],
+      telework: [],
+      holidays: [],
+      schoolVacations: [],
+      predefinedAssignments: [],
+    });
+
+    const { result } = renderHook(() =>
+      usePlanningData({ currentDate: new Date(), viewMode: "week" }),
+    );
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    const g = result.current.groupedUsers;
+    // Each department's Encadrement sits immediately before its own services,
+    // ordered by department name (Alpha before Beta). No transverse "management".
+    expect(g.map((x) => x.id)).toEqual([
+      "management-dept-a",
+      "svc-a",
+      "management-dept-b",
+      "svc-b",
+    ]);
+    expect(g.find((x) => x.id === "management")).toBeUndefined();
+    const encA = g.find((x) => x.id === "management-dept-a")!;
+    expect(encA.isManagement).toBe(true);
+    expect(encA.departmentId).toBe("dept-a");
+    expect(encA.users.map((u) => u.id)).toEqual(["mA"]);
+    expect(g.find((x) => x.id === "svc-a")!.users.map((u) => u.id)).toEqual([
+      "eA",
+    ]);
   });
 
   it("should filter groups by user id", async () => {
